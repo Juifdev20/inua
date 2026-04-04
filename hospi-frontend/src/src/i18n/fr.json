@@ -1,0 +1,66 @@
+{
+  "finance": {
+    "title": "Module Finance",
+    "dashboard": "Tableau de Bord",
+    "admissions": "Caisse Admissions",
+    "laboratory": "Caisse Laboratoire",
+    "pharmacy": "Caisse Pharmacie",
+    "services": "Services & Prix",
+    "invoices": "Gestion des Factures",
+    "stats": {
+      "dailyRevenue": "Revenus du Jour",
+      "monthlyRevenue": "Revenus du Mois",
+      "pendingInvoices": "Factures en Attente",
+      "totalCollected": "Total Encaissé",
+      "invoicesGenerated": "Factures Générées",
+      "totalExpenses": "Total Dépenses"
+    },
+    "status": {
+      "paid": "Payé",
+      "unpaid": "Non Payé",
+      "partial": "Partiel",
+      "pending": "En Attente"
+    },
+    "actions": {
+      "collect": "Encaisser",
+      "viewDetail": "Voir Détail",
+      "print": "Imprimer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "create": "Créer",
+      "search": "Rechercher",
+      "filter": "Filtrer",
+      "validate": "Valider",
+      "cancel": "Annuler"
+    },
+    "invoice": {
+      "number": "N° Facture",
+      "patient": "Patient",
+      "type": "Type",
+      "amount": "Montant",
+      "status": "Statut",
+      "date": "Date",
+      "details": "Détails"
+    },
+    "payment": {
+      "confirm": "Confirmer le Paiement",
+      "method": "Méthode de Paiement",
+      "cash": "Espèces",
+      "card": "Carte Bancaire",
+      "mobile": "Mobile Money",
+      "success": "Paiement validé avec succès",
+      "error": "Erreur lors du paiement"
+    }
+  },
+  "common": {
+    "loading": "Chargement...",
+    "noData": "Aucune donnée disponible",
+    "error": "Une erreur est survenue",
+    "success": "Opération réussie",
+    "welcome": "Bonjour",
+    "logout": "Déconnexion",
+    "settings": "Paramètres",
+    "darkMode": "Mode Sombre",
+    "lightMode": "Mode Clair"
+  }
+}

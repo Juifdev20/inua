@@ -1,0 +1,66 @@
+{
+  "finance": {
+    "title": "Finance Module",
+    "dashboard": "Dashboard",
+    "admissions": "Admissions Cashier",
+    "laboratory": "Laboratory Cashier",
+    "pharmacy": "Pharmacy Cashier",
+    "services": "Services & Prices",
+    "invoices": "Invoice Management",
+    "stats": {
+      "dailyRevenue": "Daily Revenue",
+      "monthlyRevenue": "Monthly Revenue",
+      "pendingInvoices": "Pending Invoices",
+      "totalCollected": "Total Collected",
+      "invoicesGenerated": "Invoices Generated",
+      "totalExpenses": "Total Expenses"
+    },
+    "status": {
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "pending": "Pending"
+    },
+    "actions": {
+      "collect": "Collect",
+      "viewDetail": "View Details",
+      "print": "Print",
+      "edit": "Edit",
+      "delete": "Delete",
+      "create": "Create",
+      "search": "Search",
+      "filter": "Filter",
+      "validate": "Validate",
+      "cancel": "Cancel"
+    },
+    "invoice": {
+      "number": "Invoice No.",
+      "patient": "Patient",
+      "type": "Type",
+      "amount": "Amount",
+      "status": "Status",
+      "date": "Date",
+      "details": "Details"
+    },
+    "payment": {
+      "confirm": "Confirm Payment",
+      "method": "Payment Method",
+      "cash": "Cash",
+      "card": "Credit Card",
+      "mobile": "Mobile Money",
+      "success": "Payment validated successfully",
+      "error": "Payment error"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "noData": "No data available",
+    "error": "An error occurred",
+    "success": "Operation successful",
+    "welcome": "Hello",
+    "logout": "Logout",
+    "settings": "Settings",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
+  }
+}
