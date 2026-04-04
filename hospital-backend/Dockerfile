@@ -9,6 +9,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS builder
 # Forcer l'encodage UTF-8 pour le build
 ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
 ENV MAVEN_OPTS="-Dfile.encoding=UTF-8"
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # Définir le répertoire de travail
 WORKDIR /app
@@ -32,6 +34,7 @@ FROM eclipse-temurin:21-jre-alpine
 
 # Forcer l'encodage UTF-8 au runtime
 ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
+ENV SPRING_PROFILES_ACTIVE=prod
 
 # Installer curl pour healthcheck (optionnel mais utile)
 RUN apk add --no-cache curl
