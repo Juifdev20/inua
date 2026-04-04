@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts (seront générés dans le conteneur)
+hospital-backend/target
+hospital-backend/build
+
+# Dépendances Maven (seront téléchargées dans le conteneur)
+!hospital-backend/pom.xml
+
+# Logs
+*.log
+logs
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node.js / Frontend (si présent)
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Documentation
+README.md
+docs
+*.md
+
+# Tests
+test
+tests
+hospital-backend/src/test
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Environnement local
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-dev.properties
+
+# Docker (éviter les copies récursives)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Bases de données locales
+*.db
+*.sqlite
+*.h2.db
