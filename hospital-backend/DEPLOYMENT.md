@@ -22,6 +22,31 @@
 | `JPA_DDL_AUTO` | Stratégie Hibernate | `update` |
 | `JPA_SHOW_SQL` | Afficher SQL | `false` en prod |
 
+## Configuration Render - Variables d'environnement
+
+Dans le dashboard Render, ajoute ces variables dans ton Web Service:
+
+### Variables obligatoires:
+
+```
+DATABASE_URL=jdbc:postgresql://[HOST_RENDER]:5432/inua_db
+DB_USERNAME=inua_db_user
+DB_PASSWORD=oSpUgdOYuzqZbQNDVazkJaPE6lgy5iPB
+JWT_SECRET=MaCleSecreteInuaAfiaTresLonguePourLaSecurite2025Render
+JWT_EXPIRATION=86400000
+JWT_REFRESH_EXPIRATION=604800000
+```
+
+### Conversion d'URL PostgreSQL:
+Render te donne: `postgresql://inua_db_user:password@host:5432/inua_db`
+Tu dois convertir en: `jdbc:postgresql://host:5432/inua_db`
+
+### Etapes:
+1. Va dans ton Web Service sur Render
+2. Clique sur "Environment"
+3. Ajoute chaque variable ci-dessus
+4. Redeploie le service
+
 ## Commandes de build
 
 ```bash
