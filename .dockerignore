@@ -57,10 +57,8 @@ hospital-backend/src/test
 application-local.properties
 application-dev.properties
 
-# Docker (éviter les copies récursives)
-Dockerfile
+# Docker Compose (mais PAS le Dockerfile !)
 docker-compose.yml
-.dockerignore
 
 # Bases de données locales
 *.db
