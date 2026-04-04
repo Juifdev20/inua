@@ -14,11 +14,11 @@
 *~
 
 # Build artifacts (seront générés dans le conteneur)
-hospital-backend/target
-hospital-backend/build
+target/
+build/
 
 # Dépendances Maven (seront téléchargées dans le conteneur)
-!hospital-backend/pom.xml
+!pom.xml
 
 # Logs
 *.log
@@ -43,7 +43,7 @@ docs
 # Tests
 test
 tests
-hospital-backend/src/test
+src/test
 
 # CI/CD
 .github
