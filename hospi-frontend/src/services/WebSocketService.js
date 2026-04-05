@@ -1,8 +1,20 @@
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const WS_ENDPOINT = `${BACKEND_URL}/ws-hospital`;
+// Configuration dynamique pour supporter HTTP (dev) et HTTPS (prod)
+const getWebSocketUrl = () => {
+  // Utiliser la variable d'environnement Vite
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  
+  // Securite : transformer http:// en https:// si la page est chargee en HTTPS
+  let socketUrl = baseUrl;
+  if (baseUrl.startsWith('http://') && window.location.protocol === 'https:') {
+    socketUrl = baseUrl.replace('http://', 'https://');
+    console.log('Conversion auto HTTP → HTTPS pour WebSocket');
+  }
+  
+  return `${socketUrl}/ws-hospital`;
+};
 
 class WebSocketService {
   constructor() {
@@ -18,78 +30,102 @@ class WebSocketService {
       return;
     }
 
-    const token = localStorage.getItem('token');
-    
-    this.client = new Client({
-      webSocketFactory: () => new SockJS(WS_ENDPOINT),
-      connectHeaders: {
-        Authorization: `Bearer ${token}`
-      },
-      debug: (str) => {
-        console.log('STOMP Debug:', str);
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: () => {
-        console.log('WebSocket connected');
-        this.connected = true;
-        this.subscribe(onMessageCallback);
-      },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-        this.connected = false;
-      },
-      onWebSocketClose: () => {
-        console.log('WebSocket connection closed');
-        this.connected = false;
-      }
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const wsUrl = getWebSocketUrl();
+      
+      console.log('Connexion WebSocket a:', wsUrl);
+      
+      this.client = new Client({
+        webSocketFactory: () => new SockJS(wsUrl),
+        connectHeaders: {
+          Authorization: `Bearer ${token}`
+        },
+        debug: (str) => {
+          if (import.meta.env.DEV) {
+            console.log('STOMP Debug:', str);
+          }
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+        onConnect: () => {
+          console.log('WebSocket connected');
+          this.connected = true;
+          this.subscribe(onMessageCallback);
+        },
+        onStompError: (frame) => {
+          console.error('STOMP error:', frame);
+          this.connected = false;
+        },
+        onWebSocketClose: () => {
+          console.log('WebSocket connection closed');
+          this.connected = false;
+        },
+        onWebSocketError: (error) => {
+          console.error('WebSocket error:', error);
+          this.connected = false;
+        }
+      });
 
-    this.client.activate();
+      this.client.activate();
+    } catch (error) {
+      console.error('Erreur initialisation WebSocket:', error);
+    }
   }
 
   subscribe(onMessageCallback) {
     if (!this.client || !this.connected) {
-      console.error('Cannot subscribe: client not connected');
+      console.warn('WebSocket non connecte - notifications temps reel indisponibles');
       return;
     }
 
-    // S'abonner au topic des notifications
-    const subscription = this.client.subscribe('/topic/notifications', (message) => {
-      try {
-        const notification = JSON.parse(message.body);
-        console.log('Notification received:', notification);
-        if (onMessageCallback) {
-          onMessageCallback(notification);
+    try {
+      const subscription = this.client.subscribe('/topic/notifications', (message) => {
+        try {
+          const notification = JSON.parse(message.body);
+          console.log('Notification received:', notification);
+          if (onMessageCallback) {
+            onMessageCallback(notification);
+          }
+        } catch (error) {
+          console.error('Error parsing notification:', error);
         }
-      } catch (error) {
-        console.error('Error parsing notification:', error);
-      }
-    });
+      });
 
-    this.subscriptions.push(subscription);
+      this.subscriptions.push(subscription);
+    } catch (error) {
+      console.error('Erreur subscription:', error);
+    }
   }
 
   sendMessage(destination, body) {
     if (!this.client || !this.connected) {
-      console.error('Cannot send message: client not connected');
+      console.warn('WebSocket non connecte - message non envoye');
       return;
     }
 
-    this.client.publish({
-      destination: `/app${destination}`,
-      body: JSON.stringify(body)
-    });
+    try {
+      this.client.publish({
+        destination: `/app${destination}`,
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+    }
   }
 
   disconnect() {
     if (this.client) {
-      this.subscriptions.forEach((sub) => sub.unsubscribe());
-      this.subscriptions = [];
-      this.client.deactivate();
-      this.connected = false;
-      console.log('WebSocket disconnected');
+      try {
+        this.subscriptions.forEach((sub) => sub.unsubscribe());
+        this.subscriptions = [];
+        this.client.deactivate();
+        this.connected = false;
+        console.log('WebSocket disconnected');
+      } catch (error) {
+        console.error('Erreur deconnexion:', error);
+      }
     }
   }
 
@@ -99,3 +135,4 @@ class WebSocketService {
 }
 
 export const websocketService = new WebSocketService();
+export default websocketService;
