@@ -3,19 +3,23 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { Bell, CheckCircle, Calendar, FileText, Info } from 'lucide-react';
 import axios from 'axios';
+import { getBaseUrl, getApiUrl } from '../utils/websocket';
 
 const NotificationBell = ({ userId }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
 
+    const API_BASE_URL = getBaseUrl();
+    const WS_URL = `${API_BASE_URL}/ws-notifications`;
+
     useEffect(() => {
         // 1. Charger l'historique et le compteur au démarrage
         fetchNotifications();
         fetchUnreadCount();
 
-        // 2. Connexion WebSocket pour le temps réel
-        const socket = new SockJS('http://localhost:8080/ws-notifications');
+        // 2. Connexion WebSocket pour le temps reel
+        const socket = new SockJS(WS_URL);
         const stompClient = Stomp.over(socket);
         
         // Désactiver les logs console de Stomp pour plus de propreté
@@ -40,17 +44,17 @@ const NotificationBell = ({ userId }) => {
     }, [userId]);
 
     const fetchNotifications = async () => {
-        const res = await axios.get(`http://localhost:8080/api/notifications/user/${userId}`);
+        const res = await axios.get(getApiUrl(`/api/notifications/user/${userId}`));
         setNotifications(res.data);
     };
 
     const fetchUnreadCount = async () => {
-        const res = await axios.get(`http://localhost:8080/api/notifications/user/${userId}/unread-count`);
+        const res = await axios.get(getApiUrl(`/api/notifications/user/${userId}/unread-count`));
         setUnreadCount(res.data);
     };
 
     const handleMarkAsRead = async (id) => {
-        await axios.patch(`http://localhost:8080/api/notifications/${id}/read`);
+        await axios.patch(getApiUrl(`/api/notifications/${id}/read`));
         setUnreadCount(prev => Math.max(0, prev - 1));
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     };

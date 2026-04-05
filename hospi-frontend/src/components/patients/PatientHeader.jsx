@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 
 const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -17,9 +18,8 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme, toggleMobileSidebar } = useAdmin();
 
-  const API_BASE_URL = "http://localhost:8080/api/notifications";
-  // ✅ Ajout de l'URL de base pour les images
-  const IMAGE_BASE_URL = "http://localhost:8080/uploads/profiles/";
+  const API_BASE_URL = getApiUrl('/api/notifications');
+  const IMAGE_BASE_URL = getApiUrl('/uploads/profiles/');
 
   // --- FONCTION DE CHARGEMENT DES DONNÉES ---
   const fetchNotificationData = useCallback(async () => {
@@ -60,7 +60,8 @@ const Header = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const socket = new SockJS('http://localhost:8080/ws-notifications');
+    const wsUrl = getApiUrl('/ws-notifications');
+    const socket = new SockJS(wsUrl);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null; 
 

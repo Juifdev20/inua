@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 
 const DoctorHeader = () => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -18,8 +19,8 @@ const DoctorHeader = () => {
   const { user, logout } = useAuth(); 
   const { theme, toggleTheme, toggleMobileSidebar } = useAdmin();
 
-  const API_BASE_URL = "http://localhost:8080/api/notifications";
-  const BACKEND_URL = "http://localhost:8080";
+  const API_BASE_URL = getApiUrl('/api/notifications');
+  const BACKEND_URL = getBaseUrl();
 
   // --- LOGIQUE NOTIFICATIONS ---
   const fetchNotificationData = useCallback(async () => {
@@ -55,7 +56,11 @@ const DoctorHeader = () => {
   // --- WEBSOCKET ---
   useEffect(() => {
     if (!user?.id) return;
-    const socket = new SockJS('http://localhost:8080/ws-notifications');
+    
+    const wsUrl = `${BACKEND_URL}/ws-notifications`;
+    console.log('DoctorHeader - Connexion WebSocket:', wsUrl);
+    
+    const socket = new SockJS(wsUrl);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null; 
 

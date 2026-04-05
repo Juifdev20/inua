@@ -7,6 +7,7 @@ import { admissionService } from '../../services/admissionService'; // ✅ Impor
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 
 const ReceptionHeader = () => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -25,8 +26,8 @@ const ReceptionHeader = () => {
   const { user, logout } = useAuth(); 
   const { theme, toggleTheme, toggleMobileSidebar } = useAdmin();
 
-  const API_BASE_URL = "http://localhost:8080/api/notifications";
-  const BACKEND_URL = "http://localhost:8080";
+  const API_BASE_URL = getApiUrl('/api/notifications');
+  const BACKEND_URL = getBaseUrl();
 
   // --- LOGIQUE DE RECHERCHE PATIENT ---
   useEffect(() => {
@@ -96,7 +97,11 @@ const ReceptionHeader = () => {
   // --- WEBSOCKET avec Son et Desktop Notification ---
   useEffect(() => {
     if (!user?.id) return;
-    const socket = new SockJS('http://localhost:8080/ws-notifications');
+    
+    const wsUrl = `${BACKEND_URL}/ws-notifications`;
+    console.log('ReceptionHeader - Connexion WebSocket:', wsUrl);
+    
+    const socket = new SockJS(wsUrl);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null; 
 

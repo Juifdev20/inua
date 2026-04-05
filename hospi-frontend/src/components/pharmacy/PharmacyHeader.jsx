@@ -11,6 +11,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 
 /* ── Drapeaux SVG inline (légers, pas de dépendance externe) ── */
 const FlagFR = ({ className }) => (
@@ -67,8 +68,8 @@ const PharmacyHeader = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const BACKEND_URL = "http://localhost:8080";
-  const API_BASE_URL = "http://localhost:8080/api/notifications";
+  const BACKEND_URL = getBaseUrl();
+  const API_BASE_URL = getApiUrl('/api/notifications');
 
   // ═══════════════════════════════════
   //  THÈME

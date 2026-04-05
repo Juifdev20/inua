@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl } from '../utils/websocket';
 
 const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
-  const API_BASE_URL = "http://localhost:8080";
+  const API_BASE_URL = getBaseUrl();
 
   const getTimeAgo = (date) => {
     if (!date) return "À l'instant";
@@ -24,51 +25,67 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const socket = new SockJS(`${API_BASE_URL}/ws-hospital`);
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = null;
+    try {
+      const wsUrl = `${API_BASE_URL}/ws-hospital`;
+      console.log('NotificationContext - Connexion a:', wsUrl);
+      
+      const socket = new SockJS(wsUrl);
+      const stompClient = Stomp.over(socket);
+      stompClient.debug = null;
 
     stompClient.connect({}, () => {
+      console.log('NotificationContext - WebSocket connecte');
       stompClient.subscribe('/topic/notifications', (message) => {
         if (message.body) {
-          const data = JSON.parse(message.body);
-          
-          // On utilise une seule mise à jour d'état pour éviter les désynchronisations
-          setNotifications(prev => {
-            // 🛡️ FILTRE ANTI-DOUBLON STRICT
-            // On vérifie si le contenu existe déjà (indépendamment du temps)
-            // ou s'il est arrivé il y a moins de 3 secondes
-            const isDuplicate = prev.some(n => 
-              n.message === data.content && 
-              (new Date() - new Date(n.timestamp)) < 3000
-            );
+          try {
+            const data = JSON.parse(message.body);
+            
+            // On utilise une seule mise a jour d'etat pour eviter les desynchronisations
+            setNotifications(prev => {
+              // FILTRE ANTI-DOUBLON STRICT
+              const isDuplicate = prev.some(n => 
+                n.message === data.content && 
+                (new Date() - new Date(n.timestamp)) < 3000
+              );
 
-            if (isDuplicate) {
-              return prev; 
-            }
+              if (isDuplicate) {
+                return prev; 
+              }
 
-            // Si ce n'est pas un doublon, on crée la notif
-            const newNotif = {
-              id: `${Date.now()}-${Math.random()}`, 
-              message: data.content,
-              timestamp: new Date().toISOString(),
-              unread: true
-            };
+              // Si ce n'est pas un doublon, on cree la notif
+              const newNotif = {
+                id: `${Date.now()}-${Math.random()}`, 
+                message: data.content,
+                timestamp: new Date().toISOString(),
+                unread: true
+              };
 
-            // ✅ ON MET À JOUR LE COMPTEUR ICI SEULEMENT
-            setUnreadCount(count => count + 1);
+              // ON MET A JOUR LE COMPTEUR ICI SEULEMENT
+              setUnreadCount(count => count + 1);
 
-            return [newNotif, ...prev];
-          });
+              return [newNotif, ...prev];
+            });
+          } catch (error) {
+            console.error('Erreur parsing notification:', error);
+          }
         }
       });
+    }, (error) => {
+      console.error('NotificationContext - Erreur WebSocket:', error);
     });
 
     return () => {
       if (stompClient && stompClient.connected) {
-        stompClient.disconnect();
+        try {
+          stompClient.disconnect();
+        } catch (error) {
+          console.error('Erreur deconnexion:', error);
+        }
       }
     };
+    } catch (error) {
+      console.error('Erreur initialisation WebSocket:', error);
+    }
   }, []);
 
   const markAllAsRead = () => {
