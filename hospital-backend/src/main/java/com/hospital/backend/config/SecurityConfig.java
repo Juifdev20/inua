@@ -52,6 +52,7 @@ public class SecurityConfig {
                         // ════════════════════════════════════════════
                         // ACCÈS PUBLIC
                         // ════════════════════════════════════════════
+                        .requestMatchers("/health").permitAll() // <--- AJOUTE CETTE LIGNE ICI ✅
                         .requestMatchers("/api/auth/**", "/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/uploads/**", "/profiles/**", "/api/uploads/**", "/api/profiles/**").permitAll()
                         .requestMatchers("/uploads/patients/**", "/uploads/doctors/**", "/uploads/staff/**").permitAll()
