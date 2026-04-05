@@ -5,14 +5,14 @@ import { Client } from '@stomp/stompjs';
 const getWebSocketUrl = () => {
   // Utiliser la variable d'environnement Vite
   const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-  
+
   // Securite : transformer http:// en https:// si la page est chargee en HTTPS
   let socketUrl = baseUrl;
   if (baseUrl.startsWith('http://') && window.location.protocol === 'https:') {
     socketUrl = baseUrl.replace('http://', 'https://');
     console.log('Conversion auto HTTP → HTTPS pour WebSocket');
   }
-  
+
   return `${socketUrl}/ws-hospital`;
 };
 
@@ -33,9 +33,9 @@ class WebSocketService {
     try {
       const token = localStorage.getItem('token');
       const wsUrl = getWebSocketUrl();
-      
+
       console.log('Connexion WebSocket a:', wsUrl);
-      
+
       this.client = new Client({
         webSocketFactory: () => new SockJS(wsUrl),
         connectHeaders: {
