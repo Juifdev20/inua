@@ -239,7 +239,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:5173",
                 "http://localhost:5179",
                 "http://localhost:5181",
-                "http://192.168.1.*", "http://10.*"
+                "http://192.168.1.*", "http://10.*",
+                "https://inuaafia.onrender.com"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
