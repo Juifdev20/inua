@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/uploads/patients/**", "/uploads/doctors/**", "/uploads/staff/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/ws-hospital/**", "/ws-notifications/**").permitAll()
+                        .requestMatchers("/ws-hospital/info/**", "/ws-notifications/info/**").permitAll()
 
                         // ════════════════════════════════════════════
                         // CONSULTATIONS
@@ -243,7 +244,8 @@ public class SecurityConfig {
                 "http://localhost:5181",
                 "http://192.168.1.*", "http://10.*",
                 "https://inuaafia.onrender.com",
-                "https://inua-oux2.onrender.com"
+                "https://inua-oux2.onrender.com",
+                "*" // Allow all origins for WebSocket compatibility
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -280,6 +282,8 @@ public class SecurityConfig {
         return (web) -> web.ignoring()
                 .requestMatchers("/ws-hospital/**")
                 .requestMatchers("/ws-notifications/**")
+                .requestMatchers("/ws-hospital/info/**")
+                .requestMatchers("/ws-notifications/info/**")
                 .requestMatchers("/health");
     }
 }

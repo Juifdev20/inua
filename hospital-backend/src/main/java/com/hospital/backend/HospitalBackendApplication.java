@@ -24,6 +24,11 @@ public class HospitalBackendApplication {
         return "OK - Backend is running";
     }
 
+    @GetMapping("/api/auth/test")
+    public String authTest() {
+        return "Auth endpoint is accessible";
+    }
+
     @Bean
     public CommandLineRunner logEndpoints(@Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping) {
         return args -> {
