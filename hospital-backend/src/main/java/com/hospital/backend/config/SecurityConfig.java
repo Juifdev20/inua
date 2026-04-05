@@ -240,7 +240,8 @@ public class SecurityConfig {
                 "http://localhost:5179",
                 "http://localhost:5181",
                 "http://192.168.1.*", "http://10.*",
-                "https://inuaafia.onrender.com"
+                "https://inuaafia.onrender.com",
+                "https://inua-oux2.onrender.com"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

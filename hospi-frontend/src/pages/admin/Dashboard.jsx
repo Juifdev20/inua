@@ -12,6 +12,9 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
+  // ✅ URL dynamique - fonctionne en local et en production
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  
   // 1. États pour les données réelles
   const [data, setData] = useState({
     stats: { 
@@ -40,8 +43,8 @@ const Dashboard = () => {
         
         // Appel parallèle pour les stats et les graphiques
         const [statsRes, chartRes] = await Promise.all([
-          axios.get('http://localhost:8080/api/admin/dashboard/stats', config),
-          axios.get('http://localhost:8080/api/admin/charts', config).catch(() => ({ data: null }))
+          axios.get(`${API_BASE_URL}/api/admin/dashboard/stats`, config),
+          axios.get(`${API_BASE_URL}/api/admin/charts`, config).catch(() => ({ data: null }))
         ]);
 
         const s = statsRes.data || {};

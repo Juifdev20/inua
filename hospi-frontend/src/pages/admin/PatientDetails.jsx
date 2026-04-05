@@ -28,7 +28,7 @@ const PatientDetails = () => {
         setLoading(true);
         // Cette route appelle ton PatientController.getById(id)
         // Le DTO complet contient maintenant la liste medicalRecords grâce au mapper
-        const response = await axios.get(`http://localhost:8080/patients/${id}`);
+        const response = await axios.get(`/patients/${id}`);
         setPatient(response.data.data);
       } catch (error) {
         toast.error("Erreur", { description: "Impossible de charger le dossier" });

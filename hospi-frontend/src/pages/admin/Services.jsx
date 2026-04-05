@@ -44,13 +44,16 @@ import { Textarea } from '../../components/ui/textarea';
 import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 // --- IMPORTS PDF ---
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logoHopital from '../../assets/images/logo.png'; 
 
 // --- CONFIGURATION AXIOS ---
-const API_URL = "http://localhost:8080/api/admin/services";
+const API_URL = `${API_BASE_URL}/api/admin/services`;
 const api = axios.create({ baseURL: API_URL });
 
 api.interceptors.request.use((config) => {

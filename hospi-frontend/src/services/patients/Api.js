@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { validateId } from '../api';
 
-// ✅ Base URL pointant vers ton Backend Spring Boot
-const API_BASE = "http://localhost:8080/api/v1";
+// ✅ Base URL dynamique - fonctionne en local et en production
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_BASE = `${API_URL}/api/v1`;
 
 const api = axios.create({
   baseURL: API_BASE,

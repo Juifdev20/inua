@@ -29,6 +29,9 @@ import { Textarea } from '../../components/ui/textarea';
 import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 const Departments = () => {
   // --- ÉTATS ---
   const [departments, setDepartments] = useState([]); 
@@ -53,8 +56,8 @@ const Departments = () => {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  const API_URL = "http://localhost:8080/api/admin/departments";
-  const USERS_API_URL = "http://localhost:8080/api/admin/users/all";
+  const API_URL = `${API_BASE_URL}/api/admin/departments`;
+  const USERS_API_URL = `${API_BASE_URL}/api/admin/users/all`;
 
   // --- CHARGEMENT DES DONNÉES ---
   useEffect(() => {

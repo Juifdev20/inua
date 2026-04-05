@@ -12,6 +12,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 
 /* Drapeaux SVG (comme dans FinanceHeader) */
 const FlagFR = ({ className }) => (
@@ -37,8 +38,8 @@ const LANGUAGES = [
   { code: 'en', label: 'English', shortLabel: 'EN', Flag: FlagGB },
 ];
 
-const BACKEND_URL = "http://localhost:8080";
-const API_BASE_URL = `${BACKEND_URL}/api/notifications`;
+const BACKEND_URL = getBaseUrl();
+const API_BASE_URL = getApiUrl('/api/notifications');
 
 const LabHeader = () => {
   const [showNotifications, setShowNotifications] = useState(false);

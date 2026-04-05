@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// On définit une URL de base plus générale
-const BASE_URL = "http://localhost:8080/api";
+// URL API depuis les variables d'environnement Vite
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = `${API_URL}/api`;
 
 const api = axios.create({
   baseURL: BASE_URL,

@@ -96,7 +96,7 @@ const LabSidebar = () => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:8080';
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
   /* ── Helpers ── */
   const getTimeAgo = (date) => {

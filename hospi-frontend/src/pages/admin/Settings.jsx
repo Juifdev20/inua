@@ -21,8 +21,11 @@ import { useApp } from '../../context/AppContext'; // <--- AJOUT : Import du con
 
 const Settings = () => {
   const { refreshConfig } = useConfig();
-  const { setAppName, setAppLogo } = useApp(); // <--- AJOUT : Fonctions de mise à jour globale
+  const { setAppName, setAppLogo } = useApp();
   const fileInputRef = useRef(null);
+  
+  // ✅ URL dynamique - fonctionne en local et en production
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,7 +67,7 @@ const Settings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/admin/settings', {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -73,7 +76,7 @@ const Settings = () => {
       
       // Si un logo existe déjà, on prépare la prévisualisation avec l'URL du backend
       if (data.logoUrl) {
-        setLogoPreview(`http://localhost:8080${data.logoUrl}`);
+        setLogoPreview(`${API_BASE_URL}${data.logoUrl}`);
       }
     } catch (error) {
       console.error("Erreur chargement:", error);
@@ -126,7 +129,7 @@ const Settings = () => {
         formData.append('logo', selectedFile);
       }
 
-      await axios.put('http://localhost:8080/api/admin/settings', formData, {
+      await axios.put(`${API_BASE_URL}/api/admin/settings`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

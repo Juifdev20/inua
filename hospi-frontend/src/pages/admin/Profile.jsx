@@ -15,6 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from "sonner";
 import axios from 'axios';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 const Profile = () => {
   const { user, updateUser } = useAuth();
   
@@ -87,7 +90,7 @@ const Profile = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:8080/api/admin/upload-photo/${cleanId}`,
+        `${API_BASE_URL}/api/admin/upload-photo/${cleanId}`,
         formData,
         { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
       );
@@ -116,7 +119,7 @@ const Profile = () => {
 
     try {
       await axios.put(
-        `http://localhost:8080/api/admin/update-profile/${cleanId}`, 
+        `${API_BASE_URL}/api/admin/update-profile/${cleanId}`, 
         profileData,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -146,7 +149,7 @@ const Profile = () => {
     setPassLoading(true);
     try {
       const cleanId = getCleanId(user?.id);
-      await axios.post('http://localhost:8080/api/admin/change-password', 
+      await axios.post(`${API_BASE_URL}/api/admin/change-password`, 
         { 
           adminId: cleanId, 
           currentPassword: passwordData.currentPassword, 
@@ -167,7 +170,7 @@ const Profile = () => {
 
   // ✅ Correction : Ajout d'un timestamp (?t=...) pour forcer le refresh de l'image (Cache-Busting)
   const photoUrl = user.photoUrl 
-    ? `http://localhost:8080/uploads/profiles/${user.photoUrl}?t=${new Date().getTime()}` 
+    ? `${API_BASE_URL}/uploads/profiles/${user.photoUrl}?t=${new Date().getTime()}` 
     : null;
 
   return (

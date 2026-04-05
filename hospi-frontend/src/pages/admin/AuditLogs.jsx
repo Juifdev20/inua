@@ -33,6 +33,10 @@ import {
 import { useNotifications } from '../../context/NotificationContext';
 import { toast } from 'sonner';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const AUDIT_API_URL = `${API_BASE_URL}/api/audit`;
+
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,8 +44,7 @@ const AuditLogs = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   
   // 🔔 On utilise le contexte pour savoir quand rafraîchir
-  const { notifications } = useNotifications();
-  const API_BASE_URL = "http://localhost:8080/api/audit"; 
+  const { notifications } = useNotifications(); 
 
   // Charger les données au montage du composant
   useEffect(() => {

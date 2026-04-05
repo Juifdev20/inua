@@ -33,6 +33,9 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { toast } from 'sonner';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 const ROLE_TEMPLATES = {
   "DOCTEUR": ["patients.read", "patients.write", "consultations.all", "rendez-vous.create"],
   "INFIRMIER": ["patients.read", "patients.write", "soins.execute"],
@@ -76,7 +79,7 @@ const Roles = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/admin/roles/all', {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/roles/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRoles(response.data || []);
@@ -147,10 +150,10 @@ const Roles = () => {
 
     try {
       if (editingRole) {
-        await axios.put(`http://localhost:8080/api/admin/roles/${editingRole.id}`, finalData, config);
+        await axios.put(`${API_BASE_URL}/api/admin/roles/${editingRole.id}`, finalData, config);
         toast.success('Rôle mis à jour avec succès');
       } else {
-        await axios.post('http://localhost:8080/api/admin/roles/create', finalData, config);
+        await axios.post(`${API_BASE_URL}/api/admin/roles/create`, finalData, config);
         toast.success('Nouveau rôle créé');
       }
       fetchRoles();
@@ -174,7 +177,7 @@ const Roles = () => {
     if (!roleToDelete) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/admin/roles/${roleToDelete.id}`, {
+      await axios.delete(`${API_BASE_URL}/api/admin/roles/${roleToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

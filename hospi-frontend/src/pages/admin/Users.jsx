@@ -25,6 +25,9 @@ import {
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
 
+// ✅ URL dynamique - fonctionne en local et en production
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
 // ✅ CORRECTION : Noms synchronisés avec Spring Security et la BDD
 const ALL_ROLES = [
   { id: 1, nom: 'ROLE_ADMIN' },
@@ -75,8 +78,8 @@ const Users = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       const [userRes, deptRes] = await Promise.all([
-        axios.get('http://localhost:8080/api/admin/users/all', config),
-        axios.get('http://localhost:8080/api/admin/departments/all', config)
+        axios.get(`${API_BASE_URL}/api/admin/users/all`, config),
+        axios.get(`${API_BASE_URL}/api/admin/departments/all`, config)
       ]);
 
       if (userRes.data) {
@@ -99,7 +102,7 @@ const Users = () => {
   const fetchUsers = async () => {
     const token = localStorage.getItem('token');
     const config = { headers: { Authorization: `Bearer ${token}` } };
-    const response = await axios.get('http://localhost:8080/api/admin/users/all', config);
+    const response = await axios.get(`${API_BASE_URL}/api/admin/users/all`, config);
     const payload = response.data;
     const list = Array.isArray(payload) ? payload : (payload.content || []);
     setUsers(list);
@@ -151,7 +154,7 @@ const Users = () => {
     try {
       const token = localStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.post(`http://localhost:8080/api/admin/users/${userToReset.id}/reset-password`, {}, config);
+      await axios.post(`${API_BASE_URL}/api/admin/users/${userToReset.id}/reset-password`, {}, config);
       toast.success(`Mot de passe de ${userToReset.firstName} réinitialisé avec succès`);
       setIsResetDialogOpen(false);
     } catch (error) {
@@ -191,10 +194,10 @@ const Users = () => {
     
     try {
       if (editingUser) {
-        await axios.put(`http://localhost:8080/api/admin/users/${editingUser.id}`, dataToSend, config);
+        await axios.put(`${API_BASE_URL}/api/admin/users/${editingUser.id}`, dataToSend, config);
         toast.success('Utilisateur modifié');
       } else {
-        await axios.post('http://localhost:8080/api/admin/users/create', { ...dataToSend, password: "DefaultPassword123!" }, config);
+        await axios.post(`${API_BASE_URL}/api/admin/users/create`, { ...dataToSend, password: "DefaultPassword123!" }, config);
         toast.success('Utilisateur créé avec succès');
       }
       fetchUsers();
@@ -211,7 +214,7 @@ const Users = () => {
   const confirmDelete = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/admin/users/${userToDelete.id}`, {
+      await axios.delete(`${API_BASE_URL}/api/admin/users/${userToDelete.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setUsers(users.filter(u => u.id !== userToDelete.id));
