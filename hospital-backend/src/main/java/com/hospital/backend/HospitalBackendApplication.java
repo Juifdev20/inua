@@ -1,5 +1,6 @@
 package com.hospital.backend;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -24,7 +25,7 @@ public class HospitalBackendApplication {
     }
 
     @Bean
-    public CommandLineRunner logEndpoints(RequestMappingHandlerMapping handlerMapping) {
+    public CommandLineRunner logEndpoints(@Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping) {
         return args -> {
             log.info("========================================");
             log.info("REGISTERED ENDPOINTS:");
