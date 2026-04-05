@@ -1,10 +1,13 @@
 import axios from "axios";
 
+// URL API depuis les variables d'environnement Vite
+const API_URL = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080') + '/api';
+
 // 1. Configuration de base d'Axios
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
-  // 💡 CONSEIL : On ne fixe pas le Content-Type globalement ici 
-  // pour laisser Axios le détecter automatiquement lors de l'envoi de FormData.
+  baseURL: API_URL,
+  // CONSEIL : On ne fixe pas le Content-Type globalement ici 
+  // pour laisser Axios le detecter automatiquement lors de l'envoi de FormData.
 });
 
 // --- FONCTIONS DE VALIDATION D'ID ---

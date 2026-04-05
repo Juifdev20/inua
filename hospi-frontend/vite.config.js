@@ -22,7 +22,9 @@ export default defineConfig({
     },
   },
   server: {
-    // proxy tous les appels vers le backend pour éviter les problèmes de CORS
+    port: 5173,
+    strictPort: false, // Si 5173 est occupe, Vite essaiera 5174, 5175...
+    // proxy tous les appels vers le backend pour eviter les problemes de CORS
     proxy: {
       '/patients': {
         target: 'http://localhost:8080',
@@ -32,7 +34,7 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      // ajoutez d'autres routes si nécessaire
+      // ajoutez d'autres routes si necessaire
     },
   },
 })

@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// URL API depuis les variables d'environnement Vite
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: API_URL,
+  timeout: 10000,
 });
 
 // 🚀 L'intercepteur qui injecte le token automatiquement
