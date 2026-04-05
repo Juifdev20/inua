@@ -284,6 +284,8 @@ public class SecurityConfig {
                 .requestMatchers("/ws-notifications/**")
                 .requestMatchers("/ws-hospital/info/**")
                 .requestMatchers("/ws-notifications/info/**")
-                .requestMatchers("/health");
+                .requestMatchers("/health")
+                .requestMatchers("/api/auth/test")
+                .requestMatchers("/api/auth/**"); // Temporarily allow all auth endpoints for testing
     }
 }
