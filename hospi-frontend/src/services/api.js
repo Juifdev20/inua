@@ -1,7 +1,16 @@
 import axios from "axios";
 
 // URL API depuis les variables d'environnement Vite
-const API_URL = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080') + '/api';
+// Supprime le /api suffixe pour eviter les double slashes
+const getApiBaseUrl = () => {
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 
+                  import.meta.env.VITE_API_URL || 
+                  'http://localhost:8080';
+  // Supprime le slash final s'il existe
+  return baseUrl.replace(/\/$/, '');
+};
+
+const API_URL = `${getApiBaseUrl()}/api`;  // Ajoute /api ici, pas dans la variable d'env
 
 // 1. Configuration de base d'Axios
 const api = axios.create({

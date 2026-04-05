@@ -20,7 +20,7 @@ export const NotificationProvider = ({ children }) => {
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (hours < 24) return `Il y a ${diffInHours} h`;
+    if (diffInHours < 24) return `Il y a ${diffInHours} h`;
     return past.toLocaleDateString();
   };
 

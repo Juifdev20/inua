@@ -6,15 +6,20 @@ import Stomp from 'stompjs';
  * Gere automatiquement la conversion HTTP → HTTPS
  */
 
-// URL de base dynamique
+// URL de base dynamique - evite les double slashes
 export const getBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 
+                  import.meta.env.VITE_API_URL ||
+                  'http://localhost:8080';
+  
+  // Supprime le slash final pour eviter les double slashes
+  const cleanBase = baseUrl.replace(/\/$/, '');
   
   // Conversion auto HTTP → HTTPS si la page est en HTTPS
-  if (baseUrl.startsWith('http://') && window.location.protocol === 'https:') {
-    return baseUrl.replace('http://', 'https://');
+  if (cleanBase.startsWith('http://') && window.location.protocol === 'https:') {
+    return cleanBase.replace('http://', 'https://');
   }
-  return baseUrl;
+  return cleanBase;
 };
 
 // URL pour les appels API REST
