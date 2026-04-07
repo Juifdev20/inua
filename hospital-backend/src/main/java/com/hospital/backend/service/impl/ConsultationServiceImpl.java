@@ -1641,7 +1641,7 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .patientPhone(consultation.getPatient() != null ? consultation.getPatient().getPhoneNumber() : null)
                 .patientAddress(consultation.getPatient() != null ? consultation.getPatient().getAddress() : null)
                 .patientAge(getJourneyPatientAge(consultation.getPatient()))
-                .patientGender(consultation.getPatient() != null ? consultation.getPatient().getGender().name() : null)
+                .patientGender(consultation.getPatient() != null && consultation.getPatient().getGender() != null ? consultation.getPatient().getGender().name() : null)
 
                 // Triage
                 .triageInfo(buildTriageInfo(consultation))
@@ -1877,14 +1877,45 @@ public class ConsultationServiceImpl implements ConsultationService {
             java.math.BigDecimal total = consultationFee.add(examFee);
             java.math.BigDecimal balance = total.subtract(totalPaid);
 
+            // Déterminer le statut de paiement
             String status;
+            ConsultationStatus consultStatus = consultation.getStatus();
+            
+            log.info("[DEBUG] Calcul statut paiement - consultId: {}, status: {}, totalPaid: {}, total: {}", 
+                consultation.getId(), consultStatus, totalPaid, total);
+            
+            // Si tout est payé → SOLDE
             if (balance.compareTo(java.math.BigDecimal.ZERO) == 0 && total.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 status = "SOLDE";
-            } else if (totalPaid.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            } 
+            // Si le patient a un statut PAYEE ou a franchi les étapes sans paiement enregistré
+            // on considère que la consultation est payée
+            else if (consultStatus == ConsultationStatus.PAYEE ||
+                     consultStatus == ConsultationStatus.PAID_PENDING_LAB ||
+                     consultStatus == ConsultationStatus.PAID_COMPLETED ||
+                     consultStatus == ConsultationStatus.TREATED ||
+                     consultStatus == ConsultationStatus.RESULTATS_PRETS ||
+                     (totalPaid.compareTo(java.math.BigDecimal.ZERO) == 0 && 
+                      (consultStatus == ConsultationStatus.EN_COURS || 
+                       consultStatus == ConsultationStatus.AU_LABO ||
+                       consultStatus == ConsultationStatus.EXAMENS_PAYES ||
+                       consultStatus == ConsultationStatus.EXAMENS_PRESCRITS ||
+                       consultStatus == ConsultationStatus.TERMINE ||
+                       consultStatus == ConsultationStatus.COMPLETED))) {
+                log.info("[DEBUG] Statut forcé à SOLDE car status={}", consultStatus);
+                status = "SOLDE";
+                balance = java.math.BigDecimal.ZERO;
+            }
+            // Si rien n'est payé et le patient n'a pas encore commencé le parcours → NON_PAYE
+            else if (totalPaid.compareTo(java.math.BigDecimal.ZERO) == 0) {
                 status = "NON_PAYE";
-            } else {
+            } 
+            // Sinon → paiement partiel
+            else {
                 status = "PARTIEL";
             }
+            
+            log.info("[DEBUG] Statut final: {}", status);
 
             return PatientJourneyDTO.BillingSummaryDTO.builder()
                     .invoiceNumber(consultation.getConsultationCode())

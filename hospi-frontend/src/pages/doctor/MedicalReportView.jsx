@@ -69,128 +69,256 @@ const MedicalReportView = () => {
     if (!report) return;
     
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
     
-    // Header
-    doc.setFontSize(18);
-    doc.text('INUA AFIA - FICHE MEDICALE', 105, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Systeme de Gestion Hospitaliere', 105, 28, { align: 'center' });
-    doc.text(`Consultation: #${report.consultationCode} - Date: ${formatDate(report.consultationDate)}`, 105, 35, { align: 'center' });
+    let y = 15;
     
-    let y = 50;
+    // Helper pour nettoyer le texte (remplacer accents)
+    const cleanText = (text) => {
+      if (!text) return '-';
+      return String(text)
+        .replace(/[éèêë]/g, 'e')
+        .replace(/[àâä]/g, 'a')
+        .replace(/[ùûü]/g, 'u')
+        .replace(/[ôö]/g, 'o')
+        .replace(/[îï]/g, 'i')
+        .replace(/[ç]/g, 'c')
+        .replace(/[ÉÈÊË]/g, 'E')
+        .replace(/[ÀÂÄ]/g, 'A')
+        .replace(/[ÙÛÜ]/g, 'U')
+        .replace(/[ÔÖ]/g, 'O')
+        .replace(/[ÎÏ]/g, 'I')
+        .replace(/[Ç]/g, 'C');
+    };
     
-    // Patient Section
-    doc.setFontSize(12);
-    doc.setFillColor(22, 163, 74);
-    doc.rect(20, y - 5, 170, 8, 'F');
+    // ============================================
+    // HEADER VERT (style emerald-600)
+    // ============================================
+    doc.setFillColor(5, 150, 105);
+    doc.rect(margin, y, contentWidth, 24, 'F');
+    
+    // Cercle blanc pour le logo (plus grand)
+    const logoX = margin + 15;
+    const logoY = y + 12;
+    const logoR = 10;
+    doc.setFillColor(255, 255, 255);
+    doc.circle(logoX, logoY, logoR, 'F');
+    
+    // Coeur stylise dans le cercle - dessine avec des formes
+    const cx = logoX;
+    const cy = logoY + 1;
+    const heartColor = [5, 150, 105];
+    
+    // Deux cercles pour les lobes du coeur
+    doc.setFillColor(heartColor[0], heartColor[1], heartColor[2]);
+    doc.circle(cx - 2.5, cy - 1.5, 2.8, 'F'); // lobe gauche
+    doc.circle(cx + 2.5, cy - 1.5, 2.8, 'F'); // lobe droit
+    
+    // Triangle pour la pointe du coeur
+    const trianglePoints = [
+      [cx, cy + 6],      // pointe bas
+      [cx - 4.5, cy - 0.5], // gauche
+      [cx + 4.5, cy - 0.5]  // droite
+    ];
+    doc.triangle(trianglePoints[0][0], trianglePoints[0][1], 
+                 trianglePoints[1][0], trianglePoints[1][1], 
+                 trianglePoints[2][0], trianglePoints[2][1], 'F');
+    
+    // Titre INUA AFIA
     doc.setTextColor(255, 255, 255);
-    doc.text('IDENTIFICATION DU PATIENT', 25, y);
-    doc.setTextColor(0, 0, 0);
-    
-    y += 12;
-    doc.setFontSize(10);
+    doc.setFontSize(16);
     doc.setFont(undefined, 'bold');
-    doc.text('Nom:', 20, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.patientName || '-', 50, y);
+    doc.text('INUA AFIA', margin + 32, y + 10);
     
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'normal');
+    doc.text('Systeme de Gestion Hospitaliere', margin + 32, y + 16);
+    
+    // Droite: FICHE MEDICALE
+    doc.setFontSize(8);
     doc.setFont(undefined, 'bold');
-    doc.text('Code Patient:', 110, y);
+    doc.text('FICHE MEDICALE', pageWidth - margin - 3, y + 7, { align: 'right' });
+    doc.text('INDIVIDUELLE', pageWidth - margin - 3, y + 12, { align: 'right' });
+    doc.setFontSize(6);
     doc.setFont(undefined, 'normal');
-    doc.text(report.patientCode || '-', 140, y);
+    doc.text('Genere: ' + cleanText(formatDate(report.reportGeneratedAt || new Date())), pageWidth - margin - 3, y + 17, { align: 'right' });
     
-    y += 8;
-    doc.setFont(undefined, 'bold');
-    doc.text('Age:', 20, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(`${report.patientAge || '-'} ans`, 50, y);
+    y += 30;
     
-    doc.setFont(undefined, 'bold');
-    doc.text('Sexe:', 110, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.patientGender || '-', 140, y);
-    
-    // Medecin Section
-    y += 15;
-    doc.setFontSize(12);
-    doc.setFillColor(22, 163, 74);
-    doc.rect(20, y - 5, 170, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.text('MEDECIN TRAITANT', 25, y);
-    doc.setTextColor(0, 0, 0);
-    
-    y += 12;
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.text('Nom:', 20, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.doctorName || '-', 50, y);
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('Specialite:', 110, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.doctorSpecialty || '-', 140, y);
-    
-    y += 15;
-    
-    // TRIAGE Section
-    if (report.triageInfo) {
-      doc.setFontSize(12);
-      doc.setFillColor(22, 163, 74);
-      doc.rect(20, y - 5, 170, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('CONSTANTES VITALES', 25, y);
-      doc.setTextColor(0, 0, 0);
+    // Fonction pour dessiner une section
+    const drawSection = (title, startY) => {
+      // Fond vert clair pour le titre
+      doc.setFillColor(220, 252, 231);
+      doc.rect(margin, startY, contentWidth, 9, 'F');
       
-      y += 12;
-      doc.setFontSize(10);
+      // Bordure bas
+      doc.setDrawColor(167, 243, 208);
+      doc.setLineWidth(0.3);
+      doc.line(margin, startY + 9, margin + contentWidth, startY + 9);
+      
+      // Titre
+      doc.setTextColor(6, 95, 70);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text(cleanText(title).toUpperCase(), margin + 4, startY + 6);
+      
+      return startY + 13;
+    };
+    
+    // ============================================
+    // SECTION PATIENT
+    // ============================================
+    y = drawSection('Identification du Patient', y);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    
+    const leftX = margin + 4;
+    const midX = margin + contentWidth / 2 + 4;
+    const labelW = 40;
+    const lineH = 7;
+    
+    // Ligne 1
+    doc.setFont(undefined, 'bold');
+    doc.text('Nom:', leftX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.patientName), leftX + labelW, y);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Sexe:', midX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.patientGender), midX + labelW, y);
+    y += lineH;
+    
+    // Ligne 2
+    doc.setFont(undefined, 'bold');
+    doc.text('Code:', leftX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.patientCode), leftX + labelW, y);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Tel:', midX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.patientPhone), midX + labelW, y);
+    y += lineH;
+    
+    // Ligne 3
+    doc.setFont(undefined, 'bold');
+    doc.text('Age:', leftX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text((report.patientAge || '-') + ' ans', leftX + labelW, y);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Consultation:', midX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(formatDate(report.consultationDate)), midX + labelW, y);
+    y += 10;
+    
+    doc.setDrawColor(167, 243, 208);
+    doc.line(margin, y, margin + contentWidth, y);
+    y += 6;
+    
+    // ============================================
+    // SECTION MEDECIN
+    // ============================================
+    y = drawSection('Medecin Traitant', y);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Nom:', leftX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.doctorName), leftX + labelW, y);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Specialite:', midX, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(cleanText(report.doctorSpecialty), midX + labelW, y);
+    y += 10;
+    
+    doc.setDrawColor(167, 243, 208);
+    doc.line(margin, y, margin + contentWidth, y);
+    y += 6;
+    
+    // ============================================
+    // SECTION CONSTANTES VITALES
+    // ============================================
+    if (report.triageInfo) {
+      y = drawSection('Constantes Vitales', y);
+      
+      // 4 boites identiques, bien alignees
+      const boxW = 38;
+      const boxH = 20;
+      const gap = 4;
+      const startX = margin + 4;
+      
       const vitals = [
-        ['Temperature', `${report.triageInfo.temperature || '-'} °C`],
-        ['Tension', report.triageInfo.tensionArterielle || '-'],
-        ['Poids', `${report.triageInfo.poids || '-'} kg`],
-        ['Taille', `${report.triageInfo.taille || '-'} cm`]
+        { label: 'Temperature', value: (report.triageInfo.temperature || '-') + ' C' },
+        { label: 'Tension', value: cleanText(report.triageInfo.tensionArterielle) || '-' },
+        { label: 'Poids', value: (report.triageInfo.poids || '-') + ' kg' },
+        { label: 'Taille', value: (report.triageInfo.taille || '-') + ' cm' }
       ];
       
-      vitals.forEach(([label, value]) => {
-        doc.setFont(undefined, 'bold');
-        doc.text(`${label}:`, 20, y);
+      vitals.forEach((vital, i) => {
+        const boxX = startX + (i * (boxW + gap));
+        
+        // Fond gris clair
+        doc.setFillColor(249, 250, 251);
+        doc.setDrawColor(209, 213, 219);
+        doc.rect(boxX, y, boxW, boxH, 'FD');
+        
+        // Label en haut
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(6);
         doc.setFont(undefined, 'normal');
-        doc.text(value, 50, y);
-        y += 7;
+        doc.text(cleanText(vital.label), boxX + boxW/2, y + 5, { align: 'center' });
+        
+        // Valeur centree
+        doc.setTextColor(4, 120, 87);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(vital.value, boxX + boxW/2, y + 14, { align: 'center' });
       });
       
+      y += boxH + 6;
+      
+      // Motif de visite sur toute la largeur
       if (report.triageInfo.motifVisite) {
-        y += 3;
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
         doc.setFont(undefined, 'bold');
-        doc.text('Motif de visite:', 20, y);
+        doc.text('Motif:', leftX, y);
         doc.setFont(undefined, 'normal');
-        doc.text(report.triageInfo.motifVisite, 60, y);
-        y += 8;
+        const splitMotif = doc.splitTextToSize(cleanText(report.triageInfo.motifVisite), contentWidth - 30);
+        doc.text(splitMotif, leftX + 20, y);
+        y += (splitMotif.length * 4) + 4;
       }
-      y += 10;
+      
+      y += 4;
+      doc.setDrawColor(167, 243, 208);
+      doc.line(margin, y, margin + contentWidth, y);
+      y += 6;
     }
     
-    // Lab Results
+    // ============================================
+    // SECTION LABORATOIRE
+    // ============================================
     if (report.labResults && report.labResults.length > 0) {
-      if (y > 250) {
+      if (y > 230) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
-      doc.setFontSize(12);
-      doc.setFillColor(22, 163, 74);
-      doc.rect(20, y - 5, 170, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('RESULTATS DE LABORATOIRE', 25, y);
-      doc.setTextColor(0, 0, 0);
-      
-      y += 8;
+      y = drawSection('Resultats de Laboratoire', y);
       
       const labData = report.labResults.map(lab => [
-        lab.testName,
-        `${lab.resultValue || '-'} ${lab.unit || ''}`,
-        lab.referenceRange || '-',
-        lab.interpretation || '-'
+        cleanText(lab.testName) + (lab.isCritical ? ' (!)' : ''),
+        (lab.resultValue || '-') + ' ' + cleanText(lab.unit),
+        cleanText(lab.referenceRange) || '-',
+        cleanText(lab.interpretation) || '-'
       ]);
       
       autoTable(doc, {
@@ -198,44 +326,61 @@ const MedicalReportView = () => {
         head: [['Examen', 'Resultat', 'Reference', 'Interpretation']],
         body: labData,
         theme: 'grid',
-        headStyles: { fillColor: [22, 163, 74], textColor: 255 },
-        styles: { fontSize: 9 },
-        margin: { left: 20, right: 20 }
+        headStyles: { 
+          fillColor: [209, 250, 229],
+          textColor: [6, 95, 70],
+          fontSize: 8,
+          fontStyle: 'bold'
+        },
+        styles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [209, 213, 219]
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 35, halign: 'center' },
+          3: { cellWidth: 'auto' }
+        },
+        margin: { left: margin + 4, right: margin + 4 },
+        alternateRowStyles: { fillColor: [249, 250, 251] }
       });
-      y = doc.lastAutoTable.finalY + 10;
+      
+      y = doc.lastAutoTable.finalY + 6;
+      doc.setDrawColor(167, 243, 208);
+      doc.line(margin, y, margin + contentWidth, y);
+      y += 6;
     }
     
-    // Prescription
+    // ============================================
+    // SECTION PRESCRIPTION
+    // ============================================
     if (report.prescription && report.prescription.items?.length > 0) {
-      if (y > 220) {
+      if (y > 200) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
-      doc.setFontSize(12);
-      doc.setFillColor(22, 163, 74);
-      doc.rect(20, y - 5, 170, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('PRESCRIPTION MEDICALE', 25, y);
-      doc.setTextColor(0, 0, 0);
+      y = drawSection('Prescription Medicale', y);
       
-      y += 8;
-      
+      // Diagnostic
       if (report.prescription.diagnosis) {
-        y += 5;
-        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
         doc.setFont(undefined, 'bold');
-        doc.text('Diagnostic:', 20, y);
+        doc.text('Diagnostic:', leftX, y);
         doc.setFont(undefined, 'normal');
-        doc.text(report.prescription.diagnosis, 50, y);
-        y += 10;
+        const splitDiag = doc.splitTextToSize(cleanText(report.prescription.diagnosis), contentWidth - 45);
+        doc.text(splitDiag, leftX + 30, y);
+        y += (splitDiag.length * 4) + 4;
       }
       
       const presData = report.prescription.items.map(item => [
-        item.medicationName || '-',
-        `${item.dosage || '-'} ${item.frequency || ''}`,
-        item.duration || '-',
-        item.instructions || '-'
+        cleanText(item.medicationName) + (item.genericName ? '\n' + cleanText(item.genericName) : ''),
+        cleanText(item.dosage) + (item.frequency ? ' (' + cleanText(item.frequency) + ')' : ''),
+        cleanText(item.duration) || '-',
+        cleanText(item.instructions) || '-'
       ]);
       
       autoTable(doc, {
@@ -243,60 +388,244 @@ const MedicalReportView = () => {
         head: [['Medicament', 'Posologie', 'Duree', 'Instructions']],
         body: presData,
         theme: 'grid',
-        headStyles: { fillColor: [22, 163, 74], textColor: 255 },
-        styles: { fontSize: 9 },
-        margin: { left: 20, right: 20 }
+        headStyles: { 
+          fillColor: [209, 250, 229],
+          textColor: [6, 95, 70],
+          fontSize: 8,
+          fontStyle: 'bold'
+        },
+        styles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [209, 213, 219]
+        },
+        margin: { left: margin + 4, right: margin + 4 },
+        alternateRowStyles: { fillColor: [249, 250, 251] }
       });
-      y = doc.lastAutoTable.finalY + 10;
+      
+      y = doc.lastAutoTable.finalY + 6;
+      doc.setDrawColor(167, 243, 208);
+      doc.line(margin, y, margin + contentWidth, y);
+      y += 6;
     }
     
-    // Billing
+    // ============================================
+    // SECTION FACTURATION
+    // ============================================
     if (report.billingSummary) {
-      if (y > 250) {
+      if (y > 180) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
-      doc.setFontSize(12);
-      doc.setFillColor(22, 163, 74);
-      doc.rect(20, y - 5, 170, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('FACTURATION', 25, y);
-      doc.setTextColor(0, 0, 0);
+      y = drawSection('Facturation', y);
       
-      y += 12;
-      doc.setFontSize(10);
+      const billingRows = [];
       
-      const billingItems = [
-        ['Consultation', `${report.billingSummary.consultationAmount?.toLocaleString() || '0'} $`],
-        ['Laboratoire', `${report.billingSummary.labAmount?.toLocaleString() || '0'} $`],
-        ['TOTAL', `${report.billingSummary.totalAmount?.toLocaleString() || '0'} $`],
-        ['Paye', `${report.billingSummary.totalPaid?.toLocaleString() || '0'} $`],
-        ['Reste a payer', `${report.billingSummary.balanceDue?.toLocaleString() || '0'} $`]
-      ];
+      // Frais de fiche
+      if (report.billingSummary.fraisFiche > 0 || report.isNewPatient) {
+        billingRows.push([
+          'Frais de Fiche' + (report.isNewPatient ? ' (1ere visite)' : ''),
+          (report.billingSummary.fraisFiche || 5000).toLocaleString() + ' $',
+          report.billingSummary.fraisFichePaid ? '[Paye]' : '[En attente]'
+        ]);
+      }
       
-      billingItems.forEach(([label, value], index) => {
-        if (index === 2) {
-          doc.setFont(undefined, 'bold');
-          doc.setFillColor(220, 252, 231);
-          doc.rect(20, y - 4, 170, 7, 'F');
-        } else {
-          doc.setFont(undefined, 'normal');
-        }
-        doc.text(label, 25, y);
-        doc.text(value, 100, y);
-        y += 7;
+      // Consultation
+      billingRows.push([
+        'Consultation' + (report.doctorSpecialty ? ' (' + cleanText(report.doctorSpecialty) + ')' : ''),
+        (report.billingSummary.consultationAmount || 0).toLocaleString() + ' $',
+        report.billingSummary.consultationPaid ? '[Paye]' : 
+          (report.billingSummary.consultationAmount > 0 ? '[En attente]' : '[Gratuit]')
+      ]);
+      
+      // Laboratoire
+      if (report.billingSummary.labAmount > 0) {
+        billingRows.push([
+          'Examens de Laboratoire',
+          report.billingSummary.labAmount.toLocaleString() + ' $',
+          report.billingSummary.labPaid ? '[Paye]' : '[En attente]'
+        ]);
+      }
+      
+      // Pharmacie
+      if (report.billingSummary.pharmacyAmount > 0) {
+        billingRows.push([
+          'Medicaments (Pharmacie)',
+          report.billingSummary.pharmacyAmount.toLocaleString() + ' $',
+          report.billingSummary.pharmacyPaid ? '[Paye]' : '[En attente]'
+        ]);
+      }
+      
+      // TOTAL
+      billingRows.push([
+        { content: 'TOTAL', styles: { fontStyle: 'bold', fillColor: [220, 252, 231] } },
+        { content: (report.billingSummary.totalAmount || 0).toLocaleString() + ' $', styles: { fontStyle: 'bold', fillColor: [220, 252, 231] } },
+        { content: '', styles: { fillColor: [220, 252, 231] } }
+      ]);
+      
+      autoTable(doc, {
+        startY: y,
+        head: [['Libelle', 'Montant Du', 'Statut']],
+        body: billingRows,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [209, 250, 229],
+          textColor: [6, 95, 70],
+          fontSize: 8,
+          fontStyle: 'bold'
+        },
+        styles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [209, 213, 219]
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 40, halign: 'right' },
+          2: { cellWidth: 40, halign: 'center' }
+        },
+        margin: { left: margin + 4, right: margin + 4 },
+        alternateRowStyles: { fillColor: [249, 250, 251] }
       });
+      
+      y = doc.lastAutoTable.finalY + 6;
+      
+      // ============================================
+      // RECAPITULATIF ET STATUT (2 colonnes comme dans l'interface)
+      // ============================================
+      y += 6;
+      
+      // Calculer la position pour 2 colonnes
+      const boxWidth = (contentWidth - 8) / 2;
+      const leftColX = margin + 4;
+      const rightColX = margin + 4 + boxWidth + 8;
+      const boxHeight = 45;
+      const startY = y;
+      
+      // ========== COLONNE GAUCHE: RECAPITULATIF ==========
+      // Fond vert clair
+      doc.setFillColor(236, 253, 245); // emerald-50
+      doc.setDrawColor(167, 243, 208); // emerald-200
+      doc.roundedRect(leftColX, startY, boxWidth, boxHeight, 2, 2, 'FD');
+      
+      // Titre
+      doc.setTextColor(6, 95, 70);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('RECAPITULATIF', leftColX + 5, startY + 8);
+      
+      let recapY = startY + 18;
+      
+      // TOTAL GENERAL
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('TOTAL GENERAL', leftColX + 5, recapY);
+      doc.setTextColor(4, 120, 87);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text((report.billingSummary.totalAmount || 0).toLocaleString() + ' $', leftColX + boxWidth - 5, recapY, { align: 'right' });
+      recapY += 10;
+      
+      // Ligne separateur
+      doc.setDrawColor(167, 243, 208);
+      doc.setLineWidth(0.3);
+      doc.line(leftColX + 5, recapY - 4, leftColX + boxWidth - 5, recapY - 4);
+      
+      // ACOMPTE VERSE
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('ACOMPTE VERSE', leftColX + 5, recapY);
+      doc.setTextColor(5, 150, 105);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text((report.billingSummary.totalPaid || 0).toLocaleString() + ' $', leftColX + boxWidth - 5, recapY, { align: 'right' });
+      recapY += 12;
+      
+      // RESTE A PAYER (dans un cadre blanc)
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(167, 243, 208);
+      doc.roundedRect(leftColX + 5, recapY - 6, boxWidth - 10, 10, 1, 1, 'FD');
+      
+      doc.setTextColor(55, 65, 81);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text('RESTE A PAYER', leftColX + 8, recapY);
+      
+      const balanceDue = report.billingSummary.balanceDue || 0;
+      if (balanceDue > 0) {
+        doc.setTextColor(220, 38, 38); // rouge
+      } else {
+        doc.setTextColor(5, 150, 105); // vert
+      }
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text(balanceDue.toLocaleString() + ' $', leftColX + boxWidth - 8, recapY, { align: 'right' });
+      
+      // ========== COLONNE DROITE: STATUT DE PAIEMENT ==========
+      // Fond gris clair - meme hauteur que la colonne gauche
+      doc.setFillColor(249, 250, 251);
+      doc.setDrawColor(229, 231, 235);
+      doc.roundedRect(rightColX, startY, boxWidth, boxHeight, 2, 2, 'FD');
+      
+      // Label "Statut de paiement"
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('Statut de paiement', rightColX + boxWidth/2, startY + 10, { align: 'center' });
+      
+      // Badge statut
+      const status = report.billingSummary.paymentStatus || 'NON_PAYE';
+      let statusText = status;
+      let statusBgColor, statusTextColor;
+      
+      if (status === 'SOLDE') {
+        statusBgColor = [209, 250, 229]; // vert clair
+        statusTextColor = [6, 95, 70]; // vert fonce
+        statusText = 'SOLDE';
+      } else if (status === 'PARTIEL') {
+        statusBgColor = [254, 243, 199]; // orange clair
+        statusTextColor = [146, 64, 14]; // orange fonce
+        statusText = 'PARTIEL';
+      } else {
+        statusBgColor = [254, 226, 226]; // rouge clair
+        statusTextColor = [153, 27, 27]; // rouge fonce
+        statusText = 'NON_PAYE';
+      }
+      
+      // Fond du badge - centre parfait dans la colonne
+      const badgeY = startY + 20;
+      const badgeWidth = 45;
+      const badgeHeight = 12;
+      const badgeX = rightColX + (boxWidth - badgeWidth) / 2;
+      doc.setFillColor(statusBgColor[0], statusBgColor[1], statusBgColor[2]);
+      doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 6, 6, 'F');
+      
+      // Texte du badge centre
+      doc.setTextColor(statusTextColor[0], statusTextColor[1], statusTextColor[2]);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text(statusText, rightColX + boxWidth / 2, badgeY + 8.5, { align: 'center' });
+      
+      y = startY + boxHeight + 10;
     }
     
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text('Document genere par INUA AFIA - Systeme de Gestion Hospitaliere', 105, 285, { align: 'center' });
-    doc.text(`Genere le: ${new Date().toLocaleString('fr-FR')}`, 105, 290, { align: 'center' });
+    // ============================================
+    // FOOTER
+    // ============================================
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(128, 128, 128);
+      doc.text('Document genere par INUA AFIA - Systeme de Gestion Hospitaliere', pageWidth/2, 285, { align: 'center' });
+      doc.text('Genere le: ' + cleanText(new Date().toLocaleString('fr-FR')) + ' - Page ' + i + '/' + pageCount, pageWidth/2, 290, { align: 'center' });
+    }
     
     // Save
-    doc.save(`Fiche_Medicale_${report.patientName}_${report.consultationCode}.pdf`);
+    doc.save('Fiche_Medicale_' + cleanText(report.patientName).replace(/\s+/g, '_') + '_' + report.consultationCode + '.pdf');
   };
 
   const formatDate = (dateString) => {
