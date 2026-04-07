@@ -46,7 +46,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Autorisations critiques pour CORS et WebSockets
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/ws-hospital/**").permitAll()
+                        .requestMatchers("/ws-hospital/**", "/ws-notifications/**").permitAll()
+                        .requestMatchers("/api/ws-hospital/**", "/api/ws-notifications/**").permitAll()
                         .requestMatchers("/health").permitAll()
 
                         // Auth et Uploads

@@ -254,7 +254,8 @@ public class DoctorController {
                 log.info("📌 Statut consultation {} → TERMINE (aucun examen)", id);
             }
 
-            consultation.setUpdatedAt(LocalDateTime.now());
+            // ✅ DATE DE CLÔTURE - enregistrer quand le docteur finalise
+            consultation.setDateCloture(LocalDateTime.now());
             Consultation saved = consultationRepository.save(consultation);
 
             return ResponseEntity.ok(Map.of(

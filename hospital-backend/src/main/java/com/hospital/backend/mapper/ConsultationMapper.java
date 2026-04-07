@@ -73,6 +73,9 @@ public class ConsultationMapper {
                 .dateEntree(consultation.getDateEntree())
                 .dateSortie(consultation.getDateSortie())
 
+//               ✅ DATE DE CLÔTURE (finalisation par le docteur)
+                .dateCloture(consultation.getDateCloture())
+
                 // --- TESTS ET PRESCRIPTIONS ---
                 .requiresLabTest(consultation.getRequiresLabTest())
                 .requiresPrescription(consultation.getRequiresPrescription())

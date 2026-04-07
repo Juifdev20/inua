@@ -118,6 +118,10 @@ public class Consultation {
     @Enumerated(EnumType.STRING)
     private ConsultationStatus status;
 
+    // ✅ DATE DE CLÔTURE (finalisation par le docteur)
+    @Column(name = "date_cloture")
+    private LocalDateTime dateCloture;
+
     // Compatibilité frontend / ancien système
     @Column(name = "statut")
     private String statut;

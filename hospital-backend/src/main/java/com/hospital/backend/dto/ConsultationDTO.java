@@ -123,6 +123,11 @@ public class ConsultationDTO {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dateSortie;
 
+    // ✅ DATE DE CLÔTURE (finalisation par le docteur)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonProperty("dateCloture")
+    private LocalDateTime dateCloture;
+
     // --- EXAMENS ET ORDONNANCES ---
     @Builder.Default
     private Boolean requiresLabTest = false;
