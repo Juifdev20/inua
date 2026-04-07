@@ -35,7 +35,7 @@ export const getWebSocketUrl = (endpoint = '/ws-hospital') => {
 };
 
 /**
- * Cree une connexion SockJS/STOMP securisee
+ * Cree une connexion SockJS/STOMP securisee avec options de transport et authentification JWT
  * @param {string} endpoint - Endpoint WebSocket (ex: /ws-hospital, /ws-notifications)
  * @param {function} onConnect - Callback de connexion reussie
  * @param {function} onError - Callback d'erreur
@@ -44,20 +44,28 @@ export const getWebSocketUrl = (endpoint = '/ws-hospital') => {
 export const createSecureSocket = (endpoint, onConnect, onError) => {
   try {
     const wsUrl = getWebSocketUrl(endpoint);
-    console.log('🔌 Connexion WebSocket securisee:', wsUrl);
+    console.log('Connexion WebSocket securisee:', wsUrl);
     
-    const socket = new SockJS(wsUrl);
+    // Options de transport pour compatibilite avec Render et SockJS
+    const socket = new SockJS(wsUrl, null, {
+      transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+    });
+    
     const stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
-    stompClient.connect({}, onConnect, (error) => {
-      console.error('❌ WebSocket error:', error);
+    // Recuperer le token JWT pour l'authentification
+    const token = localStorage.getItem('token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    stompClient.connect(headers, onConnect, (error) => {
+      console.error('WebSocket error:', error);
       if (onError) onError(error);
     });
 
     return stompClient;
   } catch (error) {
-    console.error('❌ Erreur creation WebSocket:', error);
+    console.error('Erreur creation WebSocket:', error);
     if (onError) onError(error);
     return null;
   }

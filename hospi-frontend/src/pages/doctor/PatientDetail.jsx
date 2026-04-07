@@ -57,14 +57,26 @@ const PatientDetail = () => {
     if (!url) return null;
     if (url.startsWith('data:image')) return url;
     if (url.startsWith('http')) return url;
+    
     const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
     let cleanPath = url.replace(/\\/g, '/');
-    if (cleanPath.toLowerCase().startsWith('uploads/') || cleanPath.toLowerCase().startsWith('/uploads/')) {
-        cleanPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-    } else {
-        cleanPath = `/uploads/${cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath}`;
+    
+    // Si le chemin commence déjà par uploads/, on le nettoie
+    if (cleanPath.startsWith('uploads/')) {
+      cleanPath = cleanPath.substring(8);
     }
-    return `${backendUrl}${cleanPath}`;
+    
+    // Essayer différents dossiers dans l'ordre
+    const possiblePaths = [
+      `${backendUrl}/uploads/patients/${cleanPath}`,
+      `${backendUrl}/uploads/profiles/${cleanPath}`,
+      `${backendUrl}/uploads/avatars/${cleanPath}`,
+      `${backendUrl}/${url}` // Au cas où le chemin est déjà complet
+    ];
+    
+    // Pour déboguer, on peut retourner le premier chemin et ajuster si besoin
+    console.log("🖼️ Photo paths for:", url, "→", possiblePaths[0]);
+    return possiblePaths[0];
   };
 
   useEffect(() => {
@@ -99,7 +111,25 @@ const PatientDetail = () => {
       let data = response.data && response.data.data ? response.data.data : response.data;
       
       if (data) {
-        data.photoUrl = getCleanImageUrl(data.photoUrl || data.photo);
+        console.log("📡 PatientDetail data received:", data);
+        console.log("📸 Photo fields:", {
+          photo: data.photo,
+          photoUrl: data.photoUrl,
+          photo_url: data.photo_url
+        });
+        console.log("🏥 Consultations:", data.consultations);
+        // Debug pour voir les diagnostics
+        if (data.consultations) {
+          data.consultations.forEach((cons, index) => {
+            console.log(`Consultation ${index}:`, {
+              id: cons.id,
+              date: cons.consultationDate,
+              diagnosis: cons.diagnosis,
+              reasonForVisit: cons.reasonForVisit
+            });
+          });
+        }
+        data.photoUrl = getCleanImageUrl(data.photoUrl || data.photo || data.photo_url);
       }
       
       setPatientData(data);
@@ -171,7 +201,10 @@ const PatientDetail = () => {
     genderLabel: patient.gender === 'MALE' ? 'Homme' : 'Femme'
   };
 
-  const consultations = patientData.consultations || [];
+  const consultations = (patientData.consultations || []).sort((a, b) => {
+    // Trier par date de consultation (plus récent en premier)
+    return new Date(b.consultationDate) - new Date(a.consultationDate);
+  });
   const medicalRecords = patientData.medicalRecords || [];
 
   return (
@@ -206,7 +239,14 @@ const PatientDetail = () => {
             <CardContent className="p-6">
               <div className="text-center mb-6">
                 <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-background shadow-lg overflow-hidden">
-                  <AvatarImage src={p.photoUrl} className="object-cover w-full h-full" />
+                  <AvatarImage 
+                    src={p.photoUrl} 
+                    className="object-cover w-full h-full"
+                    onError={(e) => {
+                      console.log("❌ PatientDetail image failed to load:", p.photoUrl);
+                      e.target.style.display = 'none';
+                    }}
+                  />
                   <AvatarFallback className="text-2xl bg-secondary text-secondary-foreground font-bold">
                     {p.firstName?.[0]}{p.lastName?.[0]}
                   </AvatarFallback>
@@ -355,20 +395,43 @@ const PatientDetail = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-foreground font-medium bg-muted/30 p-4 rounded-xl border border-border/50 leading-relaxed italic">
-                          "{cons.diagnosis || "Aucun diagnostic saisi pour cette séance."}"
+                          {cons.diagnosis ? `"${cons.diagnosis}"` : 
+                           cons.symptoms ? `"Symptômes: ${cons.symptoms}"` :
+                           cons.reasonForVisit ? `"Motif: ${cons.reasonForVisit}"` :
+                           "Consultation en cours - Diagnostic à venir"}
                         </p>
                         <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
                             <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
                               <User className="w-3.5 h-3.5 text-primary" /> Dr. {cons.doctorName || 'Non assigné'}
                             </span>
-                            <Button 
-                              onClick={() => handleViewDetails(cons)}
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 text-[11px] text-primary font-black uppercase hover:bg-primary/5 tracking-tighter"
-                            >
-                              Détails →
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={() => navigate(`/doctor/examen-clinique/${cons.id}`)}
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-[11px] text-blue-600 font-black uppercase hover:bg-blue-50 tracking-tighter border-blue-600"
+                              >
+                                <Stethoscope className="w-3 h-3 mr-1" />
+                                Examen
+                              </Button>
+                              <Button 
+                                onClick={() => navigate(`/doctor/medical-report/${cons.id}`)}
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-[11px] text-emerald-600 font-black uppercase hover:bg-emerald-50 tracking-tighter border-emerald-600"
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Fiche complète
+                              </Button>
+                              <Button 
+                                onClick={() => handleViewDetails(cons)}
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 text-[11px] text-primary font-black uppercase hover:bg-primary/5 tracking-tighter"
+                              >
+                                Détails →
+                              </Button>
+                            </div>
                         </div>
                       </div>
                     ))}

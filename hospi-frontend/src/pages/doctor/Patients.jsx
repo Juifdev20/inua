@@ -52,6 +52,17 @@ const Patients = () => {
       const response = await api.get(`${API_URL}/api/v1/doctors/patients`);
 
       if (response.data) {
+        console.log("📡 Patients data received:", response.data);
+        // Debug pour voir les champs photo
+        response.data.forEach((patient, index) => {
+          console.log(`Patient ${index}:`, {
+            id: patient.id,
+            name: `${patient.firstName} ${patient.lastName}`,
+            photo: patient.photo,
+            photoUrl: patient.photoUrl,
+            photo_url: patient.photo_url
+          });
+        });
         setPatients(response.data);
       }
     } catch (error) {
@@ -82,14 +93,42 @@ const Patients = () => {
   };
 
   const getPhotoUrl = (patient) => {
-    const photo = patient.photo || patient.photoUrl;
-    if (!photo) return null;
-    if (photo.startsWith('http') || photo.startsWith('data:')) return photo;
+    const photo = patient.photo || patient.photoUrl || patient.photo_url;
+    console.log("🔍 getPhotoUrl for patient", patient.id, "photo fields:", {
+      photo: patient.photo,
+      photoUrl: patient.photoUrl,
+      photo_url: patient.photo_url,
+      selected: photo
+    });
     
-    // ✅ Correction du chemin basée sur votre structure de dossiers réelle
-    // Si le nom contient 'patient_', on va dans /uploads/patients/, sinon /uploads/profiles/
-    const folder = photo.includes('patient_') ? 'patients' : 'profiles';
-    return `${API_URL}/uploads/${folder}/${photo}`;
+    if (!photo) {
+      console.log("❌ No photo found for patient", patient.id);
+      return null;
+    }
+    
+    if (photo.startsWith('http') || photo.startsWith('data:')) {
+      console.log("✅ Photo is already a full URL:", photo);
+      return photo;
+    }
+    
+    const backendUrl = API_URL || "http://localhost:8080";
+    
+    // Si le chemin commence déjà par uploads/, on le nettoie
+    let cleanPhoto = photo;
+    if (cleanPhoto.startsWith('uploads/')) {
+      cleanPhoto = cleanPhoto.substring(8);
+    }
+    
+    // Essayer différents dossiers dans l'ordre
+    const possiblePaths = [
+      `${backendUrl}/uploads/patients/${cleanPhoto}`,
+      `${backendUrl}/uploads/profiles/${cleanPhoto}`,
+      `${backendUrl}/uploads/avatars/${cleanPhoto}`,
+      `${backendUrl}/${photo}` // Au cas où le chemin est complet
+    ];
+    
+    console.log("🎯 Trying photo paths:", possiblePaths);
+    return possiblePaths[0]; // Retourner le premier chemin possible
   };
 
   const filteredPatients = useMemo(() => {
@@ -179,9 +218,13 @@ const Patients = () => {
                             <AvatarImage 
                               src={getPhotoUrl(patient)} 
                               className="object-cover"
+                              onError={(e) => {
+                                console.log("❌ Image failed to load:", getPhotoUrl(patient));
+                                e.target.style.display = 'none';
+                              }}
                             />
                             <AvatarFallback className="bg-blue-600/10 text-blue-600 font-black">
-                              {(patient.prenom || patient.firstName || "P")[0].toUpperCase()}
+                              {(patient.prenom || patient.firstName || "P")[0].toUpperCase()}{(patient.nom || patient.lastName || "")[0]?.toUpperCase() || ''}
                             </AvatarFallback>
                           </Avatar>
                           <div>

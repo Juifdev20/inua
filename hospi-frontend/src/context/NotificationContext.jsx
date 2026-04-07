@@ -29,11 +29,19 @@ export const NotificationProvider = ({ children }) => {
       const wsUrl = `${API_BASE_URL}/ws-hospital`;
       console.log('NotificationContext - Connexion a:', wsUrl);
       
-      const socket = new SockJS(wsUrl);
+      // Options de transport pour compatibilite avec Render et SockJS
+      const socket = new SockJS(wsUrl, null, {
+        transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+      });
+      
       const stompClient = Stomp.over(socket);
       stompClient.debug = null;
 
-    stompClient.connect({}, () => {
+      // Recuperer le token JWT pour l'authentification
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    stompClient.connect(headers, () => {
       console.log('NotificationContext - WebSocket connecte');
       stompClient.subscribe('/topic/notifications', (message) => {
         if (message.body) {

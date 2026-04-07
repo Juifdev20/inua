@@ -293,8 +293,19 @@ const LabResultsDoctor = () => {
                       Aucun résultat reçu pour le moment.
                     </div>
                   ) : (
-                    // ✅ BOUCLE SUR LES CONSULTATIONS (BOÎTES)
-                    consultations.map((consultation) => {
+                    // ✅ AFFICHE UNIQUEMENT LES CONSULTATIONS AVEC RESULTATS PRETS
+                    (() => {
+                      const filteredConsultations = consultations.filter(c => c.status === 'RESULTATS_PRETS');
+                      
+                      if (filteredConsultations.length === 0) {
+                        return (
+                          <div className="py-10 text-center text-xs text-muted-foreground">
+                            Aucun résultat prêt à analyser pour le moment.
+                          </div>
+                        );
+                      }
+                      
+                      return filteredConsultations.map((consultation) => {
                       const isSelected = selectedConsultation?.consultationId === consultation.consultationId;
                       const statusClass = getStatusClass(consultation.status);
                       const isNew = consultation.status === 'TERMINE' || consultation.status === 'RESULTAT_DISPONIBLE';
@@ -353,7 +364,8 @@ const LabResultsDoctor = () => {
                           </div>
                         </button>
                       );
-                    })
+                    });
+                  })()
                   )}
                 </div>
               </CardContent>

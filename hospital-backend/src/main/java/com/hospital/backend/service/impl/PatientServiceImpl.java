@@ -410,8 +410,29 @@ public class PatientServiceImpl implements PatientService {
 
     private ConsultationDTO mapToConsultationDTO(Consultation c) {
         return ConsultationDTO.builder()
-                .id(c.getId()).consultationCode(c.getConsultationCode())
-                .consultationDate(c.getConsultationDate()).status(c.getStatus()).build();
+                .id(c.getId())
+                .consultationCode(c.getConsultationCode())
+                .consultationDate(c.getConsultationDate())
+                .status(c.getStatus())
+                // ✅ CHAMPS MÉDICAUX IMPORTANTS
+                .diagnosis(c.getDiagnosis())
+                .treatment(c.getTreatment())
+                .reasonForVisit(c.getReasonForVisit())
+                .symptoms(c.getSymptoms())
+                .notes(c.getNotes())
+                // ✅ PARAMÈTRES VITAUX
+                .poids(c.getPoids())
+                .temperature(c.getTemperature())
+                .taille(c.getTaille())
+                .tensionArterielle(c.getTensionArterielle())
+                // ✅ RELATIONS
+                .patientId(c.getPatient() != null ? c.getPatient().getId() : null)
+                .patientName(c.getPatient() != null ? 
+                    c.getPatient().getFirstName() + " " + c.getPatient().getLastName() : null)
+                .doctorId(c.getDoctor() != null ? c.getDoctor().getId() : null)
+                .doctorName(c.getDoctor() != null ?
+                    c.getDoctor().getFirstName() + " " + c.getDoctor().getLastName() : null)
+                .build();
     }
 
     private void sendAccessNotifications(Patient patient, String username, String password) {

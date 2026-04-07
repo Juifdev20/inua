@@ -1917,13 +1917,32 @@ public class ConsultationServiceImpl implements ConsultationService {
             
             log.info("[DEBUG] Statut final: {}", status);
 
+            // Déterminer si consultation et labo sont payés (basé sur montant OU statut)
+            boolean isConsultationPaid = (consultation.getConsulAmountPaid() != null && consultation.getConsulAmountPaid() > 0)
+                    || consultStatus == ConsultationStatus.PAYEE
+                    || consultStatus == ConsultationStatus.PAID_PENDING_LAB
+                    || consultStatus == ConsultationStatus.PAID_COMPLETED
+                    || consultStatus == ConsultationStatus.TREATED
+                    || consultStatus == ConsultationStatus.RESULTATS_PRETS
+                    || consultStatus == ConsultationStatus.AU_LABO
+                    || consultStatus == ConsultationStatus.EXAMENS_PAYES;
+                    
+            boolean isLabPaid = (consultation.getExamAmountPaid() != null && consultation.getExamAmountPaid().compareTo(examFee) >= 0)
+                    || consultStatus == ConsultationStatus.PAYEE
+                    || consultStatus == ConsultationStatus.PAID_PENDING_LAB
+                    || consultStatus == ConsultationStatus.PAID_COMPLETED
+                    || consultStatus == ConsultationStatus.TREATED
+                    || consultStatus == ConsultationStatus.RESULTATS_PRETS
+                    || consultStatus == ConsultationStatus.AU_LABO
+                    || consultStatus == ConsultationStatus.EXAMENS_PAYES;
+
             return PatientJourneyDTO.BillingSummaryDTO.builder()
                     .invoiceNumber(consultation.getConsultationCode())
                     .invoiceDate(consultation.getConsultationDate())
                     .consultationAmount(consultationFee)
-                    .consultationPaid(consultation.getConsulAmountPaid() != null && consultation.getConsulAmountPaid() > 0)
+                    .consultationPaid(isConsultationPaid)
                     .labAmount(examFee)
-                    .labPaid(consultation.getExamAmountPaid() != null && consultation.getExamAmountPaid().compareTo(examFee) >= 0)
+                    .labPaid(isLabPaid)
                     .totalAmount(total)
                     .totalPaid(totalPaid)
                     .balanceDue(balance)

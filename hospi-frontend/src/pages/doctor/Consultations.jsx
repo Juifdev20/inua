@@ -136,6 +136,11 @@ const Consultations = () => {
     constantes: { tension: '', temperature: '', poids: '' }
   });
 
+  // ✅ DEBUG: Surveillance de editData
+  useEffect(() => {
+    console.log("🔄 editData changed:", editData);
+  }, [editData]);
+
   const [examServices, setExamServices] = useState([]);
   const [examList, setExamList] = useState([]);
   const [newExamItem, setNewExamItem] = useState({ serviceId: '', note: '' });
@@ -195,8 +200,17 @@ const Consultations = () => {
 
   const fetchConsultations = async () => {
     try {
+      console.log("📡 Fetching consultations from:", `${API}/consultations`);
       const response = await api.get(`${API}/consultations`);
       const data = response.data.data?.content || response.data.consultations || response.data || [];
+      
+      console.log("📊 Total consultations received:", data.length);
+      console.log("📅 All consultation dates:", data.map(c => ({
+        id: c.id,
+        date: c.consultation_date || c.consultationDate,
+        status: c.status
+      })));
+      
       setConsultations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching consultations:', error);
@@ -301,7 +315,19 @@ const Consultations = () => {
 
       const response = await api.put(endpoint, payload);
       toast.success('Fiche patient mise à jour');
-      fetchConsultations();
+      
+      // Forcer le rafraîchissement immédiat
+      console.log("🔄 Refreshing consultations after save...");
+      await fetchConsultations();
+      
+      // Mettre à jour la consultation sélectionnée avec les nouvelles données
+      setSelectedConsultation(prev => ({
+        ...prev,
+        diagnosis: editData.diagnostic,
+        treatment: editData.traitement,
+        notes_medicales: editData.notes_medicales
+      }));
+      
     } catch (error) {
       console.error('❌ Erreur sauvegarde:', error.response?.data || error);
       toast.error(error.response?.data?.message || 'Erreur lors de la sauvegarde');
@@ -328,6 +354,30 @@ const Consultations = () => {
         }
         
         setSelectedConsultation(consultationDetails);
+        
+        // ✅ CHARGEMENT DU DIAGNOSTIC EXISTANT
+        console.log("🔍 Loading consultation data:", consultationDetails);
+        console.log("🩺 Existing diagnosis:", consultationDetails.diagnosis);
+        
+        const newEditData = {
+            diagnostic: consultationDetails.diagnosis || '',
+            traitement: consultationDetails.treatment || consultationDetails.traitement || '',
+            notes_medicales: consultationDetails.notes_medicales || '',
+            constantes: { 
+                tension: consultationDetails.tensionArterielle || '', 
+                temperature: consultationDetails.temperature || '', 
+                poids: consultationDetails.poids || '' 
+            }
+        };
+        
+        console.log("✅ Setting editData to:", newEditData);
+        setEditData(newEditData);
+        
+        // Forcer la mise à jour avec un petit délai
+        setTimeout(() => {
+            console.log("🔄 Force updating editData...");
+            setEditData({...newEditData});
+        }, 100);
         
         // ✅ NOUVEAU: Charger les résultats de laboratoire pour cette consultation
         if (consultationDetails.id) {
@@ -388,16 +438,23 @@ const Consultations = () => {
     setDecisionModalOpen(true);
   };
 
-  const filteredConsultations = (consultations || []).filter(cons => {
-    if (!cons) return false;
-    const patient = cons.patient;
-    const patientName = patient ? `${patient.first_name || patient.firstName || patient.prenom || ''} ${patient.last_name || patient.lastName || patient.nom || ''}`.toLowerCase() : "";
-    const motif = (cons.reason_for_visit || cons.motif || "").toLowerCase();
-    const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || motif.includes(searchTerm.toLowerCase());
-    const currentStatus = (cons.status || cons.statut || '').toLowerCase();
-    const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredConsultations = (consultations || [])
+    .filter(cons => {
+      if (!cons) return false;
+      const patient = cons.patient;
+      const patientName = patient ? `${patient.first_name || patient.firstName || patient.prenom || ''} ${patient.last_name || patient.lastName || patient.nom || ''}`.toLowerCase() : "";
+      const motif = (cons.reason_for_visit || cons.motif || "").toLowerCase();
+      const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || motif.includes(searchTerm.toLowerCase());
+      const currentStatus = (cons.status || cons.statut || '').toLowerCase();
+      const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Trier par date de consultation (plus récent en premier)
+      const dateA = new Date(a.consultation_date || a.consultationDate || 0);
+      const dateB = new Date(b.consultation_date || b.consultationDate || 0);
+      return dateB - dateA;
+    });
 
   return (
     <div className="space-y-6 p-1" data-testid="doctor-consultations">
@@ -708,6 +765,10 @@ const Consultations = () => {
                   onChange={(e) => setEditData({ ...editData, diagnostic: e.target.value })}
                   className="bg-background border-border min-h-[120px] rounded-xl focus:ring-primary"
                 />
+                {/* Debug pour voir la valeur */}
+                <div className="text-xs text-muted-foreground">
+                  Debug diagnostic: "{editData.diagnostic}" | Longueur: {editData.diagnostic?.length || 0}
+                </div>
               </div>
 
               <div className="space-y-2">

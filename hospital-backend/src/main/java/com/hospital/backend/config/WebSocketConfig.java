@@ -12,18 +12,32 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        // /topic pour les messages publics, /queue pour les messages privés
+        config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/app");
+        // Pour envoyer des messages à un utilisateur spécifique (ex: /user/queue/notifications)
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Utilisation de setAllowedOriginPatterns pour une meilleure compatibilité CORS avec SockJS
         registry.addEndpoint("/ws-hospital")
-                .setAllowedOrigins("https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173")
+                .setAllowedOriginPatterns(
+                        "https://inua-oux2.onrender.com",
+                        "https://inuaafia.onrender.com",
+                        "http://localhost:5173",
+                        "http://localhost:3000"
+                )
                 .withSockJS();
 
         registry.addEndpoint("/ws-notifications")
-                .setAllowedOrigins("https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173")
+                .setAllowedOriginPatterns(
+                        "https://inua-oux2.onrender.com",
+                        "https://inuaafia.onrender.com",
+                        "http://localhost:5173",
+                        "http://localhost:3000"
+                )
                 .withSockJS();
     }
 }
