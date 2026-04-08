@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.security.core.Authentication;
+import java.security.Principal;
 import java.util.List;
 
 @RestController
