@@ -13,6 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import { Toaster } from "./components/ui/sonner";
 import { cn } from "./lib/utils";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -371,6 +372,7 @@ function App() {
               </Routes>
 
               <Toaster position="top-right" richColors />
+              <PWAInstallPrompt />
             </BrowserRouter>
           </ThemeProvider>
         </NotificationProvider>

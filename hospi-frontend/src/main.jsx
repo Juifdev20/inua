@@ -7,7 +7,10 @@ import App from './App.jsx'
 import './i18n/config' 
 
 // On importe le diffuseur de données (Provider)
-import { AppProvider } from './context/AppContext' 
+import { AppProvider } from './context/AppContext'
+
+// ✅ PWA: Import du service worker
+import * as serviceWorkerRegistration from './serviceWorkerRegistration' 
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -17,3 +20,14 @@ createRoot(document.getElementById('root')).render(
     </AppProvider>
   </StrictMode>,
 )
+
+// ✅ PWA: Enregistrer le service worker
+serviceWorkerRegistration.register({
+  onUpdate: (registration) => {
+    console.log('Nouvelle version disponible!');
+    // Optionnel: afficher une notification à l'utilisateur
+  },
+  onSuccess: (registration) => {
+    console.log('Service Worker activé avec succès!');
+  }
+});
