@@ -29,7 +29,12 @@ const PatientDashboard = () => {
       }
     } catch (error) {
       console.error("Erreur profil:", error);
-      if (error.response?.status !== 401) {
+      if (error.response?.status === 404) {
+        toast.error("Dossier patient introuvable", {
+          description: "Veuillez compléter votre profil patient."
+        });
+        navigate('/patients/profile');
+      } else if (error.response?.status !== 401) {
         toast.error("Données médicales indisponibles", {
           description: "Vérifiez votre connexion au serveur Inua Afia."
         });
