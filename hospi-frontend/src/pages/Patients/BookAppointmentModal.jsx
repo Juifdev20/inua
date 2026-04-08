@@ -84,12 +84,7 @@ const BookAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
         isHospitalized: false
       };
 
-      await axios.post('http://localhost:8080/api/v1/consultations/book', payload, {
-        headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-      });
+      await api.post('/api/v1/consultations/book', payload);
 
       toast.success("Rendez-vous enregistré !");
       
