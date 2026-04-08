@@ -15,5 +15,8 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     // Vous pouvez aussi ajouter une méthode pour supprimer par nom si besoin
     void deleteByNom(String nom);
+
+    // Vérifier si un rôle existe par son nom
+    boolean existsByNom(String nom);
 }
 
