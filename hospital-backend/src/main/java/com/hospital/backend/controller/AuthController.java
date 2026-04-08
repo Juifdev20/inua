@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "https://inua-oux2.onrender.com", "http://localhost:5173", "http://localhost:3000"}, 
+             allowedHeaders = "*", 
+             allowCredentials = "true")
 @RequiredArgsConstructor
 @Tag(name = "Authentification", description = "API d'authentification et gestion des tokens")
 public class AuthController {
