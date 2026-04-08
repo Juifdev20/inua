@@ -30,7 +30,7 @@ public class PatientChatController {
     private ChatMessageRepository chatMessageRepository;
 
     @GetMapping("/my-doctors")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasAuthority('ROLE_PATIENT')")
     public ResponseEntity<?> getMyDoctors(Authentication authentication) {
         try {
             User currentUser = userRepository.findByEmail(authentication.getName())
@@ -66,7 +66,7 @@ public class PatientChatController {
     }
 
     @GetMapping("/conversations/{doctorId}")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasAuthority('ROLE_PATIENT')")
     public ResponseEntity<?> getConversation(@PathVariable Long doctorId, Authentication authentication) {
         try {
             User patientUser = userRepository.findByEmail(authentication.getName())
@@ -102,7 +102,7 @@ public class PatientChatController {
     }
 
     @PostMapping("/send")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasAuthority('ROLE_PATIENT')")
     public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> payload, Authentication authentication) {
         System.out.println("DEBUG: Envoi de message par " + authentication.getName());
         try {
