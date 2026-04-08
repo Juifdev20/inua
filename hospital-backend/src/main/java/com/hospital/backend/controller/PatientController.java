@@ -18,7 +18,7 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.security.Principal;
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 @RestController
@@ -65,15 +65,17 @@ public class PatientController {
 
     /**
      * ✅ Récupère le profil du patient connecté
-     * Sécurité gérée par SecurityConfig - accessible à PATIENT, ADMIN, DOCTEUR, RECEPTION
+     * Accessible à ROLE_PATIENT, ROLE_ADMIN, ROLE_DOCTEUR, ROLE_RECEPTION
      */
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Mon profil patient", description = "Récupère les informations du patient actuellement connecté")
-    public ResponseEntity<ApiResponse<PatientDTO>> getCurrentPatientProfile(Principal principal) {
-        if (principal == null) {
+    public ResponseEntity<ApiResponse<PatientDTO>> getMyProfile(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        PatientDTO patient = patientService.getByEmail(principal.getName());
+        String username = authentication.getName();
+        log.info("🔍 [PROFILE] Récupération profil pour: {}", username);
+        PatientDTO patient = patientService.getByEmail(username);
         return ResponseEntity.ok(ApiResponse.success(patient));
     }
 

@@ -52,6 +52,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/ws-hospital/**", "/api/ws-notifications/**").permitAll()
                         .requestMatchers("/health").permitAll()
 
+                        // PRIORITÉ ABSOLUE : /me pour patient connecté (AVANT toutes autres règles patients)
+                        .requestMatchers("/api/v1/patients/me", "/api/patients/me", "/v1/patients/me", "/patients/me")
+                        .hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_RECEPTION")
+
                         // Auth et Uploads
                         .requestMatchers("/api/auth/**", "/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/uploads/**", "/profiles/**", "/api/uploads/**", "/api/profiles/**").permitAll()
@@ -67,9 +71,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/consultations/**", "/api/consultations/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_PATIENT", "ROLE_RECEPTION")
 
-                        // Patients - Routes spécifiques AVANT les génériques
-                        .requestMatchers("/api/v1/patients/me", "/api/patients/me", "/v1/patients/me")
-                        .hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_RECEPTION")
+                        // Patients - Autres routes spécifiques
+                        .requestMatchers("/api/v1/patients/all", "/api/patients/all", "/api/v1/patients/count")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_DOCTEUR")
                         .requestMatchers("/api/v1/patients/all", "/api/patients/all", "/api/v1/patients/count")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_DOCTEUR")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/patients/*/deactivate")
