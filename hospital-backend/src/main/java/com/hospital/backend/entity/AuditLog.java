@@ -1,10 +1,11 @@
-package com.hospital.backend.entity; // <--- AJOUTE CECI
+package com.hospital.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "audit_logs")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
