@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, User, Loader2, CheckCircle2, Stethoscope, Search } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -20,9 +20,7 @@ const BookAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
     const fetchDoctors = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:8080/api/v1/doctors/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/api/v1/doctors/all');
         
         const doctorsData = Array.isArray(res.data) ? res.data : (res.data.data || []);
         setDoctors(doctorsData);

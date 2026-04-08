@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, CheckCircle, Stethoscope } from 'lucide-react';
+import api from '../../api/axios';
 
 const DoctorSelector = ({ onSelectDoctor }) => {
   const [doctors, setDoctors] = useState([]);
@@ -7,11 +8,9 @@ const DoctorSelector = ({ onSelectDoctor }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Appel à ton API DoctorController
-    fetch('http://localhost:8080/api/v1/doctors/all')
-      .then(res => res.json())
-      .then(data => {
-        setDoctors(data);
+    api.get('/api/v1/doctors/all')
+      .then(res => {
+        setDoctors(res.data.data || res.data || []);
         setLoading(false);
       })
       .catch(err => {

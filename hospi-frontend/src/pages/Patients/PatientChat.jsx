@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -30,9 +30,9 @@ import {
 } from "../../components/ui/alert-dialog";
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
-const API_PATIENTS = `${API_URL}/api/v1/patients`;
-const IMAGE_BASE_URL = `${API_URL}/uploads/profiles/`;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_PATIENTS = `${BACKEND_URL}/api/v1/patients`;
+const IMAGE_BASE_URL = `${BACKEND_URL}/uploads/profiles/`;
 
 const PatientChat = () => {
   const { token } = useAuth();
@@ -57,9 +57,7 @@ const PatientChat = () => {
   const fetchMyDoctors = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${API_PATIENTS}/my-doctors`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/api/v1/patients/my-doctors`);
       const data = response.data || [];
       const formatted = data.map(d => ({
         ...d,
