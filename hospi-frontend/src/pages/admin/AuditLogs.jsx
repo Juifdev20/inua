@@ -62,7 +62,7 @@ const AuditLogs = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/logs`);
+      const response = await axios.get(`${AUDIT_API_URL}/logs`);
       setLogs(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Erreur logs:", error);

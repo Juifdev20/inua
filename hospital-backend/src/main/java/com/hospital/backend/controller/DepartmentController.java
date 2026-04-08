@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/departments")
-@CrossOrigin(origins = "*") // ✅ INDISPENSABLE pour éviter les blocages par le navigateur
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 @Slf4j // Pour voir les erreurs dans la console
 public class DepartmentController {
 

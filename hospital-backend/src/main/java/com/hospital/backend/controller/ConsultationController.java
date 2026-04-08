@@ -34,7 +34,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Consultations", description = "Gestion des consultations médicales")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class ConsultationController {
 
     private final ConsultationService consultationService;

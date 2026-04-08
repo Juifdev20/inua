@@ -16,7 +16,10 @@ logEnvironmentInfo()
 import { AppProvider } from './context/AppContext'
 
 // ✅ PWA: Import du service worker
-import * as serviceWorkerRegistration from './serviceWorkerRegistration' 
+import * as serviceWorkerRegistration from './serviceWorkerRegistration'
+
+// 🔐 PWA: Persistance du stockage (empêche l'effacement sur mobile)
+import { initStoragePersistence } from './utils/storagePersistence.js' 
 
 
 createRoot(document.getElementById('root')).render(
@@ -38,4 +41,11 @@ serviceWorkerRegistration.register({
   onSuccess: (registration) => {
     console.log('Service Worker activé avec succès!');
   }
+});
+
+// 🔐 PWA: Initialiser la persistance du stockage (important pour mobile)
+initStoragePersistence().then(() => {
+  console.log('[App] Persistance du stockage initialisée');
+}).catch((error) => {
+  console.error('[App] Erreur persistance:', error);
 });

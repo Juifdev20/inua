@@ -22,7 +22,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/documents")
-@CrossOrigin(origins = "http://localhost:5175", exposedHeaders = "Content-Disposition")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"}, exposedHeaders = "Content-Disposition")
 @PreAuthorize("hasAnyAuthority('ROLE_RECEPTION', 'ROLE_ADMIN', 'ROLE_DOCTEUR')")
 @RequiredArgsConstructor
 @Slf4j

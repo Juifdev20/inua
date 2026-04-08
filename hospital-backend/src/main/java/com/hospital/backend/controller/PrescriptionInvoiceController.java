@@ -30,7 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Prescription Invoice", description = "Gestion des factures de prescriptions")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class PrescriptionInvoiceController {
 
     private final InvoiceService invoiceService;

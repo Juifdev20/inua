@@ -15,7 +15,7 @@ import java.util.List;
 @RequestMapping("/api/v1/admissions")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR')")
 public class AdmissionController {
 

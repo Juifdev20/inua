@@ -23,7 +23,7 @@ import jakarta.validation.Valid;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Prescriptions", description = "Gestion des prescriptions médicales")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class PrescriptionController {
 
     private final PrescriptionService prescriptionService;

@@ -29,7 +29,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 @Slf4j
 public class AdminController {
 
@@ -56,11 +56,43 @@ public class AdminController {
     // ========================= LECTURE =========================
 
     @GetMapping("/users/all")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         try {
             List<User> users = userRepository.findAll();
             log.info("Nombre d'utilisateurs trouvés: {}", users.size());
-            return ResponseEntity.ok(users);
+            
+            // ✅ CORRECTION : Créer une liste simplifiée pour éviter la boucle infinie JSON
+            List<Map<String, Object>> simplifiedUsers = users.stream().map(user -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", user.getId());
+                map.put("firstName", user.getFirstName());
+                map.put("lastName", user.getLastName());
+                map.put("email", user.getEmail());
+                map.put("username", user.getUsername());
+                map.put("phoneNumber", user.getPhoneNumber());
+                map.put("isActive", user.getIsActive());
+                map.put("photoUrl", user.getPhotoUrl());
+                
+                // Rôle simplifié
+                if (user.getRole() != null) {
+                    Map<String, Object> roleMap = new HashMap<>();
+                    roleMap.put("id", user.getRole().getId());
+                    roleMap.put("nom", user.getRole().getNom());
+                    map.put("role", roleMap);
+                }
+                
+                // Département simplifié
+                if (user.getDepartment() != null) {
+                    Map<String, Object> deptMap = new HashMap<>();
+                    deptMap.put("id", user.getDepartment().getId());
+                    deptMap.put("nom", user.getDepartment().getNom());
+                    map.put("department", deptMap);
+                }
+                
+                return map;
+            }).toList();
+            
+            return ResponseEntity.ok(simplifiedUsers);
         } catch (Exception e) {
             log.error("Erreur lors du chargement de la liste des utilisateurs: {}", e.getMessage());
             log.error("Stack trace complète:", e);

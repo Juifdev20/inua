@@ -25,7 +25,7 @@ Le `DataInitializer` s'exécute au démarrage de l'application :
 
 ### Accès en Production
 
-1. **URL Production**: `https://inua-oux2.onrender.com`
+1. **URL Production**: `https://inuaafia.onrender.com`
 2. **Identifiants**: `admin` / `admin123`
 3. **Accès immédiat** à l'administration
 

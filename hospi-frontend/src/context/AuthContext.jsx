@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import authAPI from "../services/authAPI";
+import { safeLocalStorageSet, safeLocalStorageGet } from "../utils/storagePersistence.js";
 
 const AuthContext = createContext();
 
@@ -11,21 +12,44 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
-        const storedToken = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+        const storedToken = safeLocalStorageGet("token");
+        const storedUser = safeLocalStorageGet("user");
 
         if (storedToken && storedUser && storedUser !== "undefined" && storedUser !== "null") {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          // Validation du token avant de l'utiliser
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && parsedUser.id) {
+              setToken(storedToken);
+              setUser(parsedUser);
+              console.log("[Auth] Session restaurée pour:", parsedUser.username);
+            } else {
+              console.warn("[Auth] Données utilisateur invalides");
+            }
+          } catch (parseError) {
+            console.error("[Auth] Erreur parsing user:", parseError);
+            // Ne pas tout effacer, juste les données corrompues
+            safeLocalStorageSet("user", "");
+            safeLocalStorageSet("token", "");
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+          }
         }
       } catch (error) {
-        console.error("Erreur d'initialisation Auth:", error);
-        localStorage.clear();
+        console.error("[Auth] Erreur d'initialisation:", error);
+        // Ne pas effacer tout le localStorage, juste les clés d'auth
+        safeLocalStorageSet("token", "");
+        safeLocalStorageSet("user", "");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       } finally {
         setLoading(false);
       }
     };
-    initAuth();
+    
+    // Délai court pour s'assurer que localStorage est disponible (mobile PWA)
+    const timer = setTimeout(initAuth, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   /* ===================== LOGIN ===================== */
@@ -76,8 +100,8 @@ export const AuthProvider = ({ children }) => {
         preferredLanguage: userFromApi.preferredLanguage || "fr"
       };
 
-      localStorage.setItem("token", tokenFromApi);
-      localStorage.setItem("user", JSON.stringify(userData));
+      safeLocalStorageSet("token", tokenFromApi);
+      safeLocalStorageSet("user", JSON.stringify(userData));
       
       setToken(tokenFromApi);
       setUser(userData);
@@ -117,7 +141,7 @@ export const AuthProvider = ({ children }) => {
         preferredLanguage: getVal(updatedFields.preferredLanguage, prevUser.preferredLanguage)
       };
 
-      localStorage.setItem("user", JSON.stringify(newUser));
+      safeLocalStorageSet("user", JSON.stringify(newUser));
       return newUser; 
     });
   };
@@ -133,10 +157,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    safeLocalStorageSet("token", "");
+    safeLocalStorageSet("user", "");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
     setToken(null);
+    console.log("[Auth] Déconnexion - session nettoyée");
   };
 
   // ✅ Cette fonction est utilisée par les ProtectedRoutes (AdminRoute, ReceptionRoute)

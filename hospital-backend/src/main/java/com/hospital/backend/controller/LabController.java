@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/lab")
 @RequiredArgsConstructor
 @Tag(name = "Laboratoire", description = "Gestion des examens de laboratoire et des résultats")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class LabController {
 
     private final ConsultationRepository consultationRepository;

@@ -292,6 +292,48 @@ const Sidebar = () => {
             ))}
           </nav>
         </ScrollArea>
+
+        {/* Mobile: Bottom section with Notifications, Profile, Logout */}
+        <div className="p-3 border-t border-border bg-card">
+          <Separator className="mb-3" />
+          
+          <div
+            onClick={() => { navigate('/admin/notifications'); toggleMobileSidebar(); }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mb-2 cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <div className="relative">
+              <Bell className="w-5 h-5 flex-shrink-0" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-bold animate-bounce shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <span>Notifications</span>
+          </div>
+
+          <NavLink
+            to="/admin/profil"
+            onClick={toggleMobileSidebar}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mb-2",
+                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+              )
+            }
+          >
+            <User className="w-5 h-5 flex-shrink-0" />
+            <span>Mon Profil</span>
+          </NavLink>
+
+          <Button
+            variant="ghost" onClick={() => setShowLogoutDialog(true)}
+            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-3">Déconnexion</span>
+          </Button>
+        </div>
       </aside>
 
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>

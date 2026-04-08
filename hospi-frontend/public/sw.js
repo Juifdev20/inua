@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inuaafia-v1';
+const CACHE_NAME = 'inuaafia-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -96,6 +96,12 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  
+  // 🔐 Répondre aux demandes de persistance de session
+  if (event.data && event.data.type === 'KEEP_ALIVE') {
+    console.log('[SW] Keep-alive received');
+    // Ne rien faire de spécial, juste garder le SW actif
   }
 });
 
