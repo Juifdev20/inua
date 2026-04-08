@@ -83,6 +83,7 @@ public class SecurityConfig {
 
                         // Docteurs et Profils
                         .requestMatchers(HttpMethod.POST, "/api/v1/doctors/documents/upload").hasAuthority("ROLE_DOCTEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/doctors/all").hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN", "ROLE_RECEPTION")
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/doctors")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_FINANCE", "ROLE_CAISSIER")
                         .requestMatchers("/api/v1/users/profile", "/api/admin/update-profile/**").authenticated()
