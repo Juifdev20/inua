@@ -4,7 +4,7 @@ import {
   ArrowLeft, Calendar, Clock, MapPin, User, Check,
   FileText, AlertCircle, CalendarClock, Loader2, XCircle
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -19,9 +19,7 @@ const AppointmentDetails = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:8080/api/v1/consultations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/api/v1/consultations/${id}`);
       
       // ✅ CORRECTION : On accède à .data.data car le backend utilise ApiResponse<T>
       if (response.data && response.data.success) {
@@ -47,9 +45,7 @@ const AppointmentDetails = () => {
     try {
       setIsProcessing(true);
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:8080/api/v1/consultations/${id}/accept-reschedule`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/api/v1/consultations/${id}/accept-reschedule`);
       toast.success("Nouveau créneau confirmé !");
       fetchDetails(); // Rafraîchir les données locales
     } catch (error) {
@@ -65,9 +61,7 @@ const AppointmentDetails = () => {
     try {
       setIsProcessing(true);
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/v1/consultations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/v1/consultations/${id}`);
       toast.success("Rendez-vous annulé");
       navigate('/patient/appointments');
     } catch (error) {

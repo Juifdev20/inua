@@ -66,7 +66,7 @@ const PharmacySidebar = () => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
 
-  const API_BASE_URL = 'http://localhost:8080';
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const navigationItems = [
     { name: 'Tableau de bord',     path: '/pharmacy/dashboard',          icon: LayoutDashboard, color: 'text-secondary' },

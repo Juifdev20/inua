@@ -55,7 +55,7 @@ const FinanceSidebar = () => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:8080';
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const navigationItems = [
     { name: 'Tableau de bord',     path: '/finance/dashboard',          icon: LayoutDashboard, color: 'text-secondary' },

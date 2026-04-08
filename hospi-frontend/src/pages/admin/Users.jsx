@@ -26,7 +26,7 @@ import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
 
 // ✅ URL dynamique - fonctionne en local et en production
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 // ✅ CORRECTION : Noms synchronisés avec Spring Security et la BDD
 const ALL_ROLES = [

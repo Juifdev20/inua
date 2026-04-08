@@ -41,7 +41,7 @@ import {
 const getCleanImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('data:image') || url.startsWith('http')) return url;
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
   let cleanPath = url.replace(/\\/g, '/');
   if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
   const finalPath = cleanPath.startsWith('uploads/') ? `/${cleanPath}` : `/uploads/${cleanPath}`;

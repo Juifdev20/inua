@@ -52,7 +52,7 @@ const Topbar = () => {
 
   // 🖼️ URL de la photo de profil (Backend)
   const photoUrl = adminUser?.photoUrl 
-    ? `http://localhost:8080/uploads/profiles/${adminUser.photoUrl}` 
+    ? `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/uploads/profiles/${adminUser.photoUrl}` 
     : null;
 
   return (

@@ -56,7 +56,7 @@ const PatientList = () => {
     if (url.startsWith('data:image') || url.startsWith('http')) return url;
     
     // 2. Récupération de l'URL Backend via variable d'env ou fallback local
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
     
     // 3. Normalisation du chemin (Path)
     // On remplace les \ (Windows) par / et on retire le premier slash s'il existe

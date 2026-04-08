@@ -67,8 +67,8 @@ const FinanceHeader = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const BACKEND_URL = "http://localhost:8080";
-  const API_BASE_URL = "http://localhost:8080/api/notifications";
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const API_BASE_URL = `${BACKEND_URL}/api/notifications`;
 
   // ═══════════════════════════════════
   //  THÈME

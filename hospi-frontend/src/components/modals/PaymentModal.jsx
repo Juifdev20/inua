@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const API = "http://localhost:8080/api/finance";
+const API = `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/finance`;
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('fr-FR', {
