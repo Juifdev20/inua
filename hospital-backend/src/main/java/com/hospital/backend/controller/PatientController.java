@@ -65,9 +65,9 @@ public class PatientController {
 
     /**
      * ✅ Récupère le profil du patient connecté
+     * Sécurité gérée par SecurityConfig - accessible à PATIENT, ADMIN, DOCTEUR, RECEPTION
      */
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Mon profil patient", description = "Récupère les informations du patient actuellement connecté")
     public ResponseEntity<ApiResponse<PatientDTO>> getCurrentPatientProfile(Principal principal) {
         if (principal == null) {
