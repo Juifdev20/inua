@@ -349,7 +349,7 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     @Transactional
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTION', 'ROLE_DOCTEUR')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTION', 'ROLE_DOCTEUR', 'ROLE_PATIENT')")
     public void delete(Long id) {
         log.info("Demande d'archivage (Soft Delete) pour la consultation ID: {}", id);
         Consultation consultation = consultationRepository.findById(id)
