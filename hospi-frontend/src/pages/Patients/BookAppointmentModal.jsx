@@ -72,6 +72,7 @@ const BookAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
         // Pour les validateurs DTO (ex: @NotNull Long patientId)
         patientId: Number(pId),
         doctorId: Number(formData.doctorId),
+        serviceId: 1, // Service par défaut (consultation générale)
         
         // Pour le mapping d'entité JPA (ex: Patient patient)
         patient: { id: Number(pId) }, 
