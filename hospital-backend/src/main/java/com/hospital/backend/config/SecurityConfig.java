@@ -67,8 +67,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/consultations/**", "/api/consultations/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_PATIENT", "ROLE_RECEPTION")
 
-                        // Patients
-                        .requestMatchers("/api/v1/patients/me", "/api/patients/me").authenticated()
+                        // Patients - Routes spécifiques AVANT les génériques
+                        .requestMatchers("/api/v1/patients/me", "/api/patients/me", "/v1/patients/me")
+                        .hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_RECEPTION")
                         .requestMatchers("/api/v1/patients/all", "/api/patients/all", "/api/v1/patients/count")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_DOCTEUR")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/patients/*/deactivate")

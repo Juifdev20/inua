@@ -99,6 +99,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.info("🔍 [JWT DEBUG] Authentification établie pour: {} avec autorité: {}", username, authority);
         }
 
         filterChain.doFilter(request, response);
