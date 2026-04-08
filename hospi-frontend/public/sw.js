@@ -5,7 +5,16 @@ const urlsToCache = [
   '/manifest.json',
   '/logo192.png',
   '/logo512.png',
-  '/inuaafia-logo.svg'
+  '/inuaafia-logo.svg',
+  // Pages critiques
+  '/login',
+  '/dashboard',
+  '/appointments',
+  '/patients/profile',
+  // Page offline
+  '/offline.html',
+  // Assets statiques
+  '/vite.svg'
 ];
 
 // Installation du service worker
@@ -76,7 +85,7 @@ self.addEventListener('fetch', (event) => {
           
           // Pour les requêtes de navigation, retourner la page offline
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match('/offline.html');
           }
         });
       })

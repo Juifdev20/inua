@@ -14,6 +14,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { Toaster } from "./components/ui/sonner";
 import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import OfflineIndicator from "./components/OfflineIndicator";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -373,6 +374,7 @@ function App() {
 
               <Toaster position="top-right" richColors />
               <PWAInstallPrompt />
+              <OfflineIndicator />
             </BrowserRouter>
           </ThemeProvider>
         </NotificationProvider>
