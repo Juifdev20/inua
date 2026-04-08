@@ -25,11 +25,6 @@
     <!-- Theme Color -->
     <meta name="theme-color" content="#0f172a" />
     
-    <!-- 🔧 Chrome Mobile Fixes -->
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="format-detection" content="telephone=no" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="//inuaafia.onrender.com" />
     
     <!-- Description -->
     <meta name="description" content="InuaAfia - Système de Gestion Hospitalier Moderne" />
@@ -37,152 +32,9 @@
     <title>InuaAfia - Système Hospitalier</title>
   </head>
   <body>
-    <!-- 🐛 DEBUG MOBILE DIRECT DANS HTML -->
-    <div id="mobile-debug-info" style="
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 10px;
-      z-index: 999999;
-      max-width: 300px;
-    ">
-      <div>📱 Mobile Debug</div>
-      <div id="debug-content">Chargement...</div>
-      <div style="margin-top: 5px;">
-        <a href="/test-mobile.html" style="color: #00d2d3; text-decoration: none; font-size: 9px;">🧪 Test Complet</a>
-      </div>
-    </div>
     
     <div id="root"></div>
     
-    <!-- 🔧 Chrome Mobile Polyfills -->
-    <script>
-      // Polyfill pour Chrome mobile
-      if (!window.Promise) {
-        window.Promise = require('promise-polyfill');
-      }
-      if (!window.fetch) {
-        window.fetch = require('whatwg-fetch');
-      }
-      
-      // Forcer le support des modules sur Chrome mobile
-      if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
-        console.log('🔧 Chrome Mobile détecté - application des corrections');
-        
-        // Corriger les problèmes de viewport
-        function fixViewport() {
-          const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes');
-          }
-        }
-        
-        // Corriger les problèmes de scroll
-        document.addEventListener('touchmove', function(e) {
-          if (e.scale !== 1) {
-            e.preventDefault();
-          }
-        }, { passive: false });
-        
-        // Appliquer les corrections
-        fixViewport();
-      }
-    </script>
-    
-    <script>
-      // 🐛 DEBUG AVANT REACT
-      console.log('🐛 Debug HTML chargé');
-      
-      function updateDebug(message) {
-        const debugContent = document.getElementById('debug-content');
-        if (debugContent) {
-          debugContent.innerHTML += '<br>' + message;
-        }
-      }
-      
-      // 📊 Infos appareil
-      updateDebug('UA: ' + navigator.userAgent.substring(0, 50) + '...');
-      updateDebug('Screen: ' + screen.width + 'x' + screen.height);
-      updateDebug('Viewport: ' + window.innerWidth + 'x' + window.innerHeight);
-      updateDebug('Touch: ' + ('ontouchstart' in window));
-      updateDebug('Online: ' + navigator.onLine);
-      
-      // ⏰ Timeout de chargement
-      setTimeout(function() {
-        const root = document.getElementById('root');
-        if (root && root.innerHTML === '') {
-          updateDebug('❌ React ne charge pas!');
-          root.innerHTML = `
-            <div style="
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              font-family: system-ui, -apple-system, sans-serif;
-              background: #f8fafc;
-              color: #334155;
-              text-align: center;
-              padding: 20px;
-            ">
-              <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-              <h1 style="margin: 0 0 16px 0; font-size: 24px;">Application ne se charge pas</h1>
-              <p style="margin: 0 0 20px 0; font-size: 16px; max-width: 400px;">L'application rencontre un problème sur mobile. Veuillez vérifier les informations de debug.</p>
-              
-              <div style="background: white; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; font-family: monospace; font-size: 12px;">
-                <strong>📱 Debug Info:</strong><br>
-                Navigateur: ${navigator.userAgent}<br>
-                Écran: ${screen.width}x${screen.height}<br>
-                Viewport: ${window.innerWidth}x${window.innerHeight}<br>
-                Support tactile: ${'ontouchstart' in window ? 'Oui' : 'Non'}<br>
-                En ligne: ${navigator.onLine ? 'Oui' : 'Non'}<br>
-                Date: ${new Date().toLocaleString()}
-              </div>
-              
-              <button onclick="window.location.reload()" style="
-                background: #0f172a;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 16px;
-                cursor: pointer;
-                margin: 10px;
-              ">🔄 Recharger</button>
-              
-              <button onclick="localStorage.clear(); window.location.reload()" style="
-                background: #ef4444;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 16px;
-                cursor: pointer;
-                margin: 10px;
-              ">🗑️ Vider Cache</button>
-            </div>
-          `;
-        } else {
-          updateDebug('✅ React chargé!');
-        }
-      }, 3000);
-      
-      // 📱 Erreurs JavaScript
-      window.addEventListener('error', function(e) {
-        updateDebug('❌ JS Error: ' + e.message);
-        updateDebug('Fichier: ' + e.filename);
-        updateDebug('Ligne: ' + e.lineno);
-      });
-      
-      window.addEventListener('unhandledrejection', function(e) {
-        updateDebug('❌ Promise Error: ' + e.reason);
-      });
-    </script>
     
     <script type="module" src="/src/main.jsx"></script>
   </body>

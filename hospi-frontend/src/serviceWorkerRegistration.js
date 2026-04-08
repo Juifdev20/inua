@@ -20,11 +20,6 @@ const isLocalhost = Boolean(
     )
 );
 
-// 🔧 Détection Chrome Mobile
-const isChromeMobile = Boolean(
-  navigator.userAgent.includes('Chrome') && 
-  navigator.userAgent.includes('Mobile')
-);
 
 export function register(config) {
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
@@ -33,9 +28,7 @@ export function register(config) {
     const currentOrigin = window.location.origin;
     
     window.addEventListener('load', () => {
-      // 🔧 Utiliser le service worker spécifique pour Chrome Mobile
-      const swUrl = isChromeMobile ? '/sw-chrome.js' : '/sw.js';
-      console.log('🔧 Service Worker utilisé:', swUrl);
+      const swUrl = '/sw.js';
 
       if (isLocalhost) {
         // This is running on localhost. Let's check if a service worker still exists or not.
