@@ -4,7 +4,7 @@ import {
   Search, MoreHorizontal, UserRound, AlertCircle, Trash2, Volume2, X
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import axios from 'axios';
+import api from '../../api/axios';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import BookAppointmentModal from './BookAppointmentModal';
@@ -61,10 +61,7 @@ const Appointments = () => {
       if (!isSilent) setLoading(true);
       const token = localStorage.getItem('token');
       
-      // ✅ URL MISE À JOUR POUR CIBLER LE NOUVEAU CONTROLLER
-      const response = await axios.get('http://localhost:8080/api/v1/consultations/my-appointments', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/api/v1/consultations/my-appointments');
       
       // ✅ EXTRACTION DES DONNÉES (Adaptée à ApiResponse<List<ConsultationDTO>>)
       const rawData = response.data.data || [];
@@ -112,10 +109,7 @@ const Appointments = () => {
   const handleDeleteAppointment = async (id) => {
     if (!window.confirm("Voulez-vous annuler ce rendez-vous ?")) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/v1/consultations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/v1/consultations/${id}`);
       toast.success("Rendez-vous annulé");
       fetchAppointments(true);
     } catch (e) {
