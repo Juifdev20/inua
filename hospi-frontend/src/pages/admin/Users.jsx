@@ -28,16 +28,18 @@ import { toast } from 'sonner';
 // ✅ URL dynamique - fonctionne en local et en production
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-// ✅ CORRECTION : Noms synchronisés avec Spring Security et la BDD
+// ✅ Rôles complets synchronisés avec Spring Security et la BDD
 const ALL_ROLES = [
-  { id: 1, nom: 'ROLE_ADMIN' },
-  { id: 2, nom: 'ROLE_DOCTEUR' },
-  { id: 3, nom: 'ROLE_PATIENT' },
-  { id: 4, nom: 'ROLE_RECEPTION' },
-  { id: 5, nom: 'ROLE_PHARMACIE' },
-  { id: 6, nom: 'ROLE_LABORATOIRE' },
-  { id: 7, nom: 'ROLE_FINANCE' },
-  { id: 8, nom: 'ROLE_RH' }
+  { id: 1, nom: 'ROLE_ADMIN', label: 'Administrateur', description: 'Accès complet au système' },
+  { id: 2, nom: 'ROLE_DOCTEUR', label: 'Médecin', description: 'Consultations et prescriptions' },
+  { id: 3, nom: 'ROLE_PATIENT', label: 'Patient', description: 'Prise de rendez-vous' },
+  { id: 4, nom: 'ROLE_RECEPTION', label: 'Réception', description: 'Gestion des admissions' },
+  { id: 5, nom: 'ROLE_FINANCE', label: 'Finance', description: 'Gestion des factures' },
+  { id: 6, nom: 'ROLE_CAISSIER', label: 'Caissier', description: 'Encaissements' },
+  { id: 7, nom: 'ROLE_PHARMACIE', label: 'Pharmacie', description: 'Gestion des médicaments' },
+  { id: 8, nom: 'ROLE_PHARMACIST', label: 'Pharmacien', description: 'Dispensation médicaments' },
+  { id: 9, nom: 'ROLE_LABORATOIRE', label: 'Laboratoire', description: 'Analyses médicales' },
+  { id: 10, nom: 'ROLE_INFIRMIER', label: 'Infirmier', description: 'Soins infirmiers' }
 ];
 
 const Users = () => {

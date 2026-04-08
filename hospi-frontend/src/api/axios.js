@@ -1,11 +1,15 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/environment.js';
 
-// URL API depuis les variables d'environnement Vite
-const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// URL API depuis la configuration centralisée
+const API_URL = API_BASE_URL;
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000, // Augmenté à 30s pour Render
+  timeout: 30000, // 30 secondes timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // 🚀 L'intercepteur qui injecte le token automatiquement
