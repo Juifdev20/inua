@@ -20,6 +20,12 @@ const isLocalhost = Boolean(
     )
 );
 
+// 🔧 Détection Chrome Mobile
+const isChromeMobile = Boolean(
+  navigator.userAgent.includes('Chrome') && 
+  navigator.userAgent.includes('Mobile')
+);
+
 export function register(config) {
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     // The URL constructor is available in all browsers that support SW.
@@ -27,7 +33,9 @@ export function register(config) {
     const currentOrigin = window.location.origin;
     
     window.addEventListener('load', () => {
-      const swUrl = '/sw.js'; // Service worker à la racine du domaine
+      // 🔧 Utiliser le service worker spécifique pour Chrome Mobile
+      const swUrl = isChromeMobile ? '/sw-chrome.js' : '/sw.js';
+      console.log('🔧 Service Worker utilisé:', swUrl);
 
       if (isLocalhost) {
         // This is running on localhost. Let's check if a service worker still exists or not.

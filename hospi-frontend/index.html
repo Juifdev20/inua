@@ -25,6 +25,12 @@
     <!-- Theme Color -->
     <meta name="theme-color" content="#0f172a" />
     
+    <!-- 🔧 Chrome Mobile Fixes -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//inuaafia.onrender.com" />
+    
     <!-- Description -->
     <meta name="description" content="InuaAfia - Système de Gestion Hospitalier Moderne" />
     
@@ -53,6 +59,40 @@
     </div>
     
     <div id="root"></div>
+    
+    <!-- 🔧 Chrome Mobile Polyfills -->
+    <script>
+      // Polyfill pour Chrome mobile
+      if (!window.Promise) {
+        window.Promise = require('promise-polyfill');
+      }
+      if (!window.fetch) {
+        window.fetch = require('whatwg-fetch');
+      }
+      
+      // Forcer le support des modules sur Chrome mobile
+      if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
+        console.log('🔧 Chrome Mobile détecté - application des corrections');
+        
+        // Corriger les problèmes de viewport
+        function fixViewport() {
+          const viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes');
+          }
+        }
+        
+        // Corriger les problèmes de scroll
+        document.addEventListener('touchmove', function(e) {
+          if (e.scale !== 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+        
+        // Appliquer les corrections
+        fixViewport();
+      }
+    </script>
     
     <script>
       // 🐛 DEBUG AVANT REACT
