@@ -29,7 +29,26 @@
     <!-- Description -->
     <meta name="description" content="InuaAfia - Système de Gestion Hospitalier Moderne" />
     
+    <!-- 🚫 Empêcher le cache agressif -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <title>InuaAfia - Système Hospitalier</title>
+    
+    <!-- 🔧 Script de nettoyage automatique si ancien domaine détecté -->
+    <script>
+      (function() {
+        // Détecter si on est sur l'ancien domaine ou si le cache contient l'ancien domaine
+        if (location.hostname.includes('inua-oux2') || 
+            localStorage.getItem('token') && location.search.includes('oldcache')) {
+          console.log('[Cleanup] Ancien domaine ou cache détecté, nettoyage...');
+          localStorage.clear();
+          sessionStorage.clear();
+          caches.keys().then(names => names.forEach(name => caches.delete(name)));
+        }
+      })();
+    </script>
   </head>
   <body>
     

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inuaafia-v2';
+const CACHE_NAME = 'inuaafia-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -39,18 +39,48 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
+          // Supprimer tous les anciens caches (inuaafia-v1, v2, etc.)
           if (cacheName !== CACHE_NAME) {
             console.log('Service Worker: Suppression de l\'ancien cache', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('Service Worker: Tous les anciens caches ont été nettoyés');
+      // Forcer le claim des clients pour appliquer immédiatement le nouveau SW
+      return self.clients.claim();
     })
   );
 });
 
 // Interception des requêtes
 self.addEventListener('fetch', (event) => {
+  const requestUrl = new URL(event.request.url);
+  
+  // 🔥 NE PAS CACHER les appels API pour toujours avoir des données fraîches
+  const isApiCall = requestUrl.pathname.startsWith('/api/') || 
+                    requestUrl.hostname.includes('render.com');
+  
+  if (isApiCall) {
+    // Pour les API : toujours aller chercher sur le réseau, jamais le cache
+    event.respondWith(
+      fetch(event.request).catch((error) => {
+        console.error('Service Worker: Erreur API', error);
+        // Retourner une réponse d'erreur JSON pour les API
+        return new Response(
+          JSON.stringify({ error: 'Network error', offline: true }), 
+          { 
+            status: 503, 
+            headers: { 'Content-Type': 'application/json' } 
+          }
+        );
+      })
+    );
+    return;
+  }
+  
+  // Pour les ressources statiques : utiliser cache-first
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

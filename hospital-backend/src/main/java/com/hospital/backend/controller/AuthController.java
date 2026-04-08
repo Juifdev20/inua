@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"https://inuaafia.onrender.com", "https://inua-oux2.onrender.com", "http://localhost:5173", "http://localhost:3000"}, 
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"}, 
              allowedHeaders = "*", 
              allowCredentials = "true")
 @RequiredArgsConstructor

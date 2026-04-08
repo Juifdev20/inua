@@ -97,7 +97,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/finance/prescription/test").permitAll()
 
                         // Admin et Divers
-                        .requestMatchers("/api/v1/admin/**", "/api/v1/audit/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/v1/admin/**", "/api/v1/audit/**", "/api/audit/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/v1/admissions/**", "/api/admissions/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_DOCTEUR", "ROLE_FINANCE", "ROLE_CAISSIER")
                         .requestMatchers("/api/v1/reception/**")
@@ -124,11 +124,10 @@ public class SecurityConfig {
         // Origines autorisees - URLs Render specifiques
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "https://inuaafia.onrender.com",
-                "https://inua-oux2.onrender.com",
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "http://localhost:5175",
+                "http://localhost:8080",
                 "http://127.0.0.1:5173"
         ));
 
@@ -161,11 +160,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(Arrays.asList(
                 "https://inuaafia.onrender.com",
-                "https://inua-oux2.onrender.com",
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "http://localhost:5175",
+                "http://localhost:8080",
                 "http://127.0.0.1:5173"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

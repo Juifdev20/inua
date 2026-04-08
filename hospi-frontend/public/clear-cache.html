@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nettoyage Cache InuaAfia</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #0f172a;
+      color: #fff;
+    }
+    h1 { color: #10b981; }
+    button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 0;
+    }
+    button:hover { background: #059669; }
+    .success { color: #10b981; }
+    .error { color: #ef4444; }
+    #log {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Nettoyage Complet du Cache InuaAfia</h1>
+  <p>Cette page va nettoyer complètement le cache et les anciennes URLs.</p>
+  
+  <button onclick="clearEverything()">🧹 Nettoyer Tout</button>
+  <button onclick="location.href='/'">🏠 Retour à l'accueil</button>
+  
+  <div id="log"></div>
+
+  <script>
+    function log(msg, type = 'info') {
+      const div = document.getElementById('log');
+      const p = document.createElement('div');
+      p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      p.className = type;
+      div.appendChild(p);
+      console.log(msg);
+    }
+
+    async function clearEverything() {
+      log('🚀 Démarrage du nettoyage...');
+      
+      try {
+        // 1. Unregister Service Workers
+        log('📋 Étape 1: Désenregistrement des Service Workers...');
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.unregister();
+          log(`   ✅ SW désenregistré: ${reg.scope}`);
+        }
+        
+        // 2. Clear Cache API
+        log('📋 Étape 2: Suppression des caches...');
+        const caches = await window.caches.keys();
+        for (const cache of caches) {
+          await window.caches.delete(cache);
+          log(`   ✅ Cache supprimé: ${cache}`);
+        }
+        
+        // 3. Clear localStorage
+        log('📋 Étape 3: Nettoyage localStorage...');
+        const keys = Object.keys(localStorage);
+        for (const key of keys) {
+          localStorage.removeItem(key);
+          log(`   ✅ localStorage: ${key}`);
+        }
+        
+        // 4. Clear sessionStorage
+        log('📋 Étape 4: Nettoyage sessionStorage...');
+        sessionStorage.clear();
+        log('   ✅ sessionStorage nettoyé');
+        
+        // 5. Clear IndexedDB
+        log('📋 Étape 5: Nettoyage IndexedDB...');
+        const dbs = await window.indexedDB.databases();
+        for (const db of dbs) {
+          await new Promise((resolve, reject) => {
+            const req = indexedDB.deleteDatabase(db.name);
+            req.onsuccess = () => {
+              log(`   ✅ IndexedDB: ${db.name}`);
+              resolve();
+            };
+            req.onerror = () => reject(req.error);
+          });
+        }
+        
+        // 6. Clear cookies
+        log('📋 Étape 6: Suppression des cookies...');
+        document.cookie.split(";").forEach(function(c) {
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+        log('   ✅ Cookies supprimés');
+        
+        log('✅ Nettoyage terminé ! Redirection...', 'success');
+        
+        // Redirection après 2 secondes
+        setTimeout(() => {
+          location.href = '/?nocache=' + Date.now();
+        }, 2000);
+        
+      } catch (error) {
+        log('❌ Erreur: ' + error.message, 'error');
+        console.error(error);
+      }
+    }
+    
+    // Auto-run si ?clear=true
+    if (location.search.includes('clear=true')) {
+      clearEverything();
+    }
+  </script>
+</body>
+</html>

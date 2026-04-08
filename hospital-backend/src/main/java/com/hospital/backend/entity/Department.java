@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -43,7 +44,7 @@ public class Department {
      * mappedBy = "department" fait référence au champ "private Department department" dans User.java.
      */
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("department") // Évite la boucle infinie User -> Dept -> User
+    @JsonIgnore // Évite complètement la sérialisation pour prévenir les boucles infinies
     private List<User> users;
 
     /**
@@ -51,6 +52,7 @@ public class Department {
      * Dans ton frontend, tu pourras utiliser 'utilisateursCount' au lieu d'une colonne fixe.
      */
     @Transient // Ne crée pas de colonne en base de données
+    @JsonIgnore // Évite la sérialisation JSON qui déclencherait le lazy loading
     public int getUtilisateursCount() {
         return (users != null) ? users.size() : 0;
     }
