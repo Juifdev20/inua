@@ -1,6 +1,6 @@
 import axios from 'axios';
+import { BACKEND_URL } from '../../config/environment.js';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const API_BASE = `${BACKEND_URL}/api/finance`;
 
 const api = axios.create({

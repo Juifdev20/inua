@@ -145,8 +145,8 @@ const AddPatient = () => {
       });
 
       // 3. Appel API
-      // Note: baseURL dans axios.js est déjà http://localhost:8080/api
-      // Le chemin final sera http://localhost:8080/api/v1/patients
+      // Note: baseURL utilise la configuration environnementale centralisée
+      // Le chemin final sera automatiquement adapté (localhost ou production)
       await api.post('/v1/patients', data, {
         headers: { 
           'Content-Type': 'multipart/form-data' 

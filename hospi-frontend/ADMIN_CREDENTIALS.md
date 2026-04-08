@@ -37,6 +37,79 @@ Le `DataInitializer` s'exécute au démarrage de l'application :
 3. Change le mot de passe
 4. Utilise un mot de passe fort
 
+## 🔄 SYNCHRONISATION LOCAL vs PRODUCTION
+
+### ❌ ATTENTION : LES COMPTES SONT INDÉPENDANTS
+
+**Localhost et Production sont deux environnements séparés :**
+
+#### 🏠 Localhost (Développement)
+- **Base de données** : H2 (fichier local)
+- **Comptes créés** : Restent en local SEULEMENT
+- **URL** : `http://localhost:8080`
+- **Utilisation** : Tests et développement
+
+#### 🌐 Production (Render)
+- **Base de données** : PostgreSQL (cloud)
+- **Comptes créés** : Restent en production SEULEMENT
+- **URL** : `https://inuaafia.onrender.com`
+- **Utilisation** : Production réelle
+
+### 📋 CE QUI FONCTIONNE ET CE QUI NE FONCTIONNE PAS :
+
+#### ✅ CE QUI FONCTIONNE PARTOUT :
+- **Compte admin** : `admin` / `admin123` (créé automatiquement)
+- **Compte doctor** : `doctor` / `doctor123` (créé automatiquement)
+- **Interface d'administration** : Identique
+- **Rôles disponibles** : Identiques
+- **Fonctionnalités** : Identiques
+
+#### ❌ CE QUI NE SYNCHRONISE PAS :
+- **Utilisateurs créés en local** → **N'existent pas en production**
+- **Utilisateurs créés en production** → **N'existent pas en local**
+- **Données patients** → **Séparées**
+- **Rendez-vous** → **Séparés**
+- **Factures** → **Séparées**
+
+### 🎯 RECOMMANDATIONS :
+
+#### 1. POUR LE DÉVELOPPEMENT :
+- Crée des comptes de test en local
+- Utilise des données de test
+- Ne jamais utiliser de vraies données
+
+#### 2. POUR LA PRODUCTION :
+- Crée les comptes réels en production
+- Change immédiatement les mots de passe par défaut
+- Utilise des vraies données patients
+
+#### 3. POUR LES DEUX :
+- **Mêmes identifiants admin** pour éviter la confusion
+- **Mêmes rôles** pour la cohérence
+- **Mêmes fonctionnalités** pour le test
+
+### 🚀 DÉPLOIEMENT :
+
+Quand tu déploies de local à production :
+1. **Les comptes par défaut** sont créés automatiquement
+2. **Tu dois recréer** les utilisateurs en production
+3. **Les données locales** ne sont pas transférées
+4. **Commence avec** les comptes par défaut
+
+### 💡 CONSEIL PRATIQUE :
+
+**Utilise les comptes par défaut pour tester :**
+- Local : `admin` / `admin123`
+- Production : `admin` / `admin123`
+
+**Puis crée tes propres comptes :**
+- Comptes réception pour la production
+- Comptes finance pour la production
+- Comptes labo/pharmacie pour la production
+
+**Les comptes que tu crées en local restent en local !**
+**Les comptes que tu crées en production restent en production !**
+
 ### Compte Docteur Test
 - **Nom d'utilisateur**: `doctor`
 - **Mot de passe**: `doctor123`

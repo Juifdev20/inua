@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
+import { BACKEND_URL } from '../config/environment.js';
 
 const ConfigContext = createContext();
 
@@ -10,7 +11,7 @@ export const ConfigProvider = ({ children }) => {
     logoUrl: null
   });
 
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const API_BASE_URL = BACKEND_URL;
 
   const refreshConfig = async () => {
     try {

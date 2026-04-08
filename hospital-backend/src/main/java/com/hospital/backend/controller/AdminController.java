@@ -58,9 +58,12 @@ public class AdminController {
     @GetMapping("/users/all")
     public ResponseEntity<List<User>> getAllUsers() {
         try {
-            return ResponseEntity.ok(userRepository.findAll());
+            List<User> users = userRepository.findAll();
+            log.info("Nombre d'utilisateurs trouvés: {}", users.size());
+            return ResponseEntity.ok(users);
         } catch (Exception e) {
-            log.error("Erreur liste utilisateurs", e);
+            log.error("Erreur lors du chargement de la liste des utilisateurs: {}", e.getMessage());
+            log.error("Stack trace complète:", e);
             return ResponseEntity.internalServerError().build();
         }
     }

@@ -25,8 +25,9 @@ import {
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
 
-// ✅ URL dynamique - fonctionne en local et en production
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// ✅ Configuration environnementale centralisée
+import { BACKEND_URL } from '../../config/environment.js';
+const API_BASE_URL = BACKEND_URL;
 
 // ✅ Rôles complets synchronisés avec Spring Security et la BDD
 const ALL_ROLES = [
@@ -83,6 +84,9 @@ const Users = () => {
         axios.get(`${API_BASE_URL}/api/admin/users/all`, config),
         axios.get(`${API_BASE_URL}/api/admin/departments/all`, config)
       ]);
+      
+      console.log('📊 Users response:', userRes.status, userRes.data);
+      console.log('📊 Departments response:', deptRes.status, deptRes.data);
 
       if (userRes.data) {
         const payload = userRes.data;
@@ -95,7 +99,20 @@ const Users = () => {
         setRealDepartments(list);
       }
     } catch (error) {
-      toast.error("Erreur de chargement des données");
+      console.error('❌ Erreur fetchInitialData:', error);
+      console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
+      console.error('❌ URL appelée:', `${API_BASE_URL}/api/admin/users/all`);
+      
+      if (error.response?.status === 500) {
+        toast.error("Erreur serveur 500 - Vérifiez les logs du backend");
+      } else if (error.response?.status === 401) {
+        toast.error("Non autorisé - Reconnectez-vous");
+      } else if (error.response?.status === 403) {
+        toast.error("Accès refusé - Permissions insuffisantes");
+      } else {
+        toast.error(`Erreur de chargement: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -195,20 +212,33 @@ const Users = () => {
     };
     
     try {
+      console.log('🔧 Création/Modification utilisateur:', { editingUser: editingUser?.id, dataToSend });
+      console.log('🔧 URL:', editingUser ? `${API_BASE_URL}/api/admin/users/${editingUser.id}` : `${API_BASE_URL}/api/admin/users/create`);
+      
       if (editingUser) {
-        await axios.put(`${API_BASE_URL}/api/admin/users/${editingUser.id}`, dataToSend, config);
+        const response = await axios.put(`${API_BASE_URL}/api/admin/users/${editingUser.id}`, dataToSend, config);
+        console.log('✅ Modification réussie:', response.data);
         toast.success('Utilisateur modifié');
       } else {
-        await axios.post(`${API_BASE_URL}/api/admin/users/create`, { ...dataToSend, password: "DefaultPassword123!" }, config);
+        const response = await axios.post(`${API_BASE_URL}/api/admin/users/create`, { ...dataToSend, password: "DefaultPassword123!" }, config);
+        console.log('✅ Création réussie:', response.data);
         toast.success('Utilisateur créé avec succès');
       }
       fetchUsers();
       setIsDialogOpen(false);
     } catch (error) {
+      console.error('❌ Erreur création/modification utilisateur:', error);
+      console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
+      
       if (error.response?.status === 409) {
         setFormErrors({ email: "Cet email est déjà utilisé" });
+      } else if (error.response?.status === 500) {
+        toast.error("Erreur serveur - Vérifiez les logs du backend");
+      } else if (error.response?.status === 403) {
+        toast.error("Accès refusé - Permissions insuffisantes");
       } else {
-        toast.error("Une erreur est survenue");
+        toast.error(`Erreur: ${error.message}`);
       }
     }
   };

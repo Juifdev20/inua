@@ -44,8 +44,9 @@ import { Textarea } from '../../components/ui/textarea';
 import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
 
-// ✅ URL dynamique - fonctionne en local et en production
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+// ✅ Configuration environnementale centralisée
+import { BACKEND_URL } from '../../config/environment.js';
+const API_BASE_URL = BACKEND_URL;
 
 // --- IMPORTS PDF ---
 import jsPDF from 'jspdf';

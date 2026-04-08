@@ -18,14 +18,15 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useConfig } from '../../context/ConfigContext';
 import { useApp } from '../../context/AppContext'; // <--- AJOUT : Import du contexte global
+import { BACKEND_URL } from '../../config/environment.js';
 
 const Settings = () => {
   const { refreshConfig } = useConfig();
   const { setAppName, setAppLogo } = useApp();
   const fileInputRef = useRef(null);
   
-  // ✅ URL dynamique - fonctionne en local et en production
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  // ✅ Configuration environnementale centralisée
+    const API_BASE_URL = BACKEND_URL;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

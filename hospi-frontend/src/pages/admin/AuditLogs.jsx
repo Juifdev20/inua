@@ -33,8 +33,9 @@ import {
 import { useNotifications } from '../../context/NotificationContext';
 import { toast } from 'sonner';
 
-// ✅ URL dynamique - fonctionne en local et en production
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+// ✅ Configuration environnementale centralisée
+import { BACKEND_URL } from '../../config/environment.js';
+const API_BASE_URL = BACKEND_URL;
 const AUDIT_API_URL = `${API_BASE_URL}/api/audit`;
 
 const AuditLogs = () => {

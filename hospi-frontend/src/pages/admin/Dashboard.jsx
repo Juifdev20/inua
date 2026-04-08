@@ -10,10 +10,11 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie,
   Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { BACKEND_URL } from '../../config/environment.js';
 
 const Dashboard = () => {
-  // ✅ URL dynamique - fonctionne en local et en production
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  // ✅ Configuration environnementale centralisée
+    const API_BASE_URL = BACKEND_URL;
   
   // 1. États pour les données réelles
   const [data, setData] = useState({

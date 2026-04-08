@@ -1,8 +1,7 @@
 import axios from "axios";
+import { BACKEND_URL } from '../config/environment.js';
 
-// URL API depuis les variables d'environnement Vite
-const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const BASE_URL = `${API_URL}/api`;
+const BASE_URL = `${BACKEND_URL}/api`;
 
 const api = axios.create({
   baseURL: BASE_URL,
