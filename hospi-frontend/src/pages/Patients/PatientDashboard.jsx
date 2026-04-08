@@ -6,7 +6,7 @@ import {
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useNavigate } from 'react-router-dom'; 
 import BookAppointmentModal from './BookAppointmentModal'; 
 
@@ -22,9 +22,7 @@ const PatientDashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error("Session expirée");
 
-      const response = await axios.get('http://localhost:8080/api/v1/patients/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/api/v1/patients/me');
       
       if (response.data && response.data.data) {
         setPatientData(response.data.data);

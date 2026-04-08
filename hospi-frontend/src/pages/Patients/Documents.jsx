@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, Eye, Search, Loader2, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 
@@ -14,10 +14,7 @@ const Documents = () => {
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/patients/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/api/v1/patients/me');
       
       if (response.data && response.data.data.documents) {
         setDocuments(response.data.data.documents);
