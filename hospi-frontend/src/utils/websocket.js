@@ -42,12 +42,17 @@ export const getWebSocketUrl = (endpoint = '/ws-hospital') => {
  * @returns {Object} stompClient
  */
 export const createSecureSocket = (endpoint, onConnect, onError) => {
-  try {
-    const wsUrl = getWebSocketUrl(endpoint);
-    console.log('Connexion WebSocket securisee:', wsUrl);
-    
-    // Options de transport pour compatibilite avec Render et SockJS
-    const socket = new SockJS(wsUrl, null, {
+  let reconnectAttempts = 0;
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 5000; // 5s
+  
+  const connect = () => {
+    try {
+      const wsUrl = getWebSocketUrl(endpoint);
+      console.log('Tentative de connexion WebSocket:', wsUrl);
+      
+      // Options de transport pour compatibilite avec Render et SockJS
+      const socket = new SockJS(wsUrl, null, {
       transports: ['websocket', 'xhr-streaming', 'xhr-polling']
     });
     
@@ -58,10 +63,26 @@ export const createSecureSocket = (endpoint, onConnect, onError) => {
     const token = localStorage.getItem('token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    stompClient.connect(headers, onConnect, (error) => {
-      console.error('WebSocket error:', error);
-      if (onError) onError(error);
-    });
+    stompClient.connect(headers, 
+      () => {
+        console.log('✅ WebSocket connecté');
+        reconnectAttempts = 0;
+        if (onConnect) onConnect(stompClient);
+      }, 
+      (error) => {
+        console.error('❌ WebSocket error:', error);
+        if (onError) onError(error);
+        
+        // Tentative de reconnexion automatique
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          console.log(`🔄 Tentative de reconnexion ${reconnectAttempts}/${maxReconnectAttempts} dans ${reconnectDelay}ms`);
+          setTimeout(connect, reconnectDelay);
+        } else {
+          console.error('🚫 Nombre maximal de tentatives de reconnexion atteint');
+        }
+      }
+    );
 
     return stompClient;
   } catch (error) {
@@ -69,6 +90,10 @@ export const createSecureSocket = (endpoint, onConnect, onError) => {
     if (onError) onError(error);
     return null;
   }
+  };
+  
+  // Démarrer la connexion
+  return connect();
 };
 
 /**

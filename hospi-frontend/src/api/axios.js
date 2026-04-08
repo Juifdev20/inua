@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEN
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000, // Augmenté à 30s pour Render
 });
 
 // 🚀 L'intercepteur qui injecte le token automatiquement
