@@ -4,7 +4,10 @@ import './index.css'
 import App from './App.jsx'
 
 // ✅ IMPORTATION CRITIQUE : Initialise i18next avant le rendu de l'app
-import './i18n/config' 
+import './i18n/config'
+
+// 🐛 DEBUG MOBILE : Outils de debug pour téléphone
+import './utils/mobileDebug' 
 
 // On importe le diffuseur de données (Provider)
 import { AppProvider } from './context/AppContext'
