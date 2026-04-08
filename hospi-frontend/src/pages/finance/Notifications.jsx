@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
-const API_BASE_URL = 'http://localhost:8080/api/notifications';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = `${BACKEND_URL}/api/notifications`;
 
 const Notifications = () => {
   const [filter, setFilter] = useState('all');
@@ -55,7 +56,7 @@ const Notifications = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const socket = new SockJS('http://localhost:8080/ws-notifications');
+    const socket = new SockJS(`${BACKEND_URL}/ws-notifications`);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null;
 

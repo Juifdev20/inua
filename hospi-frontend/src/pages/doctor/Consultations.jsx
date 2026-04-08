@@ -47,7 +47,8 @@ import {
 import { toast } from 'react-hot-toast';
 import DecisionModal from '../../components/modals/DecisionModal';
 
-const API = "http://localhost:8080/api/v1/doctor";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API = `${BACKEND_URL}/api/v1/doctor`;
 
 // Helper functions (conservées)
 const normalizeImageUrl = (photoUrl) => {
@@ -66,7 +67,7 @@ const normalizeImageUrl = (photoUrl) => {
 const getImageUrl = (patientPhoto) => {
     if (!patientPhoto) return null;
     if (patientPhoto.startsWith('http')) return patientPhoto;
-    return `http://localhost:8080${patientPhoto}`;
+    return `${BACKEND_URL}${patientPhoto}`;
 };
 
 const formatDateFrench = (dateString) => {

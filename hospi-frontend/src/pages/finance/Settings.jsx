@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import authAPI from '@/services/authAPI';
 
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 /* ── Toast interne ── */
 const Toast = ({ message, type, onClose }) => {

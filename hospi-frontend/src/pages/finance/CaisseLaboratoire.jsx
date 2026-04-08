@@ -21,7 +21,8 @@ import PaymentModal from '../../components/modals/PaymentModal.jsx';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 
-const API = "http://localhost:8080/api/finance";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API = `${BACKEND_URL}/api/finance`;
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('fr-FR', {

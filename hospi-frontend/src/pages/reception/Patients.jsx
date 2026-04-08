@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 
 // --- CONFIGURATION URL BACKEND ---
 // en dev on passe par le proxy de Vite => pas d'hôte
-const BACKEND_URL = import.meta.env.DEV ? '' : 'http://localhost:8080';
+const BACKEND_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080');
 
 // Fonction utilitaire pour résoudre l'URL de l'image
 const isBase64String = (str) => {

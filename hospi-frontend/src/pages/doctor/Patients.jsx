@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const Patients = () => {
   const { token } = useAuth();
@@ -111,7 +111,7 @@ const Patients = () => {
       return photo;
     }
     
-    const backendUrl = API_URL || "http://localhost:8080";
+    const backendUrl = API_URL;
     
     // Si le chemin commence déjà par uploads/, on le nettoie
     let cleanPhoto = photo;

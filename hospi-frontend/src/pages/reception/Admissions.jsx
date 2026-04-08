@@ -167,7 +167,7 @@ export const Admissions = () => {
   const getCleanImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('data:image') || url.startsWith('http')) return url;
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
     return `${backendUrl}/uploads/${url.replace(/\\/g, '/').replace('uploads/', '')}`;
   };
 

@@ -21,7 +21,8 @@ const Profile = () => {
     avatar: null
   });
 
-  const IMAGE_BASE_URL = "http://localhost:8080/uploads/profiles/";
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  const IMAGE_BASE_URL = `${BACKEND_URL}/uploads/profiles/`;
 
   useEffect(() => {
     if (user) {

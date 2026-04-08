@@ -33,7 +33,7 @@ import {
 } from "../../components/ui/alert-dialog";
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const API_CHAT = `${API_URL}/api/v1/doctors/chat`;
 const IMAGE_BASE_URL = `${API_URL}/uploads/profiles/`;
 

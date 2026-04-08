@@ -41,7 +41,7 @@ const Settings = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        'http://localhost:8080/api/v1/patients/change-password', 
+        `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/v1/patients/change-password`, 
         {
           currentPassword,
           newPassword,

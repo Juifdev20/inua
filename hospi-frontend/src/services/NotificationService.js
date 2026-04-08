@@ -3,7 +3,7 @@ import Stomp from 'stompjs';
 
 // Configuration dynamique pour supporter HTTP (dev) et HTTPS (prod)
 const getWebSocketUrl = () => {
-  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   
   // Securite : transformer http:// en https:// si la page est chargee en HTTPS
   let socketUrl = baseUrl;

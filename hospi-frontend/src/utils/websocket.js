@@ -9,7 +9,7 @@ import Stomp from 'stompjs';
 // URL de base dynamique - evite les double slashes
 export const getBaseUrl = () => {
   const baseUrl = import.meta.env.VITE_BACKEND_URL || 
-                  import.meta.env.VITE_API_URL ||
+                  import.meta.env.VITE_API_BASE_URL ||
                   'http://localhost:8080';
   
   // Supprime le slash final pour eviter les double slashes
