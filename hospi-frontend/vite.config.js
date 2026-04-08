@@ -24,15 +24,24 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false, // Si 5173 est occupe, Vite essaiera 5174, 5175...
+    hmr: {
+      overlay: true, // Affiche les erreurs en overlay
+    },
+    watch: {
+      usePolling: false, // Désactive le polling pour le hot reload instantané
+      interval: 100, // Vérifie les changements toutes les 100ms
+    },
     // proxy tous les appels vers le backend pour eviter les problemes de CORS
     proxy: {
       '/patients': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        secure: false,
       },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        secure: false,
       },
       // ajoutez d'autres routes si necessaire
     },
