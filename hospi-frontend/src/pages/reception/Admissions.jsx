@@ -110,11 +110,10 @@ export const Admissions = () => {
     triageData.temperature &&
     triageData.motif;
 
-  const isNewPatient = !selectedPatient?.hasMedicalRecord && !selectedPatient?.consultations?.length;
-
-  const ficheAmount = pricingDetails?.ficheAmount || (isNewPatient ? DEFAULT_FICHE_AMOUNT : 0);
+  // Utiliser la logique du backend : le backend détermine si la fiche est requise via hasActiveFile
+  const ficheAmount = pricingDetails?.ficheAmount ?? 0;
   const consulAmount = selectedServicePrice;
-  const totalAmount = ficheAmount + consulAmount;
+  const totalAmount = pricingDetails?.totalAmount ?? (ficheAmount + consulAmount);
 
   // ═══════════════════════════════════════
   // CHARGEMENT
@@ -306,10 +305,10 @@ export const Admissions = () => {
         healthArea: triageData.healthArea
       });
 
-      // 2️⃣ Montants
-      const finalFicheAmount = pricingDetails?.ficheAmount || (isNewPatient ? DEFAULT_FICHE_AMOUNT : 0);
-      const finalConsulAmount = pricingDetails?.consulAmount || selectedServicePrice;
-      const finalTotal = finalFicheAmount + finalConsulAmount;
+      // 2️⃣ Montants - Utiliser les valeurs du backend
+      const finalFicheAmount = pricingDetails?.ficheAmount ?? 0;
+      const finalConsulAmount = pricingDetails?.consulAmount ?? selectedServicePrice;
+      const finalTotal = pricingDetails?.totalAmount ?? (finalFicheAmount + finalConsulAmount);
 
       // 3️⃣ ★ Déterminer le doctorId
       //    Le backend EXIGE ce champ. On envoie :
@@ -680,7 +679,7 @@ export const Admissions = () => {
                         </div>
                       ) : (
                         <>
-                          {isNewPatient && (
+                          {pricingDetails?.ficheRequired && (
                             <div className="p-3 bg-orange-500/10 rounded-xl flex justify-between items-center border border-orange-200">
                               <div className="flex items-center gap-2">
                                 <AlertCircle className="w-4 h-4 text-orange-600" />

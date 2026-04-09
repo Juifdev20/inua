@@ -122,8 +122,11 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
 
     List<Consultation> findByStatus(ConsultationStatus status);
 
-    // Méthode pour récupérer les admissions non archivées
-    @Query("SELECT c FROM Consultation c WHERE c.status != 'ARCHIVED'")
+    // Méthode pour récupérer les admissions non archivées avec relations chargées
+    @Query("SELECT c FROM Consultation c " +
+            "LEFT JOIN FETCH c.patient " +
+            "LEFT JOIN FETCH c.doctor " +
+            "WHERE c.status != com.hospital.backend.entity.ConsultationStatus.ARCHIVED")
     List<Consultation> findNonArchivedConsultations();
 
     @Query("SELECT c FROM Consultation c " +

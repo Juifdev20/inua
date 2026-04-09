@@ -18,7 +18,7 @@ export const getAllPrices = async () => {
 // 2. Calcule les montants pour une admission (NOUVELLE API CENTRALISÉE)
 export const calculateAdmissionPrice = async (patientId, serviceId) => {
   try {
-    const response = await api.get('/pricing/admission/calculate', {
+    const response = await api.get('/v1/pricing/admission/calculate', {
       params: { patientId, serviceId }
     });
     return response.data;
@@ -31,7 +31,7 @@ export const calculateAdmissionPrice = async (patientId, serviceId) => {
 // 3. Vérifie le statut de la fiche patient
 export const getPatientFicheStatus = async (patientId) => {
   try {
-    const response = await api.get(`/pricing/patient/${patientId}/fiche-status`);
+    const response = await api.get(`/v1/pricing/patient/${patientId}/fiche-status`);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la vérification du statut fiche:', error);
@@ -42,7 +42,7 @@ export const getPatientFicheStatus = async (patientId) => {
 // 4. Crée un nouveau prix
 export const createPrice = async (priceData) => {
   try {
-    const response = await api.post('/pricing/prices', priceData);
+    const response = await api.post('/v1/pricing/prices', priceData);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la création du prix:', error);
@@ -64,7 +64,7 @@ export const updatePrice = async (id, priceData) => {
 // 6. Initialise la grille tarifaire avec les valeurs par défaut
 export const initializePrices = async () => {
   try {
-    const response = await api.post('/pricing/prices/initialize');
+    const response = await api.post('/v1/pricing/prices/initialize');
     return response.data;
   } catch (error) {
     console.error('Erreur lors de l\'initialisation des prix:', error);
