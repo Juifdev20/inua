@@ -68,7 +68,7 @@ const Chat = () => {
   const fetchPatientsList = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${API_CHAT}/my-patients`, {
+      const response = await axios.get(`${API_URL}/api/v1/doctors/patients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = response.data || [];

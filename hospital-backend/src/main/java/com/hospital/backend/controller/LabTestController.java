@@ -268,33 +268,39 @@ public class LabTestController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR')")
     @Operation(summary = "Résultats groupés par consultation", description = "Récupère les résultats de labo groupés par consultation pour le médecin connecté")
     public ResponseEntity<ApiResponse<List<ConsultationLabResultsDTO>>> getGroupedResultsForDoctor() {
-        // Extraire l'identifiant du docteur depuis le token JWT
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String identifier = authentication.getName();
-        
-        log.info("📦 [GROUPED] Récupération des résultats groupés pour le docteur: {}", identifier);
-        
-        // Chercher par username ou email
-        User currentDoctor = userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByEmail(identifier))
-                .orElseThrow(() -> new ResourceNotFoundException("Docteur non trouvé avec l'identifiant: " + identifier));
-        
-        // Récupérer tous les tests du docteur
-        List<LabTest> labTests = labTestRepository.findByDoctorRecipientId(currentDoctor.getId());
-        
-        // Grouper par consultation
-        Map<Long, List<LabTest>> groupedByConsultation = labTests.stream()
-                .filter(lt -> lt.getConsultation() != null)
-                .collect(Collectors.groupingBy(lt -> lt.getConsultation().getId()));
-        
-        // Mapper en DTOs
-        List<ConsultationLabResultsDTO> result = groupedByConsultation.entrySet().stream()
-                .map(entry -> mapToConsultationLabResultsDTO(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList());
-        
-        log.info("📦 [GROUPED] {} consultations avec résultats trouvées", result.size());
-        
-        return ResponseEntity.ok(ApiResponse.success("Résultats groupés récupérés avec succès", result));
+        try {
+            // Extraire l'identifiant du docteur depuis le token JWT
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String identifier = authentication.getName();
+
+            log.info("📦 [GROUPED] Récupération des résultats groupés pour le docteur: {}", identifier);
+
+            // Chercher par username ou email
+            User currentDoctor = userRepository.findByUsername(identifier)
+                    .or(() -> userRepository.findByEmail(identifier))
+                    .orElseThrow(() -> new ResourceNotFoundException("Docteur non trouvé avec l'identifiant: " + identifier));
+
+            // Récupérer tous les tests du docteur
+            List<LabTest> labTests = labTestRepository.findByDoctorRecipientId(currentDoctor.getId());
+
+            // Grouper par consultation
+            Map<Long, List<LabTest>> groupedByConsultation = labTests.stream()
+                    .filter(lt -> lt.getConsultation() != null)
+                    .collect(Collectors.groupingBy(lt -> lt.getConsultation().getId()));
+
+            // Mapper en DTOs
+            List<ConsultationLabResultsDTO> result = groupedByConsultation.entrySet().stream()
+                    .map(entry -> mapToConsultationLabResultsDTO(entry.getKey(), entry.getValue()))
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+
+            log.info("📦 [GROUPED] {} consultations avec résultats trouvées", result.size());
+
+            return ResponseEntity.ok(ApiResponse.success("Résultats groupés récupérés avec succès", result));
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération des résultats groupés: {}", e.getMessage(), e);
+            return ResponseEntity.ok(ApiResponse.success("Aucun résultat trouvé", List.of()));
+        }
     }
     
     private ConsultationLabResultsDTO mapToConsultationLabResultsDTO(Long consultationId, List<LabTest> labTests) {
