@@ -115,9 +115,8 @@ const LabResults = () => {
   // ═══════════════════════════════════════════════════════════════
   const loadDoctors = useCallback(async () => {
     try {
-      const response = await fetch('/api/lab-tests/available-doctors');
-      if (!response.ok) throw new Error('Erreur lors du chargement des médecins');
-      const data = await response.json();
+      const response = await api.get('/api/users/doctors');
+      const data = response.data;
       setDoctors(data.data || data || []);
     } catch (error) {
       console.error('❌ Erreur chargement médecins:', error);
@@ -762,7 +761,7 @@ const LabResults = () => {
                     <option value="">Sélectionner un médecin...</option>
                     {doctors.map((doctor) => (
                       <option key={doctor.id} value={doctor.id}>
-                        {doctor.nom} {doctor.prenom} - {doctor.specialite || 'Médecin'}
+                        Dr. {doctor.firstName} {doctor.lastName} - {doctor.department || 'Médecin'}
                       </option>
                     ))}
                   </select>
