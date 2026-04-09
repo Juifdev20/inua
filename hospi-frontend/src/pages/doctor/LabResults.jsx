@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import api from '../../services/api/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -57,15 +58,9 @@ const LabResultsDoctor = () => {
   const loadLabResults = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       // ✅ NOUVEL ENDPOINT : Récupère les consultations groupées
-      const response = await fetch('/api/lab-tests/doctor/consultations', {
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
-      });
-      if (!response.ok) throw new Error('Erreur lors du chargement des résultats');
-      const data = await response.json();
+      const response = await api.get('/lab-tests/doctor/consultations');
+      const data = response.data;
       // ✅ Filtrer pour exclure les consultations déjà traitées (TERMINE)
       const activeConsultations = (data.data || []).filter(c => c.status !== 'TERMINE');
       setConsultations(activeConsultations);
