@@ -86,7 +86,7 @@ const SplashScreen = ({ onComplete }) => {
         </motion.div>
 
         {/* Progress Bar - Responsive width */}
-        <div className="w-36 sm:w-40 md:w-44 lg:w-48 h-1 bg-slate-700 rounded-full mt-8 sm:mt-10 md:mt-12 overflow-hidden">
+        <div className="w-36 sm:w-40 md:w-44 lg:w-48 h-1 bg-slate-700 rounded-full mt-10 sm:mt-12 md:mt-14 overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
             initial={{ width: 0 }}
@@ -97,7 +97,7 @@ const SplashScreen = ({ onComplete }) => {
 
         {/* Progress Percentage */}
         <motion.p 
-          className="text-slate-400 text-xs mt-2 sm:mt-3 font-medium"
+          className="text-slate-400 text-xs mt-3 sm:mt-4 font-medium"
           key={progress}
           initial={{ opacity: 0.5 }}
           animate={{ opacity: 1 }}
@@ -105,17 +105,17 @@ const SplashScreen = ({ onComplete }) => {
           {progress}%
         </motion.p>
 
-        {/* Bottom Text - Responsive positioning */}
+        {/* Bottom Text - Espace augmenté entre logo et texte */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="absolute bottom-8 sm:bottom-10 md:bottom-12 flex flex-col items-center px-4"
+          className="mt-16 sm:mt-20 md:mt-24 flex flex-col items-center px-4"
         >
           <p className="text-slate-500 text-xs sm:text-sm tracking-widest uppercase font-medium text-center">
             By Inua Afia Team
           </p>
-          <p className="text-slate-600 text-xs mt-1 text-center">
+          <p className="text-slate-600 text-xs mt-2 text-center">
             Votre santé, notre priorité
           </p>
         </motion.div>
