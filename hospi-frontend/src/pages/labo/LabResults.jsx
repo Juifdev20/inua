@@ -334,21 +334,21 @@ const LabResults = () => {
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b bg-card">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 border-b bg-card gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
             <FlaskConical className="w-5 h-5 text-primary" />
             Saisie des Résultats
           </h1>
           {selectedBox && (
-            <Badge variant="outline" className="font-mono">
+            <Badge variant="outline" className="font-mono text-xs">
               <User className="w-3 h-3 mr-1" />
               {selectedBox.patientName}
             </Badge>
           )}
         </div>
-        
-        <Button variant="outline" size="sm" onClick={() => navigate('/labo/queue')}>
+
+        <Button variant="outline" size="sm" onClick={() => navigate('/labo/queue')} className="w-full sm:w-auto">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour file d'attente
         </Button>
