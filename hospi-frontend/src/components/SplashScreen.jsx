@@ -4,20 +4,13 @@ import { HeartPulse } from 'lucide-react';
 
 const SplashScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
-  const [currentDot, setCurrentDot] = useState(0);
 
   useEffect(() => {
-    // Animation des points
-    const dotInterval = setInterval(() => {
-      setCurrentDot((prev) => (prev + 1) % 5);
-    }, 400);
-
     // Progression du chargement
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(progressInterval);
-          clearInterval(dotInterval);
           setTimeout(() => {
             onComplete?.();
           }, 500);
@@ -28,7 +21,6 @@ const SplashScreen = ({ onComplete }) => {
     }, 60);
 
     return () => {
-      clearInterval(dotInterval);
       clearInterval(progressInterval);
     };
   }, [onComplete]);
@@ -93,26 +85,8 @@ const SplashScreen = ({ onComplete }) => {
           </div>
         </motion.div>
 
-        {/* Loading Dots - Responsive spacing */}
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-8 sm:mt-10 md:mt-12">
-          {[0, 1, 2, 3, 4].map((index) => (
-            <motion.div
-              key={index}
-              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-colors duration-300 ${
-                index === currentDot 
-                  ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50' 
-                  : 'bg-slate-600'
-              }`}
-              animate={index === currentDot ? {
-                scale: [1, 1.3, 1],
-              } : {}}
-              transition={{ duration: 0.3 }}
-            />
-          ))}
-        </div>
-
         {/* Progress Bar - Responsive width */}
-        <div className="w-36 sm:w-40 md:w-44 lg:w-48 h-1 bg-slate-700 rounded-full mt-6 sm:mt-7 md:mt-8 overflow-hidden">
+        <div className="w-36 sm:w-40 md:w-44 lg:w-48 h-1 bg-slate-700 rounded-full mt-8 sm:mt-10 md:mt-12 overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
             initial={{ width: 0 }}
