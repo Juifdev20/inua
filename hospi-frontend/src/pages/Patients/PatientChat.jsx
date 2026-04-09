@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, Search, Send, Check, CheckCheck, 
@@ -36,6 +37,7 @@ const IMAGE_BASE_URL = `${BACKEND_URL}/uploads/profiles/`;
 
 const PatientChat = () => {
   const { token } = useAuth();
+  const { theme } = useTheme();
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -175,37 +177,37 @@ const PatientChat = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 font-sans">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 font-sans">
       {/* HEADER - WhatsApp style */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shadow-sm">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800">Messages</h1>
-          <p className="text-sm text-gray-500">Communication avec vos médecins</p>
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Messages</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Communication avec vos médecins</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="rounded-full">
-            {isMuted ? <VolumeX className="w-5 h-5 text-gray-600" /> : <Volume2 className="w-5 h-5 text-emerald-600" />}
+            {isMuted ? <VolumeX className="w-5 h-5 text-gray-600 dark:text-gray-400" /> : <Volume2 className="w-5 h-5 text-emerald-600" />}
           </Button>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* LISTE DOCTEURS - WhatsApp style sidebar */}
-        <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white border-r border-gray-200 flex flex-col`}>
-          <div className="p-3 border-b border-gray-200">
+        <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}>
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="Rechercher un médecin..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-100 border-none h-10 rounded-lg text-sm"
+                className="pl-10 bg-gray-100 dark:bg-gray-700 border-none h-10 rounded-lg text-sm dark:text-gray-100"
               />
             </div>
           </div>
           
           <ScrollArea className="flex-1">
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {loading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="p-3 flex items-center gap-3">
@@ -220,17 +222,17 @@ const PatientChat = () => {
                 <button
                   key={doc.id}
                   onClick={() => handleSelectDoctor(doc)}
-                  className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors ${
-                    selectedDoctor?.id === doc.id ? 'bg-emerald-50' : ''
+                  className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                    selectedDoctor?.id === doc.id ? 'bg-emerald-50 dark:bg-emerald-900/30' : ''
                   }`}
                 >
                   <Avatar className="w-12 h-12">
                     <AvatarImage src={`${IMAGE_BASE_URL}${doc.photo}`} />
-                    <AvatarFallback className="bg-emerald-100 text-emerald-600 font-semibold">DR</AvatarFallback>
+                    <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 font-semibold">DR</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 truncate">{doc.displayFullName}</p>
-                    <p className="text-xs text-gray-500">{doc.specialite || 'Généraliste'}</p>
+                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{doc.displayFullName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{doc.specialite || 'Généraliste'}</p>
                   </div>
                 </button>
               ))}
@@ -239,17 +241,17 @@ const PatientChat = () => {
         </div>
 
         {/* ZONE DE CHAT - WhatsApp style */}
-        <div className={`${!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-gray-50`}>
+        <div className={`${!showChatOnMobile ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-gray-50 dark:bg-gray-900`}>
           {selectedDoctor ? (
             <>
               {/* Chat header */}
-              <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={handleBackToList} 
-                    className="md:hidden rounded-full h-9 w-9 mr-1"
+                    className="rounded-full h-9 w-9 mr-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -261,14 +263,14 @@ const PatientChat = () => {
                     <AvatarFallback className="bg-emerald-500 text-white font-semibold">DR</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-sm text-gray-900">{selectedDoctor.displayFullName}</h3>
-                    <p className="text-xs text-emerald-600">Canal sécurisé</p>
+                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{selectedDoctor.displayFullName}</h3>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">Canal sécurisé</p>
                   </div>
                 </div>
               </div>
 
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
                 <div className="space-y-3">
                   <AnimatePresence initial={false}>
                     {messages.map((msg, index) => (
@@ -282,13 +284,13 @@ const PatientChat = () => {
                           <div className={`px-4 py-2 rounded-lg shadow-sm ${
                             msg.sender_type === 'patient'
                               ? 'bg-emerald-500 text-white rounded-br-none'
-                              : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'
+                              : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-none'
                           }`}>
                             <p className="text-sm leading-relaxed">
                               {msg.contenu || msg.content}
                             </p>
                             
-                            <div className={`flex items-center gap-1 mt-1 text-[10px] ${msg.sender_type === 'patient' ? 'justify-end text-white/80' : 'justify-start text-gray-500'}`}>
+                            <div className={`flex items-center gap-1 mt-1 text-[10px] ${msg.sender_type === 'patient' ? 'justify-end text-white/80' : 'justify-start text-gray-500 dark:text-gray-400'}`}>
                               <Clock size={10} />
                               {new Date(msg.created_at || msg.createdAt || new Date()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               {msg.sender_type === 'patient' && (
@@ -302,7 +304,7 @@ const PatientChat = () => {
                               <div className="absolute top-1 -left-8 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-200">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                                       <MoreVertical size={12} />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -327,14 +329,14 @@ const PatientChat = () => {
               </div>
 
               {/* Message input - WhatsApp style */}
-              <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 px-4 py-3">
+              <form onSubmit={handleSendMessage} className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 relative">
                     <Input 
                       placeholder="Écrivez un message..." 
                       value={newMessage} 
                       onChange={(e) => setNewMessage(e.target.value)}
-                      className="bg-gray-100 border-none rounded-full h-10 px-4 text-sm focus-visible:ring-2 focus-visible:ring-emerald-500"
+                      className="bg-gray-100 dark:bg-gray-700 border-none rounded-full h-10 px-4 text-sm focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-gray-100"
                     />
                   </div>
                   <Button 
@@ -348,10 +350,10 @@ const PatientChat = () => {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
-              <MessageSquare className="w-16 h-16 text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700">Sélectionnez une conversation</h3>
-              <p className="text-sm text-gray-500 mt-2">Choisissez un médecin pour commencer la discussion</p>
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+              <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">Sélectionnez une conversation</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Choisissez un médecin pour commencer la discussion</p>
             </div>
           )}
         </div>
