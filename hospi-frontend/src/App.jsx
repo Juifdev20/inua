@@ -15,6 +15,7 @@ import { Toaster } from "./components/ui/sonner";
 import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
+import AppLauncher from "./components/AppLauncher";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -168,8 +169,9 @@ function App() {
       <ConfigProvider>
         <NotificationProvider>
           <ThemeProvider>
-            <BrowserRouter>
-              <Routes>
+            <AppLauncher>
+              <BrowserRouter>
+                <Routes>
                 {/* 🌍 ROUTES PUBLIQUES */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
@@ -372,10 +374,11 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
 
-              <Toaster position="top-right" richColors />
-              <PWAInstallPrompt />
-              <OfflineIndicator />
-            </BrowserRouter>
+                <Toaster position="top-right" richColors />
+                <PWAInstallPrompt />
+                <OfflineIndicator />
+              </BrowserRouter>
+            </AppLauncher>
           </ThemeProvider>
         </NotificationProvider>
       </ConfigProvider>
