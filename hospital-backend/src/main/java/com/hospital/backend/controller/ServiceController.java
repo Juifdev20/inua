@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/services")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class ServiceController {
 
     private final MedicalServiceRepository serviceRepository;
