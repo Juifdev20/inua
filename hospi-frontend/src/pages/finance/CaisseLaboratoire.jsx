@@ -404,11 +404,11 @@ const CaisseLaboratoire = () => {
       unpaidCount: unpaid.length,
       paidCount: paid.length,
       unpaidAmount: unpaid.reduce((s, t) => {
-        const amount = parseFloat(t.examTotalAmount || t.totalAmount || 0);
+        const amount = parseFloat(t.examTotalAmount || 0);
         return s + amount;
       }, 0),
       paidAmount: paid.reduce((s, t) => {
-        const amount = parseFloat(t.examAmountPaid || t.totalAmount || 0);
+        const amount = parseFloat(t.examAmountPaid || t.examTotalAmount || 0);
         return s + amount;
       }, 0),
     };
