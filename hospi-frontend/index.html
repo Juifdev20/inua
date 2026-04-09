@@ -36,30 +36,6 @@
     
     <title>InuaAfia - Système Hospitalier</title>
     
-    <!-- 🔧 Script de nettoyage et redirection si ancien domaine détecté -->
-    <script>
-      (function() {
-        // 🚨 REDIRECTION IMMÉDIATE si on est sur l'ancien domaine
-        if (location.hostname.includes('inua-oux2')) {
-          console.log('[Redirect] Ancien domaine détecté, redirection vers inuaafia.onrender.com...');
-          // Nettoyer avant de partir
-          localStorage.clear();
-          sessionStorage.clear();
-          // Rediriger vers le nouveau domaine avec le même chemin
-          var newUrl = 'https://inuaafia.onrender.com' + location.pathname + location.search;
-          location.replace(newUrl);
-          return; // Stopper l'exécution
-        }
-        
-        // Nettoyage si paramètre oldcache présent
-        if (localStorage.getItem('token') && location.search.includes('oldcache')) {
-          console.log('[Cleanup] Nettoyage cache demandé...');
-          localStorage.clear();
-          sessionStorage.clear();
-          caches.keys().then(names => names.forEach(name => caches.delete(name)));
-        }
-      })();
-    </script>
   </head>
   <body>
     
