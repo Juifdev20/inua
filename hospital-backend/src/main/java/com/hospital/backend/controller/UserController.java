@@ -25,7 +25,7 @@ public class UserController {
      * ✅ CORRIGÉ : ROLE_FINANCE ajouté pour la caisse
      */
     @GetMapping(value = "/doctors", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTION', 'ROLE_DOCTEUR', 'ROLE_FINANCE', 'ROLE_PATIENT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTION', 'ROLE_DOCTEUR', 'ROLE_FINANCE', 'ROLE_PATIENT', 'ROLE_LABORATOIRE', 'ROLE_LAB')")
     @Operation(summary = "Lister les médecins", description = "Récupère uniquement les utilisateurs avec le rôle DOCTEUR")
     public ResponseEntity<ApiResponse<List<UserDTO>>> getAllDoctors() {
         List<UserDTO> doctors = userService.getUsersByRole("ROLE_DOCTEUR");
