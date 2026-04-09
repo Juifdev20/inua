@@ -115,7 +115,7 @@ const LabResults = () => {
   // ═══════════════════════════════════════════════════════════════
   const loadDoctors = useCallback(async () => {
     try {
-      const response = await api.get('/api/users/doctors');
+      const response = await api.get('/users/doctors');
       const data = response.data;
       setDoctors(data.data || data || []);
     } catch (error) {
