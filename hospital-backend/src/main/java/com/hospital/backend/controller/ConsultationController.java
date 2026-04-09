@@ -262,6 +262,58 @@ public class ConsultationController {
         return ResponseEntity.ok(ApiResponse.success("Fiche mise à jour", updated));
     }
 
+    // --- UPDATE RECEPTION : Sans validation stricte pour paiement labo ---
+    @PutMapping("/{id}/reception")
+    @PreAuthorize("hasAnyAuthority('ROLE_RECEPTION', 'ROLE_ADMIN')")
+    @Operation(summary = "Mise à jour par la réception (sans validation stricte)", description = "Permet la mise à jour partielle pour paiement labo et triage")
+    public ResponseEntity<ApiResponse<ConsultationDTO>> updateByReception(
+            @PathVariable Long id,
+            @RequestBody com.hospital.backend.dto.ReceptionUpdateRequest request,
+            Principal principal) {
+        log.info("Mise à jour réception consultation ID: {} par {}", id, principal != null ? principal.getName() : "système");
+        
+        // Récupérer la consultation existante
+        ConsultationDTO existing = consultationService.getById(id);
+        
+        // Mettre à jour uniquement les champs fournis
+        if (request.getPatientId() != null) {
+            existing.setPatientId(request.getPatientId());
+        }
+        if (request.getDoctorId() != null) {
+            existing.setDoctorId(request.getDoctorId());
+        }
+        if (request.getServiceId() != null) {
+            existing.setServiceId(request.getServiceId());
+        }
+        if (request.getTaille() != null) {
+            existing.setTaille(String.valueOf(request.getTaille()));
+        }
+        if (request.getPoids() != null) {
+            existing.setPoids(String.valueOf(request.getPoids()));
+        }
+        if (request.getTemperature() != null) {
+            existing.setTemperature(String.valueOf(request.getTemperature()));
+        }
+        if (request.getTensionArterielle() != null) {
+            existing.setTensionArterielle(request.getTensionArterielle());
+        }
+        if (request.getReasonForVisit() != null) {
+            existing.setReasonForVisit(request.getReasonForVisit());
+        }
+        if (request.getSymptomes() != null) {
+            existing.setSymptoms(request.getSymptomes());
+        }
+        if (request.getExamAmountPaid() != null) {
+            existing.setExamAmountPaid(request.getExamAmountPaid());
+        }
+        if (request.getStatus() != null) {
+            existing.setStatus(ConsultationStatus.valueOf(request.getStatus()));
+        }
+        
+        ConsultationDTO updated = consultationService.update(id, existing);
+        return ResponseEntity.ok(ApiResponse.success("Fiche mise à jour par réception", updated));
+    }
+
     // ✅ MÉTHODE CORRIGÉE POUR LA RESTAURATION ET MISE À JOUR DE STATUT
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_RECEPTION')")

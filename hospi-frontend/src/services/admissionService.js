@@ -110,7 +110,7 @@ export const admissionService = {
         payload.status = admissionData.status || admissionData.statut;
       }
 
-      const response = await api.put(`/v1/consultations/${validId}`, payload);
+      const response = await api.put(`/v1/consultations/${validId}/reception`, payload);
       return response.data?.data || response.data;
     } catch (error) {
       console.error("Détails Erreur Update Backend:", error.response?.data || error);
