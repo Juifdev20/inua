@@ -107,7 +107,7 @@ const EditAdmission = () => {
   );
 
   return (
-    <div className="relative p-4 max-w-xl mx-auto min-h-screen bg-background text-foreground">
+    <div className="relative p-3 sm:p-4 max-w-xl mx-auto min-h-screen bg-background text-foreground">
       <button 
         onClick={() => navigate(-1)} 
         className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 font-bold transition-colors mb-4 text-xs"
@@ -122,7 +122,7 @@ const EditAdmission = () => {
           </h2>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); setShowConfirm(true); }} className="p-6 space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); setShowConfirm(true); }} className="p-4 sm:p-6 space-y-5">
           
           <div className="space-y-1.5">
             <label className="text-[10px] uppercase font-black text-emerald-600 flex items-center gap-1.5 ml-1">
@@ -144,7 +144,7 @@ const EditAdmission = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/40">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/40">
             <div className="space-y-1 text-center">
               <label className="text-[10px] uppercase font-black text-rose-500 flex items-center justify-center gap-1.5">
                 <Activity size={12} /> Tension
@@ -207,8 +207,8 @@ const EditAdmission = () => {
 
       {/* --- MODALE DE CONFIRMATION CENTRÉE --- */}
       {showConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-card border border-border rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-card border border-border rounded-2xl sm:rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 text-center space-y-4">
               <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
                 <CheckCircle2 size={32} />

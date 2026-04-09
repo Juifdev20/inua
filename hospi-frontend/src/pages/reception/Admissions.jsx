@@ -414,22 +414,22 @@ export const Admissions = () => {
   // RENDER
   // ═══════════════════════════════════════
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 p-6">
+    <div className="space-y-6 animate-in fade-in duration-500 p-3 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Admission & Triage</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admission & Triage</h1>
           <p className="text-sm text-muted-foreground">Gestion des nouveaux arrivants</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl">
-          <Plus className="w-5 h-5 mr-2" /> Nouvelle Admission
+        <Button onClick={() => setShowModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl w-full sm:w-auto">
+          <Plus className="w-5 h-5 mr-2" /> <span className="hidden sm:inline">Nouvelle Admission</span><span className="sm:hidden">Nouveau</span>
         </Button>
       </div>
 
       {/* Workflow visuel */}
-      <div className="rounded-2xl bg-card border border-border p-4 shadow-sm">
+      <div className="rounded-2xl bg-card border border-border p-3 sm:p-4 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Workflow du patient</p>
-        <div className="flex items-center justify-between px-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-2 sm:px-4 gap-3 sm:gap-0">
           {[
             { label: 'Triage', sublabel: 'Réception', icon: UserCheck, active: true },
             { label: 'Caisse', sublabel: 'Finance', icon: Banknote, active: false },
@@ -437,18 +437,23 @@ export const Admissions = () => {
           ].map((s, i) => (
             <React.Fragment key={i}>
               {i > 0 && (
-                <div className="flex-1 mx-3">
-                  <div className="h-0.5 bg-border relative">
-                    <ArrowRight className="w-4 h-4 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card" />
+                <>
+                  <div className="hidden sm:block flex-1 mx-3">
+                    <div className="h-0.5 bg-border relative">
+                      <ArrowRight className="w-4 h-4 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card" />
+                    </div>
                   </div>
-                </div>
+                  <div className="flex sm:hidden w-8 h-0.5 bg-border mx-2 shrink-0"></div>
+                </>
               )}
-              <div className="flex flex-col items-center gap-1.5">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all", s.active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25" : "bg-muted text-muted-foreground")}>
-                  <s.icon className="w-5 h-5" />
+              <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-1.5 w-full sm:w-auto min-w-0">
+                <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all shrink-0", s.active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25" : "bg-muted text-muted-foreground")}>
+                  <s.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span className={cn("text-xs font-bold", s.active ? "text-emerald-600" : "text-muted-foreground")}>{s.label}</span>
-                <span className="text-[10px] text-muted-foreground">{s.sublabel}</span>
+                <div className="flex flex-row sm:flex-col items-center sm:items-center gap-1 sm:gap-0 min-w-0">
+                  <span className={cn("text-xs font-bold truncate", s.active ? "text-emerald-600" : "text-muted-foreground")}>{s.label}</span>
+                  <span className="text-[10px] text-muted-foreground hidden sm:inline">{s.sublabel}</span>
+                </div>
               </div>
             </React.Fragment>
           ))}
@@ -456,7 +461,7 @@ export const Admissions = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Patients aujourd\'hui', value: admissionsToday.length, icon: UserCheck, color: 'blue' },
           { label: 'En caisse', value: admissionsToday.filter(a => isWaitingPayment(a.status)).length, icon: Banknote, color: 'amber' },
@@ -546,11 +551,10 @@ export const Admissions = () => {
         <DialogPortal>
           <DialogOverlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
           <DialogContent className={cn(
-            "fixed top-1/2 z-50 w-[calc(100vw-2rem)] max-w-3xl max-h-[90vh]",
-            "translate-y-[-50%] overflow-auto bg-background border border-border rounded-2xl p-0 shadow-2xl",
-            "left-[calc(50%+40px)] -translate-x-1/2",
-            "md:left-[calc(50%+60px)]",
-            "lg:left-[calc(50%+80px)]"
+            "fixed top-1/2 z-50 w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-w-3xl max-h-[90vh]",
+            "-translate-y-1/2 overflow-auto bg-background border border-border rounded-2xl p-0 shadow-2xl",
+            "left-1/2 -translate-x-1/2",
+            "lg:left-[calc(50%+40px)]"
           )}>
             <DialogHeader className="p-4 border-b border-border sticky top-0 bg-background z-10">
               <DialogTitle className="text-xl font-bold text-foreground">
@@ -606,7 +610,7 @@ export const Admissions = () => {
                   {/* Informations Patient */}
                   <div className="bg-muted/30 p-4 rounded-xl space-y-3">
                     <p className="text-xs font-bold text-muted-foreground uppercase">Informations patient</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">Lieu de naissance</label>
                         <div className="relative">
@@ -716,7 +720,7 @@ export const Admissions = () => {
                   {/* Signes vitaux */}
                   <div className="bg-muted/30 p-4 rounded-xl space-y-3">
                     <p className="text-xs font-bold text-muted-foreground uppercase">Signes vitaux (triage)</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">Taille (cm) *</label>
                         <Input type="number" placeholder="170" value={triageData.taille} onChange={(e) => setTriageData({ ...triageData, taille: e.target.value })} required className="rounded-xl" />
