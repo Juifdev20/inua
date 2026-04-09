@@ -95,6 +95,7 @@ export const admissionService = {
       console.log(`📡 Appel API: PUT /v1/consultations/${validId}`);
 
       const payload = {
+        serviceId: admissionData.serviceId ? parseInt(admissionData.serviceId, 10) : null,
         taille: admissionData.taille ? parseFloat(admissionData.taille) : 0,
         poids: admissionData.poids ? parseFloat(admissionData.poids) : 0,
         temperature: admissionData.temperature ? parseFloat(admissionData.temperature) : 0,
