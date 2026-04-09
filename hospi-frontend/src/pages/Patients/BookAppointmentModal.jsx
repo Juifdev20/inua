@@ -20,7 +20,7 @@ const BookAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
     const fetchDoctors = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await api.get('/api/v1/doctors/all');
+        const res = await api.get('/api/users/doctors');
         
         const doctorsData = Array.isArray(res.data) ? res.data : (res.data.data || []);
         setDoctors(doctorsData);
