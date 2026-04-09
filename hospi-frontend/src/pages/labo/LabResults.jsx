@@ -63,6 +63,9 @@ const LabResults = () => {
   const [showDoctorModal, setShowDoctorModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Mobile navigation state
+  const [mobileTab, setMobileTab] = useState('patients'); // 'patients', 'exams', 'form'
+
   // ═══════════════════════════════════════════════════════════════
   // CHARGEMENT DES BOÎTES (Patients)
   // ═══════════════════════════════════════════════════════════════
@@ -132,6 +135,8 @@ const LabResults = () => {
     setSelectedBox(box);
     setSelectedExam(null);
     resetForm();
+    // Auto-navigate to exams tab on mobile
+    setMobileTab('exams');
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -142,6 +147,8 @@ const LabResults = () => {
     setResultValue(exam.resultValue || '');
     setUnit(exam.unit || '');
     setLabComment(exam.labComment || '');
+    // Auto-navigate to form tab on mobile
+    setMobileTab('form');
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -347,11 +354,41 @@ const LabResults = () => {
         </Button>
       </div>
 
-      {/* LAYOUT 3 PANES */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* LAYOUT 3 PANES - Responsive */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         
+        {/* Mobile Tab Navigation */}
+        <div className="md:hidden flex border-b bg-card sticky top-0 z-10">
+          <button
+            onClick={() => setMobileTab('patients')}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mobileTab === 'patients' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+            }`}
+          >
+            Patients
+          </button>
+          <button
+            onClick={() => setMobileTab('exams')}
+            disabled={!selectedBox}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+              !selectedBox ? 'opacity-50 cursor-not-allowed' : ''
+            } ${mobileTab === 'exams' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+          >
+            Examens
+          </button>
+          <button
+            onClick={() => setMobileTab('form')}
+            disabled={!selectedExam}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+              !selectedExam ? 'opacity-50 cursor-not-allowed' : ''
+            } ${mobileTab === 'form' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+          >
+            Saisie
+          </button>
+        </div>
+
         {/* COLONNE 1: PATIENTS (Gauche) */}
-        <div className="w-72 border-r bg-muted/20 flex flex-col">
+        <div className={`${mobileTab === 'patients' ? 'flex' : 'hidden'} md:flex w-full md:w-72 border-r bg-muted/20 flex-col flex-shrink-0`}>
           <div className="p-3 border-b bg-card">
             <div className="relative">
               <input
@@ -422,7 +459,7 @@ const LabResults = () => {
         </div>
 
         {/* COLONNE 2: EXAMENS (Centre) */}
-        <div className="w-80 border-r bg-muted/10 flex flex-col">
+        <div className={`${mobileTab === 'exams' ? 'flex' : 'hidden'} md:flex w-full md:w-80 border-r bg-muted/10 flex-col flex-shrink-0`}>
           {!selectedBox ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
               <User className="w-12 h-12 mb-2 opacity-20" />
@@ -522,7 +559,7 @@ const LabResults = () => {
         </div>
 
         {/* COLONNE 3: FORMULAIRE (Droite) */}
-        <div className="flex-1 overflow-y-auto bg-background">
+        <div className={`${mobileTab === 'form' ? 'flex' : 'hidden'} md:flex flex-1 overflow-y-auto bg-background`}>
           {!selectedExam ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
               <Beaker className="w-16 h-16 mb-4 opacity-10" />
