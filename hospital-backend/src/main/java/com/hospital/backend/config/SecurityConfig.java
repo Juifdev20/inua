@@ -123,6 +123,7 @@ public class SecurityConfig {
 
         // Origines autorisees - URLs Render specifiques
         configuration.setAllowedOriginPatterns(Arrays.asList(
+                "https://inua-oux2.onrender.com",
                 "https://inuaafia.onrender.com",
                 "http://localhost:3000",
                 "http://localhost:5173",

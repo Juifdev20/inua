@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/departments")
-@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 @Slf4j // Pour voir les erreurs dans la console
 public class DepartmentController {
 
