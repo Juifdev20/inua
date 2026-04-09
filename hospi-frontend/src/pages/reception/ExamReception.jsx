@@ -267,6 +267,8 @@ export const ExamReception = () => {
       console.log("📡 ExamReception: Traitement paiement pour:", selected.id);
       
       const payload = {
+        patientId: selected.patientId,
+        doctorId: selected.doctorId,
         serviceId: selected.serviceId,
         examAmountPaid: parseFloat(examPaid) || 0,
         status: 'labo'

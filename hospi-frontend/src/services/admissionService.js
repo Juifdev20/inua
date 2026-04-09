@@ -95,6 +95,8 @@ export const admissionService = {
       console.log(`📡 Appel API: PUT /v1/consultations/${validId}`);
 
       const payload = {
+        patientId: admissionData.patientId ? parseInt(admissionData.patientId, 10) : null,
+        doctorId: admissionData.doctorId ? parseInt(admissionData.doctorId, 10) : null,
         serviceId: admissionData.serviceId ? parseInt(admissionData.serviceId, 10) : null,
         taille: admissionData.taille ? parseFloat(admissionData.taille) : 0,
         poids: admissionData.poids ? parseFloat(admissionData.poids) : 0,
@@ -104,13 +106,6 @@ export const admissionService = {
         symptomes: (admissionData.symptomes || "").trim(),
         examAmountPaid: admissionData.examAmountPaid ? parseFloat(admissionData.examAmountPaid) : 0,
       };
-
-      if (admissionData.patientId) {
-        payload.patientId = parseInt(admissionData.patientId, 10);
-      }
-      if (admissionData.doctorId) {
-        payload.doctorId = parseInt(admissionData.doctorId, 10);
-      }
       if (admissionData.status || admissionData.statut) {
         payload.status = admissionData.status || admissionData.statut;
       }
