@@ -106,7 +106,7 @@ public class OnlineStatusController {
         }
     }
 
-    @GetMapping("/patients/my-doctors-v2")
+    @GetMapping("/online-status/my-doctors")
     @PreAuthorize("hasAuthority('ROLE_PATIENT')")
     public ResponseEntity<?> getMyDoctorsV2(Authentication authentication) {
         try {

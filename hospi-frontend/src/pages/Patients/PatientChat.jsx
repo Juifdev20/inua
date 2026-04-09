@@ -112,7 +112,7 @@ const PatientChat = () => {
   const fetchMyDoctors = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/v1/patients/my-doctors-v2`, {
+      const response = await axios.get(`${BACKEND_URL}/api/v1/online-status/my-doctors`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = response.data || [];
