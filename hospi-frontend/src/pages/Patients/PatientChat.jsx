@@ -46,6 +46,53 @@ const PatientChat = () => {
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const messagesEndRef = useRef(null);
+  const statusIntervalRef = useRef(null);
+
+  // Set online status when component mounts
+  useEffect(() => {
+    const setOnlineStatus = async () => {
+      try {
+        await api.post('/status/online');
+      } catch (error) {
+        console.error('Error setting online status:', error);
+      }
+    };
+
+    setOnlineStatus();
+
+    // Poll for doctor online status every 30 seconds
+    statusIntervalRef.current = setInterval(async () => {
+      if (doctors.length > 0) {
+        try {
+          const statusPromises = doctors.map(d => 
+            api.get(`/status/${d.id}`)
+          );
+          const responses = await Promise.all(statusPromises);
+          
+          const updatedDoctors = doctors.map((d, index) => ({
+            ...d,
+            en_ligne: responses[index].data.isOnline
+          }));
+          setDoctors(updatedDoctors);
+        } catch (error) {
+          console.error('Error fetching online status:', error);
+        }
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(statusIntervalRef.current);
+      // Set offline when component unmounts
+      const setOfflineStatus = async () => {
+        try {
+          await api.post('/status/offline');
+        } catch (error) {
+          console.error('Error setting offline status:', error);
+        }
+      };
+      setOfflineStatus();
+    };
+  }, [doctors]);
   
   const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
 
@@ -58,11 +105,12 @@ const PatientChat = () => {
   const fetchMyDoctors = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await api.get(`/api/v1/patients/my-doctors`);
+      const response = await api.get(`/patients/my-doctors-v2`);
       const data = response.data || [];
       const formatted = data.map(d => ({
         ...d,
-        displayFullName: `Dr. ${d.prenom || d.firstName || ''} ${d.nom || d.lastName || ''}`.trim(),
+        displayFullName: d.displayFullName || `Dr. ${d.prenom || d.firstName || ''} ${d.nom || d.lastName || ''}`.trim(),
+        en_ligne: d.en_ligne || false
       }));
       setDoctors(formatted);
       

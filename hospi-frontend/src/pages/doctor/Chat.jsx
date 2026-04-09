@@ -65,6 +65,57 @@ const Chat = () => {
   const scrollAreaRef = useRef(null);
   
   const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
+  const statusIntervalRef = useRef(null);
+
+  // Set online status when component mounts
+  useEffect(() => {
+    const setOnlineStatus = async () => {
+      try {
+        await axios.post(`${API_URL}/api/v1/status/online`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.error('Error setting online status:', error);
+      }
+    };
+
+    setOnlineStatus();
+
+    // Poll for patient online status every 30 seconds
+    statusIntervalRef.current = setInterval(async () => {
+      if (patients.length > 0) {
+        try {
+          const statusPromises = patients.map(p => 
+            axios.get(`${API_URL}/api/v1/status/${p.id}`)
+          );
+          const responses = await Promise.all(statusPromises);
+          
+          const updatedPatients = patients.map((p, index) => ({
+            ...p,
+            en_ligne: responses[index].data.isOnline
+          }));
+          setPatients(updatedPatients);
+        } catch (error) {
+          console.error('Error fetching online status:', error);
+        }
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(statusIntervalRef.current);
+      // Set offline when component unmounts
+      const setOfflineStatus = async () => {
+        try {
+          await axios.post(`${API_URL}/api/v1/status/offline`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (error) {
+          console.error('Error setting offline status:', error);
+        }
+      };
+      setOfflineStatus();
+    };
+  }, [token, patients]);
 
   const fetchPatientsList = useCallback(async () => {
     if (!token) return;

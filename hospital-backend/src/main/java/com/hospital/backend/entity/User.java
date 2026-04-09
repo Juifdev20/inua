@@ -98,6 +98,14 @@ public class User {
     @JsonProperty("preferredLanguage")
     private String preferredLanguage = "fr";
 
+    @Column(name = "is_online")
+    @JsonProperty("isOnline")
+    private Boolean isOnline = false;
+
+    @Column(name = "last_seen")
+    @JsonProperty("lastSeen")
+    private LocalDateTime lastSeen;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
