@@ -86,7 +86,9 @@ const Chat = () => {
       if (patients.length > 0) {
         try {
           const statusPromises = patients.map(p => 
-            axios.get(`${API_URL}/api/v1/status/${p.id}`)
+            axios.get(`${API_URL}/api/v1/status/${p.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
           );
           const responses = await Promise.all(statusPromises);
           

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,7 +53,9 @@ const PatientChat = () => {
   useEffect(() => {
     const setOnlineStatus = async () => {
       try {
-        await api.post('/status/online');
+        await axios.post(`${BACKEND_URL}/api/v1/status/online`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       } catch (error) {
         console.error('Error setting online status:', error);
       }
@@ -65,7 +68,9 @@ const PatientChat = () => {
       if (doctors.length > 0) {
         try {
           const statusPromises = doctors.map(d => 
-            api.get(`/status/${d.id}`)
+            axios.get(`${BACKEND_URL}/api/v1/status/${d.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
           );
           const responses = await Promise.all(statusPromises);
           
@@ -85,14 +90,16 @@ const PatientChat = () => {
       // Set offline when component unmounts
       const setOfflineStatus = async () => {
         try {
-          await api.post('/status/offline');
+          await axios.post(`${BACKEND_URL}/api/v1/status/offline`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
         } catch (error) {
           console.error('Error setting offline status:', error);
         }
       };
       setOfflineStatus();
     };
-  }, [doctors]);
+  }, [doctors, token]);
   
   const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
 
@@ -105,7 +112,9 @@ const PatientChat = () => {
   const fetchMyDoctors = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await api.get(`/patients/my-doctors-v2`);
+      const response = await axios.get(`${BACKEND_URL}/api/v1/patients/my-doctors-v2`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = response.data || [];
       const formatted = data.map(d => ({
         ...d,

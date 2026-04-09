@@ -160,6 +160,7 @@ public class SecurityConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(Arrays.asList(
+                "https://inua-oux2.onrender.com",
                 "https://inuaafia.onrender.com",
                 "http://localhost:3000",
                 "http://localhost:5173",
