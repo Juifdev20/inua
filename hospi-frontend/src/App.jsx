@@ -16,6 +16,7 @@ import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import AppLauncher from "./components/AppLauncher";
+import WindowControls from "./components/WindowControls";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -373,6 +374,9 @@ function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+
+                {/* 🖥️ Barre de titre PWA (desktop uniquement) */}
+                <WindowControls />
 
                 <Toaster position="top-right" richColors />
                 <PWAInstallPrompt />
