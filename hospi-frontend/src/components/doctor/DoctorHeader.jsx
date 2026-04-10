@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -151,24 +151,6 @@ const DoctorHeader = () => {
           <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
             <Menu className="w-6 h-6" />
           </button>
-
-          {/* Navigation Buttons - Style YouTube PWA */}
-          <div className="hidden sm:flex items-center gap-1">
-            <button
-              onClick={() => window.history.back()}
-              className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-              title="Retour"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-              title="Actualiser"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-          </div>
 
           <div className="relative flex-1 hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.5} />

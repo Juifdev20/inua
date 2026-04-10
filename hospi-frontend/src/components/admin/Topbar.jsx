@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Bell, Moon, Sun, Search, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext'; 
 import { Button } from '../ui/button';
@@ -67,28 +67,6 @@ const Topbar = () => {
         >
           <Menu className="w-5 h-5" />
         </Button>
-
-        {/* Navigation Buttons - Style YouTube PWA */}
-        <div className="hidden sm:flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.history.back()}
-            className="text-muted-foreground hover:text-foreground"
-            title="Retour"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.location.reload()}
-            className="text-muted-foreground hover:text-foreground"
-            title="Actualiser"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </Button>
-        </div>
 
         <div className="hidden md:flex items-center flex-1 max-w-md">
           <div className="relative w-full">

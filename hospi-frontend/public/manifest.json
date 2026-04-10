@@ -1,6 +1,5 @@
 {
-  "short_name": "InuaAfia",
-  "name": "InuaAfia - Système de Gestion Hospitalier",
+  "short_name": "InuaAfya",
   "description": "Application mobile de gestion hospitalière moderne",
   "start_url": "/?source=pwa",
   "display": "standalone",

@@ -10,9 +10,7 @@ import {
   Clock,
   CheckCircle,
   Moon,
-  Sun,
-  ArrowLeft,
-  RefreshCw
+  Sun
 } from 'lucide-react';
 import LogoInuaAfya from '../components/LogoInuaAfya';
 
@@ -95,24 +93,6 @@ const LandingPage = () => {
         ">
           INUA AFIA
         </span>
-
-        {/* Boutons Navigation - Style YouTube PWA */}
-        <div className="hidden sm:flex items-center space-x-1 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
-          <button
-            onClick={() => window.history.back()}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors"
-            title="Retour"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors"
-            title="Actualiser"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-        </div>
       </div>
 
       {/* Actions */}
