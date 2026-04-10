@@ -112,6 +112,7 @@ public class LabTestServiceImpl implements LabTestService {
     }
 
     @Override
+    @Transactional(readOnly = true) // ✅ Garde la session Hibernate ouverte pour le mapping DTO
     public PageResponse<LabTestDTO> getByConsultation(Long consultationId, Pageable pageable) {
         Page<LabTest> page = labTestRepository.findByConsultationId(consultationId, pageable);
         return toPageResponse(page);
