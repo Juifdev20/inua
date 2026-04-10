@@ -400,7 +400,20 @@ const Consultations = () => {
         setLabResults(Array.isArray(results) ? results : []);
     } catch (error) {
         console.error('❌ Erreur chargement résultats labo:', error);
-        setLabResults([]);
+        
+        // Gérer différents types d'erreurs
+        if (error.response?.status === 404) {
+            // Pas de résultats labo pour cette consultation - c'est normal
+            setLabResults([]);
+        } else if (error.response?.status === 500) {
+            // Erreur serveur - informer l'utilisateur
+            toast.error("Erreur serveur lors du chargement des résultats labo. Veuillez réessayer.");
+            setLabResults([]);
+        } else {
+            // Autres erreurs
+            toast.error("Impossible de charger les résultats laboratoire");
+            setLabResults([]);
+        }
     } finally {
         setLoadingLabResults(false);
     }

@@ -18,7 +18,8 @@ public interface LabTestRepository extends JpaRepository<LabTest, Long> {
 
     Page<LabTest> findByPatientId(Long patientId, Pageable pageable);
 
-    Page<LabTest> findByConsultationId(Long consultationId, Pageable pageable);
+    @Query("SELECT lt FROM LabTest lt LEFT JOIN FETCH lt.consultation c LEFT JOIN FETCH lt.patient p LEFT JOIN FETCH lt.requestedBy rb LEFT JOIN FETCH lt.processedBy pb LEFT JOIN FETCH lt.doctorRecipient dr WHERE lt.consultation.id = :consultationId")
+    Page<LabTest> findByConsultationId(@Param("consultationId") Long consultationId, Pageable pageable);
 
     /**
      * ✅ NOUVEAU : Récupère tous les tests d'une consultation (sans pagination)

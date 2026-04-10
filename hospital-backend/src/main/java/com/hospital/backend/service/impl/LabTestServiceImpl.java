@@ -307,9 +307,6 @@ public class LabTestServiceImpl implements LabTestService {
         LabTestDTO.LabTestDTOBuilder builder = LabTestDTO.builder()
                 .id(l.getId())
                 .testCode(l.getTestCode())
-                .consultationId(l.getConsultation().getId())
-                .patientId(l.getPatient().getId())
-                .patientName(l.getPatient().getFirstName() + " " + l.getPatient().getLastName())
                 .testType(l.getTestType())
                 .testName(l.getTestName())
                 .description(l.getDescription())
@@ -325,6 +322,17 @@ public class LabTestServiceImpl implements LabTestService {
                 .updatedAt(l.getUpdatedAt())
                 .fromFinance(l.isFromFinance())
                 .unitPrice(l.getUnitPrice());
+        
+        // ✅ Gestion null-safe pour consultation
+        if (l.getConsultation() != null) {
+            builder.consultationId(l.getConsultation().getId());
+        }
+        
+        // ✅ Gestion null-safe pour patient
+        if (l.getPatient() != null) {
+            builder.patientId(l.getPatient().getId())
+                   .patientName(l.getPatient().getFirstName() + " " + l.getPatient().getLastName());
+        }
 
         if (l.getRequestedBy() != null) {
             builder.requestedById(l.getRequestedBy().getId())
