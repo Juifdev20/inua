@@ -288,9 +288,13 @@ const LabResultsDoctor = () => {
                       Aucun résultat reçu pour le moment.
                     </div>
                   ) : (
-                    // ✅ AFFICHE UNIQUEMENT LES CONSULTATIONS AVEC RESULTATS PRETS
+                    // ✅ AFFICHE TOUTES LES CONSULTATIONS AVEC DES RÉSULTATS DE LABO
                     (() => {
-                      const filteredConsultations = consultations.filter(c => c.status === 'RESULTATS_PRETS');
+                      // Afficher toutes les consultations qui ont des résultats (hasResults === true)
+                      // ou qui ont des examens (totalExams > 0)
+                      const filteredConsultations = consultations.filter(c => 
+                        c.hasResults === true || c.totalExams > 0 || c.examResults?.length > 0
+                      );
                       
                       if (filteredConsultations.length === 0) {
                         return (
@@ -303,7 +307,8 @@ const LabResultsDoctor = () => {
                       return filteredConsultations.map((consultation) => {
                       const isSelected = selectedConsultation?.consultationId === consultation.consultationId;
                       const statusClass = getStatusClass(consultation.status);
-                      const isNew = consultation.status === 'TERMINE' || consultation.status === 'RESULTAT_DISPONIBLE';
+                      // ✅ NOUVEAU : Toute consultation avec résultats non encore vue
+                      const isNew = consultation.hasResults === true || consultation.status === 'RESULTAT_DISPONIBLE' || consultation.status === 'RESULTATS_PRETS';
 
                       return (
                         <button
