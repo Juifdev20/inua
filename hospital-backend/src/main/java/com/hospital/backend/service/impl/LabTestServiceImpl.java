@@ -270,6 +270,98 @@ public class LabTestServiceImpl implements LabTestService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    // ✅ NOUVEAU : Récupère les résultats groupés par consultation pour un médecin
+    // Toute la conversion en DTO se fait à l'intérieur de la transaction pour éviter LazyInitializationException
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConsultationLabResultsDTO> getGroupedResultsForDoctor(Long doctorId) {
+        log.info("📦 [SERVICE] Récupération des résultats groupés pour le docteur ID: {}", doctorId);
+
+        // 1. Récupère tous les tests du docteur (à l'intérieur de la transaction)
+        List<LabTest> labTests = labTestRepository.findByDoctorRecipientId(doctorId);
+
+        // 2. Groupe par consultation (toujours dans la transaction)
+        Map<Long, List<LabTest>> groupedByConsultation = labTests.stream()
+                .filter(lt -> lt.getConsultation() != null)
+                .collect(Collectors.groupingBy(lt -> lt.getConsultation().getId()));
+
+        // 3. Convertit chaque groupe en DTO (tout est chargé ici, avant la fermeture de la transaction)
+        return groupedByConsultation.entrySet().stream()
+                .map(entry -> buildConsultationLabResultsDTO(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
+    }
+
+    // Helper method pour construire le DTO de regroupement
+    private ConsultationLabResultsDTO buildConsultationLabResultsDTO(Long consultationId, List<LabTest> tests) {
+        // Prend le premier test pour extraire les infos communes de la consultation
+        LabTest firstTest = tests.get(0);
+        Consultation consultation = firstTest.getConsultation();
+        Patient patient = firstTest.getPatient();
+
+        // Compte les examens critiques
+        long criticalCount = tests.stream()
+                .filter(t -> isCriticalResult(t.getResults(), t.getNormalRange()))
+                .count();
+
+        // Convertit les tests en DoctorLabResultDTO
+        List<DoctorLabResultDTO> examResults = tests.stream()
+                .map(this::convertToDoctorLabResultDTO)
+                .collect(Collectors.toList());
+
+        return ConsultationLabResultsDTO.builder()
+                .consultationId(consultationId)
+                .consultationCode(consultation.getConsultationCode())
+                .consultationTitle(consultation.getMotif())
+                .consultationDate(consultation.getCreatedAt())
+                .status(consultation.getStatus().name())
+                .patientId(patient.getId())
+                .patientName(patient.getFirstName() + " " + patient.getLastName())
+                .patientCode(patient.getPatientCode())
+                .patientPhoto(patient.getPhotoUrl() != null ? patient.getPhotoUrl() : null)
+                .doctorId(consultation.getDoctor() != null ? consultation.getDoctor().getId() : null)
+                .doctorName(consultation.getDoctor() != null ?
+                        consultation.getDoctor().getFirstName() + " " + consultation.getDoctor().getLastName() : null)
+                .doctorPhoto(consultation.getDoctor() != null ? consultation.getDoctor().getPhotoUrl() : null)
+                .examResults(examResults)
+                .totalExams(tests.size())
+                .criticalExams(criticalCount)
+                .hasResults(true)
+                .resultsDate(tests.stream()
+                        .filter(t -> t.getProcessedAt() != null)
+                        .map(LabTest::getProcessedAt)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null))
+                .globalInterpretation(tests.stream()
+                        .filter(t -> t.getInterpretation() != null)
+                        .map(LabTest::getInterpretation)
+                        .findFirst()
+                        .orElse(null))
+                .build();
+    }
+
+    // Helper method pour convertir un LabTest en DoctorLabResultDTO
+    private DoctorLabResultDTO convertToDoctorLabResultDTO(LabTest test) {
+        return DoctorLabResultDTO.builder()
+                .id(test.getId())
+                .examName(test.getTestName())
+                .resultValue(test.getResults())
+                .unit(test.getUnit())
+                .referenceRange(test.getNormalRange())
+                .comment(test.getInterpretation())
+                .isCritical(isCriticalResult(test.getResults(), test.getNormalRange()))
+                .resultDate(test.getProcessedAt())
+                .build();
+    }
+
+    // Helper method pour détecter si un résultat est critique
+    private boolean isCriticalResult(String results, String normalRange) {
+        if (results == null || normalRange == null) return false;
+        // Logique simple : si le résultat contient "CRITIQUE" ou dépasse la norme
+        return results.toUpperCase().contains("CRITIQUE") ||
+               results.toUpperCase().contains("ALERTE") ||
+               results.toUpperCase().contains("URGENT");
+    }
+
     @Override
     public List<LabTestDTO> getActiveTestsForPatient(Long patientId) {
         List<LabTestStatus> allowedStatuses = Arrays.asList(LabTestStatus.EN_ATTENTE, LabTestStatus.EN_COURS);

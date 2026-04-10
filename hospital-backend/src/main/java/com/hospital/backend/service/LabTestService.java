@@ -1,5 +1,6 @@
 package com.hospital.backend.service;
 
+import com.hospital.backend.dto.ConsultationLabResultsDTO;
 import com.hospital.backend.dto.LabTestDTO;
 import com.hospital.backend.dto.PageResponse;
 import com.hospital.backend.dto.UserDTO; // Assurez-vous d'avoir ce DTO pour la liste des médecins
@@ -101,4 +102,10 @@ public interface LabTestService {
      * (Consultable par le docteur lors de la rédaction de la prescription)
      */
     List<LabTestDTO> getFinishedResultsByPatient(Long patientId);
+
+    /**
+     * ✅ NOUVEAU : Récupère les résultats de laboratoire groupés par consultation pour un médecin
+     * Utilise un DTO sans entités Hibernate pour éviter LazyInitializationException
+     */
+    List<ConsultationLabResultsDTO> getGroupedResultsForDoctor(Long doctorId);
 }

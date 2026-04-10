@@ -5,6 +5,7 @@ import com.hospital.backend.dto.ApiResponse;
 import com.hospital.backend.entity.LabTestStatus;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.exception.ResourceNotFoundException;
+import com.hospital.backend.repository.LabTestRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.LabTestService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,15 +22,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import com.hospital.backend.entity.LabTest;
-import com.hospital.backend.repository.LabTestRepository;
 
 @RestController
 @RequestMapping("/api/lab-tests")
@@ -268,7 +263,6 @@ public class LabTestController {
     @GetMapping("/doctor/consultations")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR')")
     @Operation(summary = "Résultats groupés par consultation", description = "Récupère les résultats de labo groupés par consultation pour le médecin connecté")
-    @Transactional(readOnly = true) // ✅ Garde la session ouverte pour lazy loading
     public ResponseEntity<ApiResponse<List<ConsultationLabResultsDTO>>> getGroupedResultsForDoctor() {
         try {
             // Extraire l'identifiant du docteur depuis le token JWT
@@ -282,19 +276,9 @@ public class LabTestController {
                     .or(() -> userRepository.findByEmail(identifier))
                     .orElseThrow(() -> new ResourceNotFoundException("Docteur non trouvé avec l'identifiant: " + identifier));
 
-            // Récupérer tous les tests du docteur
-            List<LabTest> labTests = labTestRepository.findByDoctorRecipientId(currentDoctor.getId());
-
-            // Grouper par consultation
-            Map<Long, List<LabTest>> groupedByConsultation = labTests.stream()
-                    .filter(lt -> lt.getConsultation() != null)
-                    .collect(Collectors.groupingBy(lt -> lt.getConsultation().getId()));
-
-            // Mapper en DTOs
-            List<ConsultationLabResultsDTO> result = groupedByConsultation.entrySet().stream()
-                    .map(entry -> mapToConsultationLabResultsDTO(entry.getKey(), entry.getValue()))
-                    .filter(dto -> dto != null)
-                    .collect(Collectors.toList());
+            // ✅ Utilise le service qui gère la transaction et la conversion en DTO
+            // Cela évite complètement les LazyInitializationException
+            List<ConsultationLabResultsDTO> result = labTestService.getGroupedResultsForDoctor(currentDoctor.getId());
 
             log.info("📦 [GROUPED] {} consultations avec résultats trouvées", result.size());
 
@@ -303,78 +287,5 @@ public class LabTestController {
             log.error("❌ Erreur lors de la récupération des résultats groupés: {}", e.getMessage(), e);
             return ResponseEntity.ok(ApiResponse.success("Aucun résultat trouvé", List.of()));
         }
-    }
-    
-    private ConsultationLabResultsDTO mapToConsultationLabResultsDTO(Long consultationId, List<LabTest> labTests) {
-        if (labTests.isEmpty()) return null;
-        
-        LabTest firstTest = labTests.get(0);
-        
-        // Mapper les résultats d'examens
-        List<DoctorLabResultDTO> examResults = labTests.stream()
-                .map(this::mapToExamResultDTO)
-                .collect(Collectors.toList());
-        
-        // Compter les examens critiques
-        long criticalCount = examResults.stream()
-                .filter(er -> Boolean.TRUE.equals(er.getIsCritical()))
-                .count();
-        
-        // Construire le DTO
-        ConsultationLabResultsDTO.ConsultationLabResultsDTOBuilder builder = ConsultationLabResultsDTO.builder()
-                .consultationId(consultationId)
-                .consultationCode(firstTest.getConsultation() != null ? firstTest.getConsultation().getConsultationCode() : null)
-                .consultationTitle(firstTest.getTestType()) // Utiliser le type comme titre par défaut
-                .consultationDate(firstTest.getRequestedAt())
-                .status(firstTest.getConsultation() != null && firstTest.getConsultation().getStatus() != null 
-                        ? firstTest.getConsultation().getStatus().name() 
-                        : "UNKNOWN")
-                .patientId(firstTest.getPatient() != null ? firstTest.getPatient().getId() : null)
-                .patientName(firstTest.getPatient() != null ? 
-                        firstTest.getPatient().getFirstName() + " " + firstTest.getPatient().getLastName() : "Patient inconnu")
-                .patientCode(firstTest.getPatient() != null ? firstTest.getPatient().getPatientCode() : null)
-                .doctorId(firstTest.getDoctorRecipient() != null ? firstTest.getDoctorRecipient().getId() : null)
-                .doctorName(firstTest.getDoctorRecipient() != null ? 
-                        "Dr. " + firstTest.getDoctorRecipient().getFirstName() + " " + firstTest.getDoctorRecipient().getLastName() : null)
-                .examResults(examResults)
-                .totalExams(examResults.size())
-                .criticalExams(criticalCount)
-                .hasResults(!examResults.isEmpty())
-                .resultsDate(firstTest.getProcessedAt());
-        
-        return builder.build();
-    }
-    
-    private DoctorLabResultDTO mapToExamResultDTO(LabTest labTest) {
-        // Parser le JSON des résultats si présent
-        String resultValue = labTest.getResults();
-        if (resultValue != null && resultValue.startsWith("{")) {
-            try {
-                // Essayer d'extraire la valeur du JSON
-                int start = resultValue.indexOf("\"valeur\":\"");
-                if (start != -1) {
-                    start += 10;
-                    int end = resultValue.indexOf("\"", start);
-                    if (end != -1) {
-                        resultValue = resultValue.substring(start, end);
-                    }
-                }
-            } catch (Exception e) {
-                // Garder la valeur originale en cas d'erreur
-            }
-        }
-        
-        return DoctorLabResultDTO.builder()
-                .id(labTest.getId())
-                .examName(labTest.getTestName())
-                .resultValue(resultValue)
-                .unit(labTest.getUnit())
-                .referenceRange(labTest.getNormalRange())
-                .comment(labTest.getInterpretation())
-                .isCritical(labTest.getStatus() != null && 
-                        (labTest.getStatus().name().contains("CRITIQUE") || 
-                         (labTest.getResults() != null && labTest.getResults().contains("CRITIQUE"))))
-                .resultDate(labTest.getProcessedAt())
-                .build();
     }
 }
