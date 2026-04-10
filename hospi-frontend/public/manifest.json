@@ -1,5 +1,6 @@
 {
   "short_name": "InuaAfya",
+  "name": "InuaAfya",
   "description": "Application mobile de gestion hospitalière moderne",
   "start_url": "/?source=pwa",
   "display": "standalone",
