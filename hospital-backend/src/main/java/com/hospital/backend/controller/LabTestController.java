@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -267,6 +268,7 @@ public class LabTestController {
     @GetMapping("/doctor/consultations")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR')")
     @Operation(summary = "Résultats groupés par consultation", description = "Récupère les résultats de labo groupés par consultation pour le médecin connecté")
+    @Transactional(readOnly = true) // ✅ Garde la session ouverte pour lazy loading
     public ResponseEntity<ApiResponse<List<ConsultationLabResultsDTO>>> getGroupedResultsForDoctor() {
         try {
             // Extraire l'identifiant du docteur depuis le token JWT
