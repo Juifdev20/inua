@@ -306,7 +306,9 @@ const LabResultsDoctor = () => {
                       
                       return filteredConsultations.map((consultation) => {
                       const isSelected = selectedConsultation?.consultationId === consultation.consultationId;
-                      const statusClass = getStatusClass(consultation.status);
+                      // ✅ CORRECTION: Afficher RESULTATS_PRETS si hasResults, sinon le statut de consultation
+                      const displayStatus = consultation.hasResults === true ? 'RESULTATS_PRETS' : consultation.status;
+                      const statusClass = getStatusClass(displayStatus);
                       // ✅ NOUVEAU : Toute consultation avec résultats non encore vue
                       const isNew = consultation.hasResults === true || consultation.status === 'RESULTAT_DISPONIBLE' || consultation.status === 'RESULTATS_PRETS';
 
@@ -341,7 +343,7 @@ const LabResultsDoctor = () => {
                               {consultation.patientName}
                             </p>
                             <Badge className={`text-[9px] ${statusClass}`}>
-                              {consultation.status?.replace('_', ' ') || 'N/A'}
+                              {displayStatus?.replace(/_/g, ' ') || 'N/A'}
                             </Badge>
                           </div>
 

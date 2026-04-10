@@ -5,6 +5,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.PrescriptionService;
+import com.hospital.backend.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
     private final MedicationRepository medicationRepository;
+    private final InvoiceService invoiceService;
     
     @Override
     @Transactional
@@ -206,7 +208,19 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             }
         }
         
-        return mapToDTO(prescription);
+        PrescriptionDTO result = mapToDTO(prescription);
+        
+        // ✅ AUTO-CRÉATION DE LA FACTURE pour la caisse pharmacie
+        try {
+            log.info("🧾 [AUTO-INVOICE] Création automatique de la facture pour prescription ID: {}", prescription.getId());
+            invoiceService.createPrescriptionInvoice(prescription.getId(), doctor);
+            log.info("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID: {}", prescription.getId());
+        } catch (Exception e) {
+            log.error("❌ [AUTO-INVOICE] Erreur lors de la création de la facture: {}", e.getMessage(), e);
+            // Ne pas bloquer la création de la prescription si la facture échoue
+        }
+        
+        return result;
     }
     
     private PrescriptionDTO mapToDTO(Prescription prescription) {
