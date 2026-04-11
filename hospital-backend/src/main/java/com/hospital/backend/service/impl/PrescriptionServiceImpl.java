@@ -216,7 +216,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             invoiceService.createPrescriptionInvoice(prescription.getId(), doctor);
             log.info("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID: {}", prescription.getId());
         } catch (Exception e) {
-            log.error("❌ [AUTO-INVOICE] Erreur lors de la création de la facture: {}", e.getMessage(), e);
+            log.error("❌ [AUTO-INVOICE] Erreur lors de la création de la facture: {}", e.getMessage());
+            log.error("❌ [AUTO-INVOICE] Stack trace:", e);
             // Ne pas bloquer la création de la prescription si la facture échoue
         }
         

@@ -122,10 +122,12 @@ const financeApi = {
           // Décoder le token JWT pour voir les rôles
           const payload = JSON.parse(atob(token.split('.')[1]));
           console.log('👤 [DEBUG] Utilisateur connecté:', payload);
-          console.log('🔑 [DEBUG] Rôles bruts:', payload.roles || payload.authorities || 'Non spécifiés');
+          // ✅ CORRECTION: Le backend met le rôle dans 'role' (singulier), pas 'roles'
+          const rawRole = payload.role || payload.roles || payload.authorities;
+          console.log('🔑 [DEBUG] Rôle brut:', rawRole || 'Non spécifié');
           
           // Afficher les rôles formatés pour Spring Security
-          const roles = payload.roles || payload.authorities || [];
+          const roles = rawRole ? (Array.isArray(rawRole) ? rawRole : [rawRole]) : [];
           console.log('🔑 [DEBUG] Rôles formatés pour Spring:', roles.map(r => r.startsWith('ROLE_') ? r : 'ROLE_' + r));
         } catch (e) {
           console.log('⚠️ [DEBUG] Impossible de décoder le token:', e.message);
