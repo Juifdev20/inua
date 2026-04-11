@@ -19,6 +19,11 @@ public class InvoiceItemDTO {
     @NotBlank(message = "La description est obligatoire")
     private String description;
     
+    // ★ ALIAS pour compatibilité frontend (CaissePharmacie attend 'name')
+    public String getName() {
+        return this.description;
+    }
+    
     private InvoiceItemType itemType;
     
     @NotNull(message = "La quantité est obligatoire")
@@ -26,6 +31,11 @@ public class InvoiceItemDTO {
     
     @NotNull(message = "Le prix unitaire est obligatoire")
     private BigDecimal unitPrice;
+    
+    // ★ ALIAS pour compatibilité frontend (CaissePharmacie attend 'price')
+    public BigDecimal getPrice() {
+        return this.unitPrice;
+    }
     
     private BigDecimal totalPrice;
 }

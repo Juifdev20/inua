@@ -213,7 +213,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         return InvoiceItemDTO.builder()
                 .id(item.getId())
                 .description(item.getDescription())
+                .itemType(item.getItemType())
                 .quantity(item.getQuantity())
+                .unitPrice(item.getUnitPrice())
                 .totalPrice(item.getTotalPrice())
                 .build();
     }
