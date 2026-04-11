@@ -778,18 +778,20 @@ public class PharmacyServiceImpl implements PharmacyService {
     // ══════════════════════════════════════════════════════════════════
 
     @Override
+    @Transactional(readOnly = true)
     public List<PrescriptionDTO> getPendingPrescriptions() {
-        log.info("🔄 [PRESCRIPTION] Récupération des prescriptions en attente pour la pharmacie");
+        log.info("🔄 [PRESCRIPTION] Récupération des prescriptions pour la pharmacie");
         
-        // TODO: Implémenter la logique pour récupérer les prescriptions avec statut EN_ATTENTE
-        // List<Prescription> prescriptions = prescriptionRepository.findByStatus(PrescriptionStatus.EN_ATTENTE);
-        // return prescriptions.stream().map(this::mapToPrescriptionDTO).collect(Collectors.toList());
+        // Récupérer les prescriptions avec statuts pertinents pour la pharmacie
+        List<Prescription> prescriptions = prescriptionRepository.findPendingPrescriptions();
         
-        log.warn("⚠️ [PRESCRIPTION] Service non implémenté - retour d'une liste vide");
-        return List.of();
+        return prescriptions.stream()
+            .map(this::mapToPrescriptionDTO)
+            .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional
     public PharmacyOrderDTO convertPrescriptionToOrder(Long prescriptionId, Map<String, Object> options) {
         log.info("🔄 [PRESCRIPTION] Conversion de la prescription {} en commande pharmacie", prescriptionId);
         
@@ -1168,6 +1170,62 @@ public class PharmacyServiceImpl implements PharmacyService {
                 : 0.0)
             .averageCart(orders.isEmpty() ? BigDecimal.ZERO : 
                 revenue.divide(BigDecimal.valueOf(orders.size()), 2, RoundingMode.HALF_UP))
+            .build();
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // PRESCRIPTION MAPPING METHODS
+    // ═════════════════════════════════════════════════════════════════
+
+    private PrescriptionDTO mapToPrescriptionDTO(Prescription prescription) {
+        if (prescription == null) return null;
+
+        List<PrescriptionDTO.PrescriptionItemDTO> items = prescription.getItems() != null
+            ? prescription.getItems().stream()
+                .map(this::mapPrescriptionItemToDTO)
+                .collect(Collectors.toList())
+            : List.of();
+
+        return PrescriptionDTO.builder()
+            .id(prescription.getId())
+            .prescriptionCode(prescription.getPrescriptionCode())
+            .patientId(prescription.getPatient() != null ? prescription.getPatient().getId() : null)
+            .patientName(prescription.getPatient() != null
+                ? prescription.getPatient().getFirstName() + " " + prescription.getPatient().getLastName()
+                : null)
+            .doctorId(prescription.getDoctor() != null ? prescription.getDoctor().getId() : null)
+            .doctorName(prescription.getDoctor() != null
+                ? prescription.getDoctor().getFirstName() + " " + prescription.getDoctor().getLastName()
+                : null)
+            .consultationId(prescription.getConsultation() != null ? prescription.getConsultation().getId() : null)
+            .status(prescription.getStatus())
+            .notes(prescription.getNotes())
+            .createdAt(prescription.getCreatedAt())
+            .items(items)
+            .build();
+    }
+
+    private PrescriptionDTO.PrescriptionItemDTO mapPrescriptionItemToDTO(PrescriptionItem item) {
+        if (item == null) return null;
+
+        Medication medication = item.getMedication();
+        BigDecimal unitPrice = medication != null && medication.getUnitPrice() != null
+            ? medication.getUnitPrice()
+            : BigDecimal.ZERO;
+        Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+
+        return PrescriptionDTO.PrescriptionItemDTO.builder()
+            .id(item.getId())
+            .medicationId(medication != null ? medication.getId() : null)
+            .medicationName(medication != null ? medication.getName() : "Unknown")
+            .dosage(item.getDosage())
+            .frequency(item.getFrequency())
+            .duration(item.getDuration() != null ? item.getDuration().toString() : null)
+            .quantity(quantity)
+            .quantityPerDose(item.getQuantityPerDose())
+            .unitPrice(unitPrice)
+            .totalPrice(unitPrice.multiply(BigDecimal.valueOf(quantity)))
+            .stockQuantity(medication != null ? medication.getStockQuantity() : 0)
             .build();
     }
 }

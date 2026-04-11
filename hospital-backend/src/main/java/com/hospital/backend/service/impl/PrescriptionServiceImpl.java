@@ -293,6 +293,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public PrescriptionDTO getById(Long id) {
         log.info("Récupération de la prescription ID: {}", id);
         Prescription prescription = prescriptionRepository.findById(id)
