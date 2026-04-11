@@ -35,6 +35,7 @@ public class PrescriptionController {
     public ResponseEntity<ApiResponse<PrescriptionDTO>> createPrescription(
             @Valid @RequestBody PrescriptionDTO prescriptionDTO, 
             Authentication authentication) {
+        log.info("🔥🔥🔥 [PRESCRIPTION CONTROLLER] /api/prescriptions/create APPELÉ! 🔥🔥🔥");
         try {
             // Récupérer le docteur connecté depuis le JWT token
             String username = authentication.getName();
