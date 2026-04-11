@@ -103,25 +103,50 @@ public class FinanceController {
             );
 
             List<Consultation> consultations;
+            boolean dateFilterApplied = false;
             
             // Si une date est fournie, filtrer par cette date
             if (date != null && !date.isEmpty()) {
-                LocalDate targetDate = LocalDate.parse(date);
-                LocalDateTime startOfDay = targetDate.atStartOfDay();
-                LocalDateTime endOfDay = targetDate.atTime(23, 59, 59);
+                try {
+                    LocalDate targetDate = LocalDate.parse(date);
+                    LocalDateTime startOfDay = targetDate.atStartOfDay();
+                    LocalDateTime endOfDay = targetDate.atTime(23, 59, 59);
+                    
+                    List<Consultation> dateFiltered = consultationRepository
+                        .findByStatusInAndCreatedAtBetweenWithPatientDoctorAndExams(
+                            targetStatuses, startOfDay, endOfDay);
+                    
+                    log.info("📅 [FINANCE CTRL] Filtrage par date: {} - {} consultations trouvées", 
+                        date, dateFiltered.size());
+                    
+                    // Si des résultats sont trouvés pour cette date, les utiliser
+                    // Sinon, fallback sur les 7 derniers jours
+                    if (!dateFiltered.isEmpty()) {
+                        consultations = dateFiltered;
+                        dateFilterApplied = true;
+                    } else {
+                        log.info("📅 [FINANCE CTRL] Aucun résultat pour {} → fallback sur 7 derniers jours", date);
+                        consultations = List.of(); // Initialiser pour le fallback ci-dessous
+                    }
+                } catch (Exception e) {
+                    log.warn("⚠️ [FINANCE CTRL] Format de date invalide: {}", date);
+                    consultations = List.of();
+                }
+            } else {
+                consultations = List.of(); // Initialiser pour le fallback ci-dessous
+            }
+            
+            // Fallback: si pas de filtre date appliqué ou résultats vides → 7 derniers jours
+            if (!dateFilterApplied || consultations.isEmpty()) {
+                LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
+                LocalDateTime startOfPeriod = sevenDaysAgo.atStartOfDay();
+                LocalDateTime endOfPeriod = LocalDate.now().atTime(23, 59, 59);
                 
                 consultations = consultationRepository
                     .findByStatusInAndCreatedAtBetweenWithPatientDoctorAndExams(
-                        targetStatuses, startOfDay, endOfDay);
+                        targetStatuses, startOfPeriod, endOfPeriod);
                 
-                log.info("📅 [FINANCE CTRL] Filtrage par date: {} - {} consultations trouvées", 
-                    date, consultations.size());
-            } else {
-                // Sinon, récupérer toutes les consultations (sans filtre de date)
-                consultations = consultationRepository
-                    .findByStatusInWithPatientDoctorAndExams(targetStatuses);
-                
-                log.info("📋 [FINANCE CTRL] {} consultations trouvées (sans filtre date)", 
+                log.info("📋 [FINANCE CTRL] {} consultations trouvées (7 derniers jours)", 
                     consultations.size());
             }
 
