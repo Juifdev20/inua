@@ -980,23 +980,47 @@ public class ReceptionController {
 
             // Utiliser la nouvelle méthode qui filtre les archivés
             List<Consultation> nonArchived = consultationRepository.findNonArchivedConsultations();
+            boolean dateFilterApplied = false;
 
             // Filtrer par date si fournie
             if (date != null && !date.trim().isEmpty()) {
                 try {
                     LocalDate filterDate = LocalDate.parse(date);
-                    nonArchived = nonArchived.stream()
+                    List<Consultation> dateFiltered = nonArchived.stream()
                             .filter(c -> {
-                                LocalDate consultationDate = c.getConsultationDate() != null ? 
-                                    c.getConsultationDate().toLocalDate() : 
+                                LocalDate consultationDate = c.getConsultationDate() != null ?
+                                    c.getConsultationDate().toLocalDate() :
                                     c.getCreatedAt().toLocalDate();
                                 return consultationDate.equals(filterDate);
                             })
                             .toList();
-                    log.info("📅 [RECEPTION] Filtrage par date {} : {} admission(s) trouvées", date, nonArchived.size());
+                    log.info("📅 [RECEPTION] Filtrage par date {} : {} admission(s) trouvées", date, dateFiltered.size());
+                    
+                    // Si des résultats sont trouvés pour cette date, les utiliser
+                    // Sinon, continuer avec toutes les admissions non archivées (dernières 24h)
+                    if (!dateFiltered.isEmpty()) {
+                        nonArchived = dateFiltered;
+                        dateFilterApplied = true;
+                    } else {
+                        log.info("📅 [RECEPTION] Aucune admission pour {} → affichage des admissions récentes (7 derniers jours)", date);
+                    }
                 } catch (Exception e) {
                     log.warn("⚠️ [RECEPTION] Format de date invalide: {}", date);
                 }
+            }
+            
+            // Si pas de filtre de date appliqué, filtrer pour les 7 derniers jours par défaut
+            if (!dateFilterApplied) {
+                LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
+                nonArchived = nonArchived.stream()
+                        .filter(c -> {
+                            LocalDate consultationDate = c.getConsultationDate() != null ?
+                                c.getConsultationDate().toLocalDate() :
+                                c.getCreatedAt().toLocalDate();
+                            return !consultationDate.isBefore(sevenDaysAgo);
+                        })
+                        .toList();
+                log.info("📅 [RECEPTION] Filtrage 7 derniers jours : {} admission(s)", nonArchived.size());
             }
 
             // Filtrer par statuts pertinents pour la caisse
