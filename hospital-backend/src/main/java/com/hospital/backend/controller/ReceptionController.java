@@ -1000,7 +1000,12 @@ public class ReceptionController {
             }
 
             // Filtrer par statuts pertinents pour la caisse
+            // EN_ATTENTE = nouvelles admissions réception
+            // PENDING_PAYMENT = en attente paiement
+            // PAYEE = déjà payées
+            // ARRIVED = patient arrivé
             List<ConsultationStatus> targetStatuses = List.of(
+                    ConsultationStatus.EN_ATTENTE,
                     ConsultationStatus.PENDING_PAYMENT,
                     ConsultationStatus.PAYEE,
                     ConsultationStatus.ARRIVED
