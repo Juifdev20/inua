@@ -93,7 +93,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Override
     @Transactional
     public PrescriptionDTO createPrescription(PrescriptionDTO dto) {
-        log.info("Création d'une prescription à partir des résultats de laboratoire");
+        log.info("🚀🚀🚀 createPrescription APPELÉ! patientId={}, consultationId={}", dto.getPatientId(), dto.getConsultationId());
         
         // Debug: Vérifier les données reçues du frontend
         log.info("🔍 DTO reçu - patientId: {}", dto.getPatientId());
