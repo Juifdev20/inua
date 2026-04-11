@@ -331,6 +331,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public List<PrescriptionDTO> getPendingPrescriptions() {
         log.info("Récupération des prescriptions en attente");
         
