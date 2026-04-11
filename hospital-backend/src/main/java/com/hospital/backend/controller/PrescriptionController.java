@@ -36,6 +36,8 @@ public class PrescriptionController {
             @Valid @RequestBody PrescriptionDTO prescriptionDTO, 
             Authentication authentication) {
         log.info("🔥🔥🔥 [PRESCRIPTION CONTROLLER] /api/prescriptions/create APPELÉ! 🔥🔥🔥");
+        System.out.println("🔥🔥🔥 [PRESCRIPTION CONTROLLER] /api/prescriptions/create APPELÉ! 🔥🔥🔥");
+        System.out.flush();
         try {
             // Récupérer le docteur connecté depuis le JWT token
             String username = authentication.getName();
@@ -47,6 +49,8 @@ public class PrescriptionController {
             
             log.info("Création d'une prescription pour le patient ID: {} par le docteur: {} (ID: {})", 
                     prescriptionDTO.getPatientId(), doctor.getUsername(), doctor.getId());
+            System.out.println("[PRESCRIPTION] patientId=" + prescriptionDTO.getPatientId() + " doctor=" + doctor.getUsername() + " doctorId=" + doctor.getId());
+            System.out.flush();
             
             PrescriptionDTO createdPrescription = prescriptionService.createPrescription(prescriptionDTO);
             

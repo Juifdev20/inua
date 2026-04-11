@@ -94,6 +94,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Transactional
     public PrescriptionDTO createPrescription(PrescriptionDTO dto) {
         log.info("🚀🚀🚀 createPrescription APPELÉ! patientId={}, consultationId={}", dto.getPatientId(), dto.getConsultationId());
+        System.out.println("🚀🚀🚀 createPrescription APPELÉ! patientId=" + dto.getPatientId() + " consultationId=" + dto.getConsultationId());
+        System.out.flush();
         
         // Debug: Vérifier les données reçues du frontend
         log.info("🔍 DTO reçu - patientId: {}", dto.getPatientId());
@@ -213,11 +215,18 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         // ✅ AUTO-CRÉATION DE LA FACTURE pour la caisse pharmacie
         try {
             log.info("🧾 [AUTO-INVOICE] Création automatique de la facture pour prescription ID: {}", prescription.getId());
+            System.out.println("🧾 [AUTO-INVOICE] Création automatique de la facture pour prescription ID=" + prescription.getId());
+            System.out.flush();
             invoiceService.createPrescriptionInvoice(prescription.getId(), doctor);
             log.info("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID: {}", prescription.getId());
+            System.out.println("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID=" + prescription.getId());
+            System.out.flush();
         } catch (Exception e) {
             log.error("❌ [AUTO-INVOICE] Erreur lors de la création de la facture: {}", e.getMessage());
             log.error("❌ [AUTO-INVOICE] Stack trace:", e);
+            System.out.println("❌ [AUTO-INVOICE] Erreur: " + e.getMessage());
+            e.printStackTrace(System.out);
+            System.out.flush();
             // Ne pas bloquer la création de la prescription si la facture échoue
         }
         
