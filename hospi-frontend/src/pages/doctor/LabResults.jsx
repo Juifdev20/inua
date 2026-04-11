@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '../../services/api/api';
+import { BACKEND_URL } from '../../config/environment.js';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -184,7 +185,7 @@ const LabResultsDoctor = () => {
       };
 
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/prescriptions/create', {
+      const response = await fetch(`${BACKEND_URL}/api/prescriptions/create`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

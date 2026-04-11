@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BACKEND_URL } from '../../config/environment.js';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -45,7 +46,7 @@ const PharmacySalesHistory = () => {
       
       // Pour l'instant, simulons les données avec l'API existante
       // TODO: Créer un endpoint dédié pour l'historique des ventes
-      const response = await fetch('/api/v1/finance/prescription/stats', {
+      const response = await fetch(`${BACKEND_URL}/api/v1/finance/prescription/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

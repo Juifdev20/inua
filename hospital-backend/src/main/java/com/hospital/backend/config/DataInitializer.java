@@ -36,6 +36,10 @@ public class DataInitializer implements CommandLineRunner {
         initializeRoles();
         initializeAdminUser();
         initializeDoctorUser();
+        initializeReceptionUser();
+        initializeLaboUser();
+        initializePharmacieUser();
+        initializeFinanceUser();
         
         log.info("✅ Initialisation terminée!");
     }
@@ -138,6 +142,114 @@ public class DataInitializer implements CommandLineRunner {
             log.info("👨‍⚕️ Docteur créé: {} / Mot de passe: doctor123", doctorUsername);
         } else {
             log.info("👨‍⚕️ Docteur existe déjà");
+        }
+    }
+
+    private void initializeReceptionUser() {
+        String username = "reception";
+        if (!userRepository.existsByUsername(username)) {
+            Role role = roleRepository.findByNom("ROLE_RECEPTION")
+                .orElseThrow(() -> new RuntimeException("Rôle ROLE_RECEPTION non trouvé"));
+            User user = User.builder()
+                .username(username)
+                .email("reception@inuaafia.com")
+                .password(passwordEncoder.encode("reception123"))
+                .firstName("Marie")
+                .lastName("Reception")
+                .phoneNumber("+243000000002")
+                .role(role)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            userRepository.save(user);
+            log.info("📋 Réception créée: {} / Mot de passe: reception123", username);
+        } else {
+            log.info("📋 Réception existe déjà");
+        }
+    }
+
+    private void initializeLaboUser() {
+        String username = "labo";
+        if (!userRepository.existsByUsername(username)) {
+            Role role = roleRepository.findByNom("ROLE_LABORATOIRE")
+                .orElseThrow(() -> new RuntimeException("Rôle ROLE_LABORATOIRE non trouvé"));
+            User user = User.builder()
+                .username(username)
+                .email("labo@inuaafia.com")
+                .password(passwordEncoder.encode("labo123"))
+                .firstName("Tech")
+                .lastName("Laboratoire")
+                .phoneNumber("+243000000003")
+                .role(role)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            userRepository.save(user);
+            log.info("🔬 Labo créé: {} / Mot de passe: labo123", username);
+        } else {
+            log.info("🔬 Labo existe déjà");
+        }
+    }
+
+    private void initializePharmacieUser() {
+        String username = "pharmacie";
+        if (!userRepository.existsByUsername(username)) {
+            Role role = roleRepository.findByNom("ROLE_PHARMACIE")
+                .orElseThrow(() -> new RuntimeException("Rôle ROLE_PHARMACIE non trouvé"));
+            User user = User.builder()
+                .username(username)
+                .email("pharmacie@inuaafia.com")
+                .password(passwordEncoder.encode("pharmacie123"))
+                .firstName("Pharma")
+                .lastName("Pharmacien")
+                .phoneNumber("+243000000004")
+                .role(role)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            userRepository.save(user);
+            log.info("💊 Pharmacie créée: {} / Mot de passe: pharmacie123", username);
+        } else {
+            log.info("💊 Pharmacie existe déjà");
+        }
+    }
+
+    private void initializeFinanceUser() {
+        String username = "finance";
+        if (!userRepository.existsByUsername(username)) {
+            Role role = roleRepository.findByNom("ROLE_FINANCE")
+                .orElseThrow(() -> new RuntimeException("Rôle ROLE_FINANCE non trouvé"));
+            User user = User.builder()
+                .username(username)
+                .email("finance@inuaafia.com")
+                .password(passwordEncoder.encode("finance123"))
+                .firstName("Compta")
+                .lastName("Finance")
+                .phoneNumber("+243000000005")
+                .role(role)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            userRepository.save(user);
+            log.info("💰 Finance créée: {} / Mot de passe: finance123", username);
+        } else {
+            log.info("💰 Finance existe déjà");
         }
     }
 }

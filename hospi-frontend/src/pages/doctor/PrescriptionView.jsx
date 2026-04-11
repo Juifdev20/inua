@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import { BACKEND_URL } from '../../config/environment.js';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -150,7 +151,7 @@ const PrescriptionView = ({
       };
 
       // 1. Créer la prescription
-      const response = await fetch('/api/prescriptions/create', {
+      const response = await fetch(`${BACKEND_URL}/api/prescriptions/create`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -166,7 +167,7 @@ const PrescriptionView = ({
       }
 
       // 2. Finaliser la consultation (endpoint POST avec /v1/)
-      const finalizeResponse = await fetch(`/api/v1/consultations/${consultationId}/finaliser`, {
+      const finalizeResponse = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/finaliser`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

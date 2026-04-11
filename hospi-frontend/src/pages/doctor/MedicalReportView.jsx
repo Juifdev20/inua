@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BACKEND_URL } from '../../config/environment.js';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { 
@@ -41,7 +42,7 @@ const MedicalReportView = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/consultations/${consultationId}/patient-journey`, {
+      const response = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/patient-journey`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
