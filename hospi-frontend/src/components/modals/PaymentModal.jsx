@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, CreditCard, Banknote, Smartphone, Check, Receipt, User, FileText, DollarSign, ShieldCheck } from 'lucide-react';
 import api from '../../services/api';
+import { BACKEND_URL } from '../../config/environment.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const API = `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/finance`;
+const API = `${BACKEND_URL}/api/finance`;
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('fr-FR', {
@@ -48,9 +49,23 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
           throw new Error('Méthode de paiement invalide');
       }
 
-      const response = await api.post(`${API}/pay/${invoice.id}`, { 
-        paymentMethod: backendMethod
-      });
+      // Détecter si c'est une facture pharmacie (departmentSource === 'PHARMACY')
+      const isPharmacyInvoice = invoice.departmentSource === 'PHARMACY' || 
+                                invoice.type === 'PHARMACY' ||
+                                (invoice.invoiceCode && invoice.invoiceCode.startsWith('PHARMA'));
+      
+      let response;
+      if (isPharmacyInvoice) {
+        // Paiement pour facture pharmacie - endpoint spécifique
+        response = await api.post(
+          `${BACKEND_URL}/api/finance/prescription/process-payment/${invoice.id}?paymentMethod=${backendMethod}`
+        );
+      } else {
+        // Paiement standard (laboratoire, etc.)
+        response = await api.post(`${API}/pay/${invoice.id}`, { 
+          paymentMethod: backendMethod
+        });
+      }
       toast.success('Paiement validé avec succès !');
       onSuccess();
     } catch (error) {

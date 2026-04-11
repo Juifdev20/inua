@@ -75,7 +75,7 @@ public class PrescriptionInvoiceController {
     }
 
     @PostMapping("/process-payment/{invoiceId}")
-    @PreAuthorize("hasAnyRole('CASHIER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CASHIER', 'ADMIN', 'FINANCE')")
     @Operation(summary = "Traiter le paiement d'une facture de prescription avec mise à jour du stock")
     public ResponseEntity<?> processPrescriptionPayment(
             @PathVariable Long invoiceId,
