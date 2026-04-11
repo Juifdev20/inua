@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 public class InvoiceServiceImpl implements InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceItemRepository invoiceItemRepository;
     private final PatientRepository patientRepository;
     private final ConsultationRepository consultationRepository;
     private final PrescriptionRepository prescriptionRepository;
@@ -638,21 +639,55 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new RuntimeException("Le montant total de la facture ne peut pas être zéro ou négatif");
         }
         
+        // Créer d'abord l'invoice pour obtenir l'ID
         Invoice invoice = Invoice.builder()
             .prescription(prescription)
             .patient(prescription.getPatient())
             .consultation(prescription.getConsultation())
             .totalAmount(totalAmount)
+            .subtotal(totalAmount)
             .paidAmount(BigDecimal.ZERO)
             .status(InvoiceStatus.EN_ATTENTE)
             .departmentSource(DepartmentSource.PHARMACY)
             .createdBy((User) createdBy)
             .build();
         
-        invoice = invoiceRepository.save(invoice);
-        log.info("Facture créée avec succès: {} pour un total de {}", invoice.getInvoiceCode(), totalAmount);
+        final Invoice savedInvoice = invoiceRepository.save(invoice);
+        log.info("✅ Facture créée: {} avec ID: {}", savedInvoice.getInvoiceCode(), savedInvoice.getId());
+
+        // Créer les InvoiceItem maintenant que l'invoice a un ID
+        List<InvoiceItem> invoiceItems = items.stream()
+            .map(item -> {
+                BigDecimal unitPrice = item.getMedication().getUnitPrice();
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    unitPrice = item.getMedication().getPrice();
+                }
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    unitPrice = BigDecimal.ONE;
+                }
+
+                Integer quantity = item.getQuantity() != null ? item.getQuantity() : 1;
+                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+
+                return InvoiceItem.builder()
+                    .invoice(savedInvoice)
+                    .description(item.getMedication().getName() + " - " + (item.getDosage() != null ? item.getDosage() : ""))
+                    .quantity(quantity)
+                    .unitPrice(unitPrice)
+                    .totalPrice(totalPrice)
+                    .itemType(InvoiceItemType.MEDICAMENT)
+                    .build();
+            })
+            .collect(Collectors.toList());
         
-        return mapToDTO(invoice);
+        // Sauvegarder les items
+        invoiceItemRepository.saveAll(invoiceItems);
+        log.info("✅ {} médicaments ajoutés à la facture {}", invoiceItems.size(), savedInvoice.getInvoiceCode());
+        
+        // Recharger l'invoice avec les items
+        savedInvoice.setItems(invoiceItems);
+
+        return mapToDTO(savedInvoice);
     }
 
     @Override
@@ -725,8 +760,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         
         // Mise à jour du statut de la prescription
         Prescription prescription = invoice.getPrescription();
-        prescription.setStatus(PrescriptionStatus.VALIDEE);
+        prescription.setStatus(PrescriptionStatus.PAYEE);
         prescriptionRepository.save(prescription);
+        log.info("✅ Prescription {} marquée comme PAYEE - prête pour retrait pharmacie", prescription.getPrescriptionCode());
         
         log.info("Paiement traité avec succès pour la facture: {}", invoice.getInvoiceCode());
         
