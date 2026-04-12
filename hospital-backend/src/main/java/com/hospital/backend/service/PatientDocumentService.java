@@ -417,6 +417,67 @@ public class PatientDocumentService {
     }
 
     /**
+     * ✅ NOUVEAU: Crée un document avec son contenu binaire stocké en PostgreSQL
+     * Compatible avec Render (filesystem éphémère)
+     * 
+     * @param dto Les métadonnées du document
+     * @param content Le contenu binaire du fichier
+     * @return Le document créé
+     */
+    @Transactional
+    public PatientDocument createDocumentWithContent(PatientDocumentDTO dto, byte[] content) {
+        log.info("📤 [PATIENT_DOCUMENT] Création d'un document avec contenu BDD: {} ({} bytes)", 
+                dto.getFileName(), content.length);
+        
+        try {
+            DocumentType docType = dto.getDocumentType();
+            if (docType == null) {
+                docType = DocumentType.DOSSIER_PATIENT;
+            }
+            
+            PatientDocument document = PatientDocument.builder()
+                    .fileName(dto.getFileName())
+                    .filePath(dto.getFilePath())
+                    .fileUrl(dto.getFileUrl())
+                    .documentType(docType)
+                    .patientId(dto.getPatientId())
+                    .patientName(dto.getPatientName())
+                    .totalAmount(dto.getTotalAmount() != null ? dto.getTotalAmount() : 0.0)
+                    .amountPaid(dto.getAmountPaid() != null ? dto.getAmountPaid() : 0.0)
+                    .remainingCredit(dto.getRemainingCredit() != null ? dto.getRemainingCredit() : 0.0)
+                    .paymentStatus(dto.getPaymentStatus() != null ? dto.getPaymentStatus() : "NON_PAYE")
+                    .content(content)  // ✅ Stockage binaire dans PostgreSQL
+                    .fileSize(dto.getFileSize())
+                    .mimeType(dto.getMimeType())
+                    .build();
+            
+            document = patientDocumentRepository.save(document);
+            
+            log.info("✅ [PATIENT_DOCUMENT] Document avec contenu créé: {} (ID: {})", 
+                    document.getFileName(), document.getId());
+            
+            return document;
+            
+        } catch (Exception e) {
+            log.error("❌ [PATIENT_DOCUMENT] Erreur création document avec contenu: {}", e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la création du document: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ✅ NOUVEAU: Récupère le contenu binaire d'un document depuis PostgreSQL
+     * 
+     * @param id ID du document
+     * @return Le contenu binaire ou null si non trouvé
+     */
+    @Transactional(readOnly = true)
+    public byte[] getDocumentContent(Long id) {
+        return patientDocumentRepository.findById(id)
+                .map(PatientDocument::getContent)
+                .orElse(null);
+    }
+
+    /**
      * Supprime un document (fichier et entrée en base de données)
      * @param id ID du document à supprimer
      */

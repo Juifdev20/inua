@@ -588,8 +588,8 @@ public class ReceptionController {
                 ));
             }
             
-            // Créer le répertoire de stockage si nécessaire
-            String uploadDir = System.getProperty("user.home") + "/hospital_uploads/documents";
+            // Créer le répertoire de stockage si nécessaire (chemin relatif pour production)
+            String uploadDir = "uploads/documents";
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
@@ -605,13 +605,13 @@ public class ReceptionController {
             
 // Sauvegarder le fichier
             Path filePath = uploadPath.resolve(newFilename);
-            Files.copy(file.getInputStream(), filePath);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             
             // Créer l'entrée dans la base de données
             PatientDocumentDTO documentDTO = PatientDocumentDTO.builder()
                 .patientName(patientName)
                 .fileName(originalFilename != null ? originalFilename : newFilename)
-                .fileUrl("/hospital_uploads/documents/" + newFilename)
+                .fileUrl("/uploads/documents/" + newFilename)
                 .documentType(DocumentType.valueOf(documentType))
                 .paymentStatus("NON_PAYE")
                 .build();
@@ -672,8 +672,8 @@ public class ReceptionController {
     @Autowired
     private UserRepository userRepository;
 
-    // ✅ CORRECTION: Utiliser un chemin absolu pour les uploads
-    private final String AVATAR_UPLOAD_DIR = "c:/Users/dieud/Desktop/Inua/hospital-backend/uploads/avatars/";
+    // ✅ CORRECTION: Utiliser un chemin relatif pour les uploads (compatible tous OS)
+    private final String AVATAR_UPLOAD_DIR = "uploads/avatars/";
 
     /**
      * PUT /api/v1/reception/profile/password
@@ -732,12 +732,12 @@ public class ReceptionController {
     /**
      * POST /api/v1/reception/profile/avatar
      * Upload de l'avatar utilisateur
+     * Stockage local (uploads/avatars/)
      */
     @PostMapping("/profile/avatar")
     @Transactional
     public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
         try {
-            // ✅ CORRECTION: Récupérer username depuis SecurityContextHolder au lieu de @AuthenticationPrincipal
             String username = getCurrentUsername();
             log.info("📸 [RECEPTION] Upload d'avatar pour: {}", username);
             

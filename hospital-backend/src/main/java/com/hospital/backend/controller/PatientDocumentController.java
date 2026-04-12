@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 
@@ -96,16 +97,16 @@ public class PatientDocumentController {
             Path path = null;
             String filePathStr = doc.getFilePath();
             
-            // Essayer le chemin tel quel
+            // Essayer le chemin tel quel (relatif ou absolu)
             path = Paths.get(filePathStr);
             if (!java.nio.file.Files.exists(path)) {
-                // Essayer avec le chemin home + chemin relatif
-                String homeDir = System.getProperty("user.home");
-                if (filePathStr.startsWith("/hospital_uploads/")) {
+                // Essayer depuis le répertoire de travail courant
+                path = Paths.get(System.getProperty("user.dir"), filePathStr);
+                
+                // Ancienne compatibilité: essayer avec /hospital_uploads/ dans home (données legacy)
+                if (!java.nio.file.Files.exists(path) && filePathStr.startsWith("/hospital_uploads/")) {
+                    String homeDir = System.getProperty("user.home");
                     path = Paths.get(homeDir + filePathStr);
-                } else if (!filePathStr.contains("/") && !filePathStr.contains("\\")) {
-                    // Essayer dans le répertoire documents du projet
-                    path = Paths.get(System.getProperty("user.dir"), "documents", filePathStr);
                 }
             }
             
@@ -161,6 +162,7 @@ public class PatientDocumentController {
     /**
      * Importe un document patient
      * POST /api/v1/documents/upload
+     * ✅ STOCKE LE CONTENU EN BASE64 DANS POSTGRESQL (compatible Render)
      */
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
@@ -177,11 +179,13 @@ public class PatientDocumentController {
                 ));
             }
             
-            // Créer le répertoire de stockage si nécessaire
-            String uploadDir = System.getProperty("user.home") + "/hospital_uploads/documents";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!java.nio.file.Files.exists(uploadPath)) {
-                java.nio.file.Files.createDirectories(uploadPath);
+            // ✅ Limiter la taille des fichiers (max 5 Mo pour PostgreSQL)
+            long maxSize = 5 * 1024 * 1024; // 5 Mo
+            if (file.getSize() > maxSize) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Le fichier est trop volumineux (max 5 Mo)"
+                ));
             }
             
             // Générer un nom de fichier unique
@@ -192,28 +196,31 @@ public class PatientDocumentController {
             }
             String newFilename = "DOC_" + patientName.replace(" ", "_") + "_" + System.currentTimeMillis() + extension;
             
-            // Sauvegarder le fichier
-            Path filePath = uploadPath.resolve(newFilename);
-            java.nio.file.Files.copy(file.getInputStream(), filePath);
+            // ✅ Lire le contenu du fichier et le stocker en byte[] pour PostgreSQL
+            byte[] fileContent = file.getBytes();
             
-            // Créer l'entrée dans la base de données avec le chemin du système de fichiers
+            // Créer l'entrée dans la base de données avec le contenu binaire
             PatientDocumentDTO documentDTO = PatientDocumentDTO.builder()
                 .patientName(patientName)
                 .fileName(originalFilename != null ? originalFilename : newFilename)
-                .filePath(filePath.toString())  // CORRECT: stocker le chemin absolu du fichier
-                .fileUrl("/hospital_uploads/documents/" + newFilename)
+                .filePath("db_storage/" + newFilename)  // Indicateur de stockage DB
+                .fileUrl("/api/v1/documents/" + newFilename + "/content")  // URL pour accès au contenu
                 .documentType(com.hospital.backend.entity.DocumentType.valueOf(documentType))
                 .paymentStatus("NON_PAYE")
+                .fileSize(file.getSize())
+                .mimeType(file.getContentType())
+                .hasContent(true)
                 .build();
             
-            PatientDocumentDTO savedDocument = patientDocumentService.createDocument(documentDTO);
+            // Sauvegarder le document avec son contenu
+            PatientDocument savedDoc = patientDocumentService.createDocumentWithContent(documentDTO, fileContent);
             
-            log.info("✅ [DOCUMENTS] Document importé avec succès: {}", newFilename);
+            log.info("✅ [DOCUMENTS] Document stocké en BDD avec succès: {} ({} bytes)", newFilename, fileContent.length);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Document importé avec succès",
-                "document", savedDocument
+                "document", PatientDocumentDTO.fromEntity(savedDoc)
             ));
             
         } catch (Exception e) {
@@ -221,6 +228,59 @@ public class PatientDocumentController {
             return ResponseEntity.internalServerError().body(Map.of(
                 "success", false,
                 "error", "Erreur lors de l'import: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * ✅ NOUVEAU: Récupère le contenu binaire d'un document depuis PostgreSQL
+     * GET /api/v1/documents/{id}/content
+     * Compatible Render - pas besoin de système de fichiers
+     */
+    @GetMapping("/{id}/content")
+    public ResponseEntity<?> getDocumentContent(@PathVariable Long id) {
+        try {
+            log.info("📥 [DOCUMENTS] Récupération du contenu BDD pour document ID: {}", id);
+            
+            // Récupérer les métadonnées du document
+            PatientDocumentDTO doc = patientDocumentService.getDocumentById(id);
+            if (doc == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Récupérer le contenu binaire depuis PostgreSQL
+            byte[] content = patientDocumentService.getDocumentContent(id);
+            
+            if (content == null || content.length == 0) {
+                // Fallback: essayer de lire depuis le système de fichiers (compatibilité legacy)
+                log.warn("⚠️ [DOCUMENTS] Contenu non trouvé en BDD, tentative lecture fichier: {}", id);
+                return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "error", "Contenu du document non disponible en base de données"
+                ));
+            }
+            
+            // Déterminer le type MIME
+            String mimeType = doc.getMimeType();
+            if (mimeType == null) {
+                mimeType = "application/octet-stream";
+            }
+            
+            log.info("✅ [DOCUMENTS] Contenu BDD récupéré: {} ({} bytes, MIME: {})", 
+                    id, content.length, mimeType);
+            
+            // Retourner le contenu avec les bons headers
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                            "inline; filename=\"" + doc.getFileName() + "\"")
+                    .contentType(MediaType.parseMediaType(mimeType))
+                    .body(content);
+            
+        } catch (Exception e) {
+            log.error("❌ [DOCUMENTS] Erreur récupération contenu BDD: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "error", "Erreur lors de la récupération du contenu"
             ));
         }
     }

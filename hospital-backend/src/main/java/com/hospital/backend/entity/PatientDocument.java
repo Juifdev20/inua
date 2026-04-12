@@ -64,6 +64,20 @@ public class PatientDocument {
     // Statut de paiement (pour les documents importés manuellement)
     @Column(name = "payment_status")
     private String paymentStatus;
+    
+    // ✅ NOUVEAU: Contenu binaire du document (stocké en Base64 dans PostgreSQL)
+    // Permet de persister les documents même sur Render (filesystem éphémère)
+    @Column(name = "content", columnDefinition = "bytea")
+    @Lob
+    private byte[] content;
+    
+    // ✅ Taille du fichier en bytes
+    @Column(name = "file_size")
+    private Long fileSize;
+    
+    // ✅ Type MIME du fichier (ex: application/pdf, image/jpeg)
+    @Column(name = "mime_type")
+    private String mimeType;
 
     @PrePersist
     protected void onCreate() {

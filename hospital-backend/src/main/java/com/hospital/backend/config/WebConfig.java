@@ -44,6 +44,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:uploads/avatars/")
                 .setCachePeriod(3600);
         
+        // ✅ Servir les documents uploadés via la réception
+        registry.addResourceHandler("/uploads/documents/**")
+                .addResourceLocations("file:uploads/documents/")
+                .setCachePeriod(3600);
+        
         // ✅ Servir les documents médicaux (medical_docs)
         registry.addResourceHandler("/medical_docs/**")
                 .addResourceLocations("file:uploads/medical_docs/")

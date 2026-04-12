@@ -27,6 +27,16 @@ public class PatientDocumentDTO {
     private Double amountPaid;
     private Double remainingCredit;
     private String paymentStatus; // "SOLDE" ou "CREDIT"
+    
+    // ✅ NOUVEAU: Contenu du document en Base64 (pour affichage inline)
+    private String contentBase64;
+    
+    // ✅ NOUVEAU: Taille et type MIME
+    private Long fileSize;
+    private String mimeType;
+    
+    // ✅ Indicateur si le contenu est disponible en base de données
+    private Boolean hasContent;
 
     /**
      * Méthode utilitaire pour créer un DTO depuis l'entité
@@ -38,6 +48,14 @@ public class PatientDocumentDTO {
         String paymentStatus = "SOLDE";
         if (document.getRemainingCredit() != null && document.getRemainingCredit() > 0) {
             paymentStatus = "CREDIT";
+        }
+
+        // ✅ Convertir le contenu binaire en Base64 si présent
+        String contentBase64 = null;
+        Boolean hasContent = false;
+        if (document.getContent() != null && document.getContent().length > 0) {
+            contentBase64 = java.util.Base64.getEncoder().encodeToString(document.getContent());
+            hasContent = true;
         }
 
         return PatientDocumentDTO.builder()
@@ -54,6 +72,10 @@ public class PatientDocumentDTO {
                 .amountPaid(document.getAmountPaid())
                 .remainingCredit(document.getRemainingCredit())
                 .paymentStatus(paymentStatus)
+                .contentBase64(contentBase64)
+                .fileSize(document.getFileSize())
+                .mimeType(document.getMimeType())
+                .hasContent(hasContent)
                 .build();
     }
 }
