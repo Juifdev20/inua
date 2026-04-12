@@ -48,11 +48,18 @@ const DoctorAppointments = () => {
     return 'EN_ATTENTE';
   };
 
+  // Détection automatique de l'environnement
+  const isLocalhost = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' || 
+                     window.location.hostname.includes('local');
+  const API_URL = import.meta.env.VITE_BACKEND_URL || 
+                  (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
+
   const fetchDoctorData = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/doctors/dashboard', {
+      const response = await axios.get(`${API_URL}/api/v1/doctors/dashboard`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const rawData = response.data.rdvs_today || response.data.data || [];

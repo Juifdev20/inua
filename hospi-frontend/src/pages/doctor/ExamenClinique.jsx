@@ -15,7 +15,13 @@ import { Badge } from '../../components/ui/badge';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080/api';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 
+                (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
+const API_URL = `${BACKEND_URL}/api`;
 
 const ExamenClinique = () => {
   const { id } = useParams();

@@ -15,7 +15,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Import de la modal de décision
 import DecisionModal from '../../components/modals/DecisionModal';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const API_URL = import.meta.env.VITE_BACKEND_URL || 
+                (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 
 const StatCard = ({ icon: Icon, label, value, color, bg, loading }) => (
   <div className="bg-card border border-border p-6 rounded-[2.5rem] flex items-center gap-4 transition-all hover:shadow-xl hover:shadow-emerald-500/5 hover:border-emerald-500/20 group">

@@ -21,7 +21,12 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const API_URL = import.meta.env.VITE_BACKEND_URL || 
+                (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 
 const Sidebar = () => {
   const location = useLocation();

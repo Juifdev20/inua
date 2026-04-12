@@ -21,7 +21,12 @@ import {
 import { Label } from '../../components/ui/label';
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const API_URL = import.meta.env.VITE_BACKEND_URL || 
+                (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 const API_DOCTORS = `${API_URL}/api/v1/doctors`;
 const IMAGE_BASE_URL = `${API_URL}/uploads/profiles/`;
 
