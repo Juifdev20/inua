@@ -204,6 +204,16 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
 
     List<Consultation> findByDoctorId(Long doctorId);
 
+    /**
+     * ✅ CORRECTION: Récupère les consultations avec JOIN FETCH patient et user
+     * Pour éviter le lazy loading dans DoctorChatController
+     */
+    @Query("SELECT DISTINCT c FROM Consultation c " +
+            "LEFT JOIN FETCH c.patient p " +
+            "LEFT JOIN FETCH p.user " +
+            "WHERE c.doctor.id = :doctorId")
+    List<Consultation> findByDoctorIdWithPatient(@Param("doctorId") Long doctorId);
+
     @Query("SELECT COUNT(c) FROM Consultation c WHERE c.doctor.id = :doctorId " +
             "AND c.consultationDate BETWEEN :start AND :end")
     long countTodayConsultationsByDoctorId(

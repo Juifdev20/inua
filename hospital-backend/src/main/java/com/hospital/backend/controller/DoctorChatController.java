@@ -42,7 +42,7 @@ public class DoctorChatController {
 
             if (doctor == null) return ResponseEntity.status(404).body("Docteur non trouvÃ©");
 
-            List<Consultation> consultations = consultationRepository.findByDoctorId(doctor.getId());
+            List<Consultation> consultations = consultationRepository.findByDoctorIdWithPatient(doctor.getId());
 
             Map<Long, Map<String, Object>> uniquePatients = new LinkedHashMap<>();
             for (Consultation c : consultations) {
