@@ -1,11 +1,16 @@
 import axios from "axios";
 
-// URL API depuis les variables d'environnement Vite
-// Supprime le /api suffixe pour eviter les double slashes
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+
+// URL API avec détection automatique localhost/production
 const getApiBaseUrl = () => {
   const baseUrl = import.meta.env.VITE_BACKEND_URL || 
                   import.meta.env.VITE_API_URL || 
-                  import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+                  import.meta.env.VITE_API_BASE_URL || 
+                  (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
   // Supprime le slash final s'il existe
   return baseUrl.replace(/\/$/, '');
 };

@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+
+const BACKEND_URL = isLocalhost 
+  ? (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080')
+  : (import.meta.env.VITE_BACKEND_URL || 'https://inuaafia.onrender.com');
+
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '') + '/api',
+  baseURL: `${BACKEND_URL.replace(/\/$/, '')}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
