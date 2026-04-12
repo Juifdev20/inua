@@ -52,7 +52,7 @@ const Notifications = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const socket = new SockJS('http://localhost:8080/ws-notifications');
+    const socket = new SockJS(`${BACKEND_URL}/ws-notifications`);
     const stompClient = Stomp.over(socket);
     stompClient.debug = null; 
 
