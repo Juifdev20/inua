@@ -406,6 +406,7 @@ public class PatientServiceImpl implements PatientService {
         if (dto.getTemperature() != null) patient.setTemperature(dto.getTemperature());
         if (dto.getHeartRate() != null) patient.setHeartRate(dto.getHeartRate());
         if (hasText(dto.getSymptoms())) patient.setSymptoms(dto.getSymptoms());
+        if (hasText(dto.getBloodType())) patient.setBloodType(dto.getBloodType());
     }
 
     private ConsultationDTO mapToConsultationDTO(Consultation c) {
