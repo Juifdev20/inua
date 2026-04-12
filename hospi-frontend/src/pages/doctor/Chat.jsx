@@ -33,7 +33,12 @@ import {
 } from "../../components/ui/alert-dialog";
 import { toast } from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const API_URL = import.meta.env.VITE_BACKEND_URL || 
+                (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 const API_CHAT = `${API_URL}/api/v1/doctors/chat`;
 const IMAGE_BASE_URL = `${API_URL}/uploads/profiles/`;
 
@@ -46,6 +51,14 @@ const getPhotoUrl = (patient) => {
   if (!photo) return null;
   if (photo.startsWith('http') || photo.startsWith('data:')) return photo;
   return `${IMAGE_BASE_URL}${photo}`;
+};
+
+// Fonction pour obtenir les initiales du patient
+const getPatientInitials = (patient) => {
+  if (!patient) return 'P';
+  const first = patient.prenom?.[0] || patient.firstName?.[0] || '';
+  const last = patient.nom?.[0] || patient.lastName?.[0] || '';
+  return (first + last).toUpperCase() || 'P';
 };
 
 const Chat = () => {
@@ -159,7 +172,7 @@ const Chat = () => {
   const fetchPatientsList = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${API_URL}/api/v1/doctors/patients`, {
+      const response = await axios.get(`${API_CHAT}/my-patients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = response.data || [];
@@ -423,7 +436,7 @@ const Chat = () => {
                     <Avatar className="w-12 h-12">
                         <AvatarImage src={getPhotoUrl(p)} />
                         <AvatarFallback className="bg-emerald-100 text-emerald-600 font-semibold">
-                        {p.prenom?.[0]}{p.nom?.[0]}
+                          {getPatientInitials(p)}
                         </AvatarFallback>
                     </Avatar>
                     {unreadCounts[p.id] > 0 && (
@@ -470,7 +483,7 @@ const Chat = () => {
                   <Avatar className="w-10 h-10">
                     <AvatarImage src={getPhotoUrl(selectedPatient)} />
                     <AvatarFallback className="bg-emerald-500 text-white font-semibold">
-                      {selectedPatient.prenom?.[0]}
+                      {getPatientInitials(selectedPatient)}
                     </AvatarFallback>
                   </Avatar>
                   <div>

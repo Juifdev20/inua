@@ -31,9 +31,31 @@ import {
 } from "../../components/ui/alert-dialog";
 import { toast } from 'react-hot-toast';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Détection automatique de l'environnement
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname.includes('local');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 
+                    (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 const API_PATIENTS = `${BACKEND_URL}/api/v1/patients`;
 const IMAGE_BASE_URL = `${BACKEND_URL}/uploads/profiles/`;
+
+// Fonction pour récupérer l'URL de la photo du docteur avec fallback
+const getDoctorPhotoUrl = (doctor) => {
+  if (!doctor) return null;
+  const photo = doctor.photo || doctor.photoUrl;
+  if (!photo) return null;
+  if (photo.startsWith('http') || photo.startsWith('data:')) return photo;
+  return `${IMAGE_BASE_URL}${photo}`;
+};
+
+// Fonction pour obtenir les initiales du docteur
+const getDoctorInitials = (doctor) => {
+  if (!doctor) return 'DR';
+  const first = doctor.prenom?.[0] || doctor.firstName?.[0] || '';
+  const last = doctor.nom?.[0] || doctor.lastName?.[0] || '';
+  return (first + last).toUpperCase() || 'DR';
+};
 
 const PatientChat = () => {
   const { token } = useAuth();
@@ -147,7 +169,7 @@ const PatientChat = () => {
   const fetchMyDoctors = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/v1/online-status/my-doctors`, {
+      const response = await axios.get(`${API_PATIENTS}/my-doctors`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = response.data || [];
@@ -328,8 +350,10 @@ const PatientChat = () => {
                   }`}
                 >
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={`${IMAGE_BASE_URL}${doc.photo}`} />
-                    <AvatarFallback className="bg-emerald-100 text-emerald-600 font-semibold">DR</AvatarFallback>
+                    <AvatarImage src={getDoctorPhotoUrl(doc)} />
+                    <AvatarFallback className="bg-emerald-100 text-emerald-600 font-semibold">
+                      {getDoctorInitials(doc)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left min-w-0">
                     <p className="font-semibold text-sm truncate">{doc.displayFullName}</p>
@@ -365,8 +389,10 @@ const PatientChat = () => {
                     </svg>
                   </Button>
                   <Avatar className="w-10 h-10">
-                    <AvatarImage src={`${IMAGE_BASE_URL}${selectedDoctor.photo}`} />
-                    <AvatarFallback className="bg-emerald-500 text-white font-semibold">DR</AvatarFallback>
+                    <AvatarImage src={getDoctorPhotoUrl(selectedDoctor)} />
+                    <AvatarFallback className="bg-emerald-500 text-white font-semibold">
+                      {getDoctorInitials(selectedDoctor)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-semibold text-sm">{selectedDoctor.displayFullName}</h3>

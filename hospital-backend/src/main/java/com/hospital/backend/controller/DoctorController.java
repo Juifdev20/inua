@@ -518,7 +518,7 @@ public class DoctorController {
 
             if (doctorUser == null) return ResponseEntity.status(404).body("Docteur non trouvé");
 
-            List<MedicalRecord> records = medicalRecordRepository.findByDoctorId(doctorUser.getId());
+            List<MedicalRecord> records = medicalRecordRepository.findByDoctorIdWithPatient(doctorUser.getId());
 
             List<Map<String, Object>> docs = records.stream()
                     .filter(r -> r.getNotes() != null && r.getNotes().contains("uploads/"))
