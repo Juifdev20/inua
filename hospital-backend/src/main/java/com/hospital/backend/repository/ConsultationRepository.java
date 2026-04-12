@@ -98,8 +98,6 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
             "ORDER BY c.createdAt DESC")
     List<Consultation> findByDoctorIdWithDetails(@Param("doctorId") Long doctorId);
 
-    List<Consultation> findByPatientIdOrderByConsultationDateDesc(Long patientId);
-
     Page<Consultation> findByDoctorIdAndStatusInOrderByConsultationDateDesc(
             Long doctorId,
             List<ConsultationStatus> statuses,
@@ -284,6 +282,17 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     );
 
     List<Consultation> findByPatientIdOrderByCreatedAtDesc(Long patientId);
+
+    /**
+     * Récupère les consultations d'un patient ordonnées par date de consultation
+     * Utilisé par OnlineStatusController pour récupérer les médecins du patient
+     */
+    @Query("SELECT c FROM Consultation c " +
+            "LEFT JOIN FETCH c.doctor d " +
+            "LEFT JOIN FETCH d.department " +
+            "WHERE c.patient.id = :patientId " +
+            "ORDER BY c.consultationDate DESC")
+    List<Consultation> findByPatientIdOrderByConsultationDateDesc(@Param("patientId") Long patientId);
 
     @Query("SELECT c FROM Consultation c WHERE c.patient.id = :patientId " +
             "AND c.ficheAmountPaid > 0 " +
