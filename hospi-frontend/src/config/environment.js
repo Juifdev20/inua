@@ -5,15 +5,18 @@
 // pour localhost et production
 
 // Détection automatique de l'environnement
-const isProduction = import.meta.env.PROD;
 const isLocalhost = window.location.hostname === 'localhost' || 
                    window.location.hostname === '127.0.0.1' || 
                    window.location.hostname.includes('local');
 
+// Détection production basée sur le hostname ou la variable d'environnement Vite
+const isProduction = import.meta.env.PROD || !isLocalhost;
+
 // URL du backend - détection automatique
-export const BACKEND_URL = isProduction 
-  ? import.meta.env.VITE_BACKEND_URL || 'https://inuaafia.onrender.com'
-  : import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+// Priorité: 1) Variable d'environnement, 2) Détection auto localhost/prod, 3) Valeurs par défaut
+export const BACKEND_URL = isLocalhost 
+  ? (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080')
+  : (import.meta.env.VITE_BACKEND_URL || 'https://inuaafia.onrender.com');
 
 // URLs des API
 export const API_BASE_URL = BACKEND_URL;
@@ -38,15 +41,13 @@ export const DEV_CONFIG = {
   profilesUrl: PROFILES_URL,
 };
 
-// Logs de configuration (uniquement en développement)
-if (!isProduction) {
-  console.log('=== CONFIGURATION ENVIRONNEMENTALE ===');
-  console.log('Mode:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
-  console.log('Localhost:', isLocalhost);
-  console.log('Backend URL:', BACKEND_URL);
-  console.log('WebSocket URL:', WEBSOCKET_URL);
-  console.log('=====================================');
-}
+// Logs de configuration (en développement et production pour debug)
+console.log('=== CONFIGURATION ENVIRONNEMENTALE ===');
+console.log('Mode:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
+console.log('Localhost:', isLocalhost);
+console.log('Backend URL:', BACKEND_URL);
+console.log('WebSocket URL:', WEBSOCKET_URL);
+console.log('=====================================');
 
 // Fonctions utilitaires
 export const getApiUrl = (endpoint) => `${API_BASE_URL}${endpoint}`;
