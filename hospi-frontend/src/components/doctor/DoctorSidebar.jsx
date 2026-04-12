@@ -1,34 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  Stethoscope, 
-  ClipboardList, 
-  MessageSquare, 
-  Settings, 
+import axios from 'axios';
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  Stethoscope,
+  ClipboardList,
+  MessageSquare,
+  Settings,
   LogOut,
   ChevronLeft,
   HeartPulse,
   FileText
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
-import { useAuth } from '../../context/AuthContext'; // Ajout pour une déconnexion propre
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 const DoctorSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const [unreadCount, setUnreadCount] = useState(0);
+
   // Récupération des états du contexte Admin (Sidebar toggle)
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
-  
-  // Récupération de la fonction logout du contexte Auth
-  const { logout } = useAuth();
+
+  // Récupération de la fonction logout et token du contexte Auth
+  const { logout, token } = useAuth();
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        // Fetch patients and sum their unread counts
+        const response = await axios.get(`${API_URL}/api/v1/doctors/patients`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const patients = response.data || [];
+        const totalUnread = patients.reduce((sum, p) => sum + (p.unreadCount || 0), 0);
+        setUnreadCount(totalUnread);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+    // Poll every 10 seconds for unread count
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const menuItems = [
     { 
@@ -67,11 +95,12 @@ const DoctorSidebar = () => {
       icon: ClipboardList, 
       color: 'text-amber-500' 
     },
-    { 
-      path: '/doctor/chat', 
-      label: 'Chat Patient', 
-      icon: MessageSquare, 
-      color: 'text-indigo-500' 
+    {
+      path: '/doctor/chat',
+      label: 'Chat Patient',
+      icon: MessageSquare,
+      color: 'text-indigo-500',
+      badge: unreadCount
     },
     { 
       path: '/doctor/settings', 
@@ -142,12 +171,28 @@ const DoctorSidebar = () => {
                     sidebarCollapsed && "justify-center"
                   )}
                 >
-                  <item.icon className={cn(
-                    "w-5 h-5 flex-shrink-0 transition-colors", 
-                    active ? "text-primary" : item.color,
-                    !active && "group-hover:text-foreground"
-                  )} />
-                  {!sidebarCollapsed && <span className="flex-1 tracking-tight">{item.label}</span>}
+                  <div className="relative">
+                    <item.icon className={cn(
+                      "w-5 h-5 flex-shrink-0 transition-colors",
+                      active ? "text-primary" : item.color,
+                      !active && "group-hover:text-foreground"
+                    )} />
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  {!sidebarCollapsed && (
+                    <span className="flex-1 tracking-tight flex items-center gap-2">
+                      {item.label}
+                      {item.badge > 0 && (
+                        <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -187,17 +232,31 @@ const DoctorSidebar = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={toggleMobileSidebar} // Ferme la sidebar après le clic sur mobile
+                  onClick={toggleMobileSidebar}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
                     active ? "bg-primary/10 text-primary" : "text-muted-foreground"
                   )}
                 >
-                  <item.icon className={cn(
-                    "w-5 h-5", 
-                    active ? "text-primary" : item.color
-                  )} />
-                  {item.label}
+                  <div className="relative">
+                    <item.icon className={cn(
+                      "w-5 h-5",
+                      active ? "text-primary" : item.color
+                    )} />
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="flex items-center gap-2">
+                    {item.label}
+                    {item.badge > 0 && (
+                      <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               );
             })}

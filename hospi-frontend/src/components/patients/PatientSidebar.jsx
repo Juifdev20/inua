@@ -1,29 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Bell, 
-  Calendar, 
-  CreditCard, 
-  Settings, 
-  LogOut, 
-  User, 
-  ChevronLeft, 
+import axios from 'axios';
+import {
+  Bell,
+  Calendar,
+  CreditCard,
+  Settings,
+  LogOut,
+  User,
+  ChevronLeft,
   HeartPulse,
   LayoutDashboard,
   FileText,
-  MessageCircle // Ajout de l'icône pour la messagerie
+  MessageCircle
 } from 'lucide-react';
-import { useAdmin } from '../../context/AdminContext'; 
+import { useAdmin } from '../../context/AdminContext';
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 
+const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
+  const { token } = useAuth();
 
   // Mise à jour de la liste des menus avec "Messagerie"
   const menuItems = [
@@ -39,11 +45,12 @@ const Sidebar = () => {
       icon: Bell, 
       color: 'text-blue-500' 
     },
-    { 
-      path: '/patient/messages', // Nouvelle route pour le chat
-      label: 'Messagerie', 
-      icon: MessageCircle, 
-      color: 'text-emerald-500' 
+    {
+      path: '/patient/messages',
+      label: 'Messagerie',
+      icon: MessageCircle,
+      color: 'text-emerald-500',
+      badge: unreadCount
     },
     { 
       path: '/patient/profile', 
@@ -77,9 +84,31 @@ const Sidebar = () => {
     },
   ];
 
+  // Fetch unread message count
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/v1/online-status/my-doctors`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const doctors = response.data || [];
+        const totalUnread = doctors.reduce((sum, d) => sum + (d.unreadCount || 0), 0);
+        setUnreadCount(totalUnread);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   const handleLogout = () => {
     localStorage.removeItem('patient_token');
-    localStorage.removeItem('token'); 
+    localStorage.removeItem('token');
     navigate('/login');
   };
 
@@ -139,12 +168,28 @@ const Sidebar = () => {
                     sidebarCollapsed && "justify-center"
                   )}
                 >
-                  <item.icon className={cn(
-                    "w-5 h-5 flex-shrink-0 transition-colors", 
-                    active ? "text-primary" : item.color,
-                    !active && "group-hover:text-foreground"
-                  )} />
-                  {!sidebarCollapsed && <span className="flex-1 tracking-tight">{item.label}</span>}
+                  <div className="relative">
+                    <item.icon className={cn(
+                      "w-5 h-5 flex-shrink-0 transition-colors",
+                      active ? "text-primary" : item.color,
+                      !active && "group-hover:text-foreground"
+                    )} />
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  {!sidebarCollapsed && (
+                    <span className="flex-1 tracking-tight flex items-center gap-2">
+                      {item.label}
+                      {item.badge > 0 && (
+                        <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -188,8 +233,22 @@ const Sidebar = () => {
                   isActive(item.path) ? "bg-primary/10 text-primary" : "text-muted-foreground"
                 )}
               >
-                <item.icon className={cn("w-5 h-5", isActive(item.path) ? "text-primary" : item.color)} />
-                {item.label}
+                <div className="relative">
+                  <item.icon className={cn("w-5 h-5", isActive(item.path) ? "text-primary" : item.color)} />
+                  {item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  {item.badge > 0 && (
+                    <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
           </nav>

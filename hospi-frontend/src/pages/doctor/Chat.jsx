@@ -63,17 +63,53 @@ const Chat = () => {
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
-  
+
   const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
   const statusIntervalRef = useRef(null);
+  const notificationPermission = useRef(false);
 
-  // Set online status when component mounts
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        notificationPermission.current = permission === 'granted';
+      });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      notificationPermission.current = true;
+    }
+  }, []);
+
+  // Function to play sound and show notification
+  const notifyNewMessage = useCallback((senderName, messagePreview) => {
+    // Play sound
+    if (!isMuted) {
+      audioPlayer.current.currentTime = 0;
+      audioPlayer.current.play().catch(() => {});
+    }
+
+    // Show browser notification if permitted and tab is not visible
+    if (notificationPermission.current && document.hidden && 'Notification' in window) {
+      new Notification('Nouveau message de ' + senderName, {
+        body: messagePreview,
+        icon: '/logo192.png',
+        badge: '/logo192.png',
+        tag: 'chat-message',
+        requireInteraction: false
+      });
+    }
+  }, [isMuted]);
+
+  // Set online status when component mounts - using ref to avoid stale closure
+  const patientsRef = useRef(patients);
+  patientsRef.current = patients;
+
   useEffect(() => {
     const setOnlineStatus = async () => {
       try {
         await axios.post(`${API_URL}/api/v1/status/online`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('Doctor set to online');
       } catch (error) {
         console.error('Error setting online status:', error);
       }
@@ -81,27 +117,27 @@ const Chat = () => {
 
     setOnlineStatus();
 
-    // Poll for patient online status every 30 seconds
+    // Poll for patient online status every 10 seconds (more responsive)
     statusIntervalRef.current = setInterval(async () => {
-      if (patients.length > 0) {
+      const currentPatients = patientsRef.current;
+      if (currentPatients.length > 0) {
         try {
-          const statusPromises = patients.map(p => 
+          const statusPromises = currentPatients.map(p => 
             axios.get(`${API_URL}/api/v1/status/${p.id}`, {
               headers: { Authorization: `Bearer ${token}` }
-            })
+            }).catch(() => ({ data: { isOnline: false } }))
           );
           const responses = await Promise.all(statusPromises);
           
-          const updatedPatients = patients.map((p, index) => ({
+          setPatients(prevPatients => prevPatients.map((p, index) => ({
             ...p,
-            en_ligne: responses[index].data.isOnline
-          }));
-          setPatients(updatedPatients);
+            en_ligne: responses[index]?.data?.isOnline || false
+          })));
         } catch (error) {
           console.error('Error fetching online status:', error);
         }
       }
-    }, 30000);
+    }, 10000);
 
     return () => {
       clearInterval(statusIntervalRef.current);
@@ -111,13 +147,14 @@ const Chat = () => {
           await axios.post(`${API_URL}/api/v1/status/offline`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
+          console.log('Doctor set to offline');
         } catch (error) {
           console.error('Error setting offline status:', error);
         }
       };
       setOfflineStatus();
     };
-  }, [token, patients]);
+  }, [token]);
 
   const fetchPatientsList = useCallback(async () => {
     if (!token) return;
@@ -152,11 +189,15 @@ const Chat = () => {
       const response = await axios.get(`${API_CHAT}/conversations/${patientUserId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const newMsgs = response.data || [];
-      
+
       setMessages(prevMessages => {
-        if (newMsgs.length !== prevMessages.length) {
+        // More accurate comparison using message IDs
+        const prevIds = new Set(prevMessages.map(m => m.id));
+        const hasNewMessages = newMsgs.some(m => !prevIds.has(m.id));
+
+        if (hasNewMessages || newMsgs.length !== prevMessages.length) {
           if (isPolling && newMsgs.length > prevMessages.length) {
             const lastMsg = newMsgs[newMsgs.length - 1];
             if (lastMsg.sender_type !== 'doctor') {
@@ -166,7 +207,11 @@ const Chat = () => {
                   [patientUserId]: (prev[patientUserId] || 0) + 1
                 }));
               }
-              if (!isMuted) audioPlayer.current.play().catch(() => {});
+              // Find patient name for notification
+              const patient = patientsRef.current.find(p => p.id === patientUserId);
+              const senderName = patient?.displayFullName || 'Patient';
+              const preview = lastMsg.contenu?.substring(0, 50) || 'Nouveau message';
+              notifyNewMessage(senderName, preview);
             }
           }
           return newMsgs;
@@ -176,7 +221,7 @@ const Chat = () => {
     } catch (error) {
       console.error('Erreur messages:', error);
     }
-  }, [token, isMuted, selectedPatient?.id]);
+  }, [token, isMuted, selectedPatient?.id, notifyNewMessage]);
 
   const scrollToBottom = (behavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -186,11 +231,16 @@ const Chat = () => {
     fetchPatientsList();
   }, [fetchPatientsList]);
 
+  // Poll for messages every 3 seconds for better real-time feel
   useEffect(() => {
     if (!selectedPatient) return;
+    
+    // Immediate fetch when selecting patient
+    fetchMessages(selectedPatient.id, false);
+    
     const interval = setInterval(() => {
         fetchMessages(selectedPatient.id, true);
-    }, 5000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [selectedPatient?.id, fetchMessages]);
 
@@ -387,8 +437,8 @@ const Chat = () => {
                       {p.displayFullName}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <div className={`w-2 h-2 rounded-full ${p.en_ligne ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-                      <p className="text-xs text-muted-foreground">
+                      <span className={`w-2.5 h-2.5 rounded-full ${p.en_ligne ? 'bg-[#00C851]' : 'bg-gray-400'}`} />
+                      <p className={`text-xs ${p.en_ligne ? 'text-[#00C851]' : 'text-gray-500'}`}>
                         {p.en_ligne ? 'En ligne' : 'Hors ligne'}
                       </p>
                     </div>
@@ -425,9 +475,12 @@ const Chat = () => {
                   </Avatar>
                   <div>
                     <h3 className="font-semibold text-sm">{selectedPatient.displayFullName}</h3>
-                    <p className="text-xs text-emerald-600">
-                      {selectedPatient.en_ligne ? 'En ligne' : 'Hors ligne'}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${selectedPatient.en_ligne ? 'bg-[#00C851]' : 'bg-gray-400'}`} />
+                      <p className={`text-xs ${selectedPatient.en_ligne ? 'text-[#00C851]' : 'text-gray-500'}`}>
+                        {selectedPatient.en_ligne ? 'En ligne' : 'Hors ligne'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">

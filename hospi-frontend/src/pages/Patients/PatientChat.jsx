@@ -48,6 +48,43 @@ const PatientChat = () => {
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const messagesEndRef = useRef(null);
   const statusIntervalRef = useRef(null);
+  const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
+  const notificationPermission = useRef(false);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        notificationPermission.current = permission === 'granted';
+      });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      notificationPermission.current = true;
+    }
+  }, []);
+
+  // Function to play sound and show notification
+  const notifyNewMessage = useCallback((senderName, messagePreview) => {
+    // Play sound
+    if (!isMuted) {
+      audioPlayer.current.currentTime = 0;
+      audioPlayer.current.play().catch(() => {});
+    }
+
+    // Show browser notification if permitted and tab is not visible
+    if (notificationPermission.current && document.hidden && 'Notification' in window) {
+      new Notification('Nouveau message de Dr. ' + senderName, {
+        body: messagePreview,
+        icon: '/logo192.png',
+        badge: '/logo192.png',
+        tag: 'chat-message',
+        requireInteraction: false
+      });
+    }
+  }, [isMuted]);
+
+  // Ref for doctors to avoid stale closure in polling
+  const doctorsRef = useRef(doctors);
+  doctorsRef.current = doctors;
 
   // Set online status when component mounts
   useEffect(() => {
@@ -63,27 +100,27 @@ const PatientChat = () => {
 
     setOnlineStatus();
 
-    // Poll for doctor online status every 30 seconds
+    // Poll for doctor online status every 10 seconds
     statusIntervalRef.current = setInterval(async () => {
-      if (doctors.length > 0) {
+      const currentDoctors = doctorsRef.current;
+      if (currentDoctors.length > 0) {
         try {
-          const statusPromises = doctors.map(d => 
+          const statusPromises = currentDoctors.map(d => 
             axios.get(`${BACKEND_URL}/api/v1/status/${d.id}`, {
               headers: { Authorization: `Bearer ${token}` }
-            })
+            }).catch(() => ({ data: { isOnline: false } }))
           );
           const responses = await Promise.all(statusPromises);
           
-          const updatedDoctors = doctors.map((d, index) => ({
+          setDoctors(prevDoctors => prevDoctors.map((d, index) => ({
             ...d,
-            en_ligne: responses[index].data.isOnline
-          }));
-          setDoctors(updatedDoctors);
+            en_ligne: responses[index]?.data?.isOnline || false
+          })));
         } catch (error) {
           console.error('Error fetching online status:', error);
         }
       }
-    }, 30000);
+    }, 10000);
 
     return () => {
       clearInterval(statusIntervalRef.current);
@@ -99,9 +136,7 @@ const PatientChat = () => {
       };
       setOfflineStatus();
     };
-  }, [doctors, token]);
-  
-  const audioPlayer = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
+  }, [token]);
 
   // Fonction pour scroller en bas
   const scrollToBottom = () => {
@@ -133,22 +168,30 @@ const PatientChat = () => {
     }
   }, [token, selectedDoctor]);
 
-  // 2. Récupérer les messages
+  // 2. Récupérer les messages avec détection améliorée
   const fetchMessages = useCallback(async (doctorId, isPolling = false) => {
     if (!token || !doctorId) return;
     try {
       const response = await axios.get(`${API_PATIENTS}/conversations/${doctorId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const serverMessages = response.data || [];
-      
+
       setMessages(prevMessages => {
-        if (serverMessages.length !== prevMessages.length) {
+        // Détection plus précise avec les IDs
+        const prevIds = new Set(prevMessages.map(m => m.id));
+        const hasNewMessages = serverMessages.some(m => !prevIds.has(m.id));
+
+        if (hasNewMessages || serverMessages.length !== prevMessages.length) {
           if (isPolling && serverMessages.length > prevMessages.length) {
             const lastMsg = serverMessages[serverMessages.length - 1];
-            if (lastMsg.sender_type === 'doctor' && !isMuted) {
-              audioPlayer.current.play().catch(() => {});
+            if (lastMsg.sender_type === 'doctor') {
+              // Find doctor name for notification
+              const doctor = doctorsRef.current.find(d => d.id === doctorId);
+              const senderName = doctor?.displayFullName || 'Médecin';
+              const preview = lastMsg.contenu?.substring(0, 50) || 'Nouveau message';
+              notifyNewMessage(senderName, preview);
             }
           }
           return serverMessages;
@@ -158,19 +201,22 @@ const PatientChat = () => {
     } catch (error) {
       console.error('Erreur lors de la récupération des messages:', error);
     }
-  }, [token, isMuted]);
+  }, [token, isMuted, notifyNewMessage]);
 
   useEffect(() => {
     fetchMyDoctors();
   }, [fetchMyDoctors]);
 
+  // Poll pour messages toutes les 3 secondes
   useEffect(() => {
     if (!selectedDoctor) return;
+
+    // Fetch immédiat quand on sélectionne un docteur
     fetchMessages(selectedDoctor.id);
 
     const interval = setInterval(() => {
       fetchMessages(selectedDoctor.id, true);
-    }, 4000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [selectedDoctor?.id, fetchMessages]);
@@ -287,7 +333,12 @@ const PatientChat = () => {
                   </Avatar>
                   <div className="flex-1 text-left min-w-0">
                     <p className="font-semibold text-sm truncate">{doc.displayFullName}</p>
-                    <p className="text-xs text-muted-foreground">{doc.specialite || 'Généraliste'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${doc.en_ligne ? 'bg-[#00C851]' : 'bg-gray-400'}`} />
+                      <p className={`text-xs ${doc.en_ligne ? 'text-[#00C851]' : 'text-gray-500'}`}>
+                        {doc.en_ligne ? 'En ligne' : 'Hors ligne'}
+                      </p>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -319,7 +370,12 @@ const PatientChat = () => {
                   </Avatar>
                   <div>
                     <h3 className="font-semibold text-sm">{selectedDoctor.displayFullName}</h3>
-                    <p className="text-xs text-emerald-600">Canal sécurisé</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${selectedDoctor.en_ligne ? 'bg-[#00C851]' : 'bg-gray-400'}`} />
+                      <p className={`text-xs ${selectedDoctor.en_ligne ? 'text-[#00C851]' : 'text-gray-500'}`}>
+                        {selectedDoctor.en_ligne ? 'En ligne' : 'Hors ligne'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
