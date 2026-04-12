@@ -268,12 +268,17 @@ public class ReceptionController {
             // Calculer les dates du jour
             LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
             LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+            log.info("📅 [RECEPTION] Période: {} à {}", startOfDay, endOfDay);
             
             // 1. Admissions du jour (compter toutes les consultations créées aujourd'hui)
-            long admissionsJour = consultationRepository.countAdmissionsToday(startOfDay, endOfDay);
+            Long admissionsJourObj = consultationRepository.countAdmissionsToday(startOfDay, endOfDay);
+            long admissionsJour = admissionsJourObj != null ? admissionsJourObj : 0L;
+            log.info("📊 [RECEPTION] Admissions du jour: {}", admissionsJour);
             
             // 2. En attente (statut EN_ATTENTE) - utilise la méthode existante countByStatus
-            long enAttente = consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
+            Long enAttenteObj = consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
+            long enAttente = enAttenteObj != null ? enAttenteObj : 0L;
+            log.info("📊 [RECEPTION] En attente: {}", enAttente);
             
             // 3. Fiches transmises (statuts: EN_COURS, LABORATOIRE_EN_ATTENTE, PENDING_PAYMENT, PAID_PENDING_LAB)
             List<ConsultationStatus> transmittedStatuses = List.of(
@@ -282,14 +287,20 @@ public class ReceptionController {
                 ConsultationStatus.PENDING_PAYMENT,
                 ConsultationStatus.PAID_PENDING_LAB
             );
-            long fichesTransmises = consultationRepository.countFichesTransmises(transmittedStatuses);
+            log.info("📊 [RECEPTION] Statuts transmis: {}", transmittedStatuses);
+            Long fichesTransmisesObj = consultationRepository.countFichesTransmises(transmittedStatuses);
+            long fichesTransmises = fichesTransmisesObj != null ? fichesTransmisesObj : 0L;
+            log.info("📊 [RECEPTION] Fiches transmises: {}", fichesTransmises);
             
             // 4. Terminées aujourd'hui (statuts: TERMINE, COMPLETED)
             List<ConsultationStatus> terminatedStatuses = List.of(
                 ConsultationStatus.TERMINE,
                 ConsultationStatus.COMPLETED
             );
-            long terminees = consultationRepository.countTermineesToday(terminatedStatuses, startOfDay, endOfDay);
+            log.info("📊 [RECEPTION] Statuts terminés: {}", terminatedStatuses);
+            Long termineesObj = consultationRepository.countTermineesToday(terminatedStatuses, startOfDay, endOfDay);
+            long terminees = termineesObj != null ? termineesObj : 0L;
+            log.info("📊 [RECEPTION] Terminées aujourd'hui: {}", terminees);
             
             // 5. Revenu du jour (somme des examAmountPaid aujourd'hui)
             // Pour simplifier, on utilise les consultations terminées
@@ -328,7 +339,15 @@ public class ReceptionController {
             
         } catch (Exception e) {
             log.error("❌ [RECEPTION] Erreur lors du calcul des stats dashboard: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            // Retourner une réponse avec détail de l'erreur pour faciliter le débogage
+            return ResponseEntity.internalServerError()
+                .body(com.hospital.backend.dto.DashboardStatsDTO.builder()
+                    .admissionsJour(0L)
+                    .enAttente(0L)
+                    .fichesTransmises(0L)
+                    .terminees(0L)
+                    .todayRevenue(0.0)
+                    .build());
         }
     }
     

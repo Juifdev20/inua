@@ -265,16 +265,16 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     );
 
     @Query("SELECT COUNT(c) FROM Consultation c WHERE c.createdAt BETWEEN :startOfDay AND :endOfDay AND c.status != 'ARCHIVED'")
-    long countAdmissionsToday(
+    Long countAdmissionsToday(
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
 
     @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status IN :statuses AND c.status != 'ARCHIVED'")
-    long countFichesTransmises(@Param("statuses") List<ConsultationStatus> statuses);
+    Long countFichesTransmises(@Param("statuses") List<ConsultationStatus> statuses);
 
     @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status IN :statuses AND c.updatedAt BETWEEN :startOfDay AND :endOfDay AND c.status != 'ARCHIVED'")
-    long countTermineesToday(
+    Long countTermineesToday(
             @Param("statuses") List<ConsultationStatus> statuses,
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
