@@ -56,7 +56,9 @@ export default function Documents() {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('[DOCUMENTS] Réponse API:', data);
         const docs = data?.content || data || [];
+        console.log('[DOCUMENTS] Documents extraits:', docs);
         setDocuments(Array.isArray(docs) ? docs : []);
       } else {
         console.error('Error fetching documents:', response.status);
@@ -233,12 +235,16 @@ export default function Documents() {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('[DOCUMENTS] Upload réussi:', result);
         // Reset form and refresh documents
         setSelectedFile(null);
         setPatientName('');
         setDocumentType('DOSSIER_PATIENT');
         setIsUploadOpen(false);
-        fetchDocuments();
+        // Attendre 500ms pour laisser la transaction se propager
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchDocuments();
       } else {
         console.error('Upload failed:', response.status);
         alert('Échec de l\'importation du document');

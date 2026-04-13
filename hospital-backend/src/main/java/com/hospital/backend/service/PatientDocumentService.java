@@ -327,7 +327,19 @@ public class PatientDocumentService {
      * Récupère tous les documents pour la réception
      */
     public List<PatientDocumentDTO> getAllDocuments() {
-        return patientDocumentRepository.findAllOrderByCreatedAtDesc().stream()
+        log.info("📄 [PATIENT_DOCUMENT] Récupération de tous les documents");
+        
+        List<PatientDocument> documents = patientDocumentRepository.findAllOrderByCreatedAtDesc();
+        log.info("📄 [PATIENT_DOCUMENT] {} documents bruts récupérés de la BDD", documents.size());
+        
+        // Log chaque document brut pour debug
+        for (PatientDocument doc : documents) {
+            log.info("📄 [PATIENT_DOCUMENT] Brut: ID={}, Name={}, CreatedAt={}, Content={} bytes",
+                doc.getId(), doc.getFileName(), doc.getCreatedAt(),
+                doc.getContent() != null ? doc.getContent().length : 0);
+        }
+        
+        return documents.stream()
                 .map(PatientDocumentDTO::fromEntity)
                 .toList();
     }
@@ -452,9 +464,10 @@ public class PatientDocumentService {
                     .build();
             
             document = patientDocumentRepository.save(document);
+            patientDocumentRepository.flush(); // ✅ Force l'écriture immédiate en BDD
             
-            log.info("✅ [PATIENT_DOCUMENT] Document avec contenu créé: {} (ID: {})", 
-                    document.getFileName(), document.getId());
+            log.info("✅ [PATIENT_DOCUMENT] Document avec contenu créé: {} (ID: {}, CreatedAt: {})", 
+                    document.getFileName(), document.getId(), document.getCreatedAt());
             
             return document;
             

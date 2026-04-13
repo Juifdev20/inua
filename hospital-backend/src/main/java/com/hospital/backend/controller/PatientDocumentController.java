@@ -43,6 +43,12 @@ public class PatientDocumentController {
             
             List<PatientDocumentDTO> documents = patientDocumentService.getAllDocuments();
             
+            // ✅ DEBUG: Log chaque document pour diagnostiquer
+            for (PatientDocumentDTO doc : documents) {
+                log.info("📄 [DOCUMENTS] Doc ID={}, Name={}, Patient={}, hasContent={}, createdAt={}",
+                    doc.getId(), doc.getFileName(), doc.getPatientName(), doc.getHasContent(), doc.getCreatedAt());
+            }
+            
             Map<String, Object> response = Map.of(
                 "content", documents,
                 "count", documents.size()
@@ -215,7 +221,13 @@ public class PatientDocumentController {
             // Sauvegarder le document avec son contenu
             PatientDocument savedDoc = patientDocumentService.createDocumentWithContent(documentDTO, fileContent);
             
-            log.info("✅ [DOCUMENTS] Document stocké en BDD avec succès: {} ({} bytes)", newFilename, fileContent.length);
+            log.info("✅ [DOCUMENTS] Document stocké en BDD avec succès: ID={}, Name={}, CreatedAt={}", 
+                savedDoc.getId(), savedDoc.getFileName(), savedDoc.getCreatedAt());
+            
+            // Vérifier que le document a bien un ID et une date de création
+            if (savedDoc.getId() == null || savedDoc.getCreatedAt() == null) {
+                log.error("❌ [DOCUMENTS] Document sauvegardé mais ID ou CreatedAt est null!");
+            }
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
