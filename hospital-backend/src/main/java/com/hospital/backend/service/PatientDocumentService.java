@@ -447,21 +447,21 @@ public class PatientDocumentService {
                 docType = DocumentType.DOSSIER_PATIENT;
             }
             
-            PatientDocument document = PatientDocument.builder()
-                    .fileName(dto.getFileName())
-                    .filePath(dto.getFilePath())
-                    .fileUrl(dto.getFileUrl())
-                    .documentType(docType)
-                    .patientId(dto.getPatientId())
-                    .patientName(dto.getPatientName())
-                    .totalAmount(dto.getTotalAmount() != null ? dto.getTotalAmount() : 0.0)
-                    .amountPaid(dto.getAmountPaid() != null ? dto.getAmountPaid() : 0.0)
-                    .remainingCredit(dto.getRemainingCredit() != null ? dto.getRemainingCredit() : 0.0)
-                    .paymentStatus(dto.getPaymentStatus() != null ? dto.getPaymentStatus() : "NON_PAYE")
-                    .content(content)  // ✅ Stockage binaire dans PostgreSQL
-                    .fileSize(dto.getFileSize())
-                    .mimeType(dto.getMimeType())
-                    .build();
+            // ✅ CORRECTION: Utiliser une approche explicite pour éviter la confusion Lombok
+            PatientDocument document = new PatientDocument();
+            document.setFileName(dto.getFileName());
+            document.setFilePath(dto.getFilePath());
+            document.setFileUrl(dto.getFileUrl());
+            document.setDocumentType(docType);
+            document.setPatientId(dto.getPatientId());
+            document.setPatientName(dto.getPatientName());
+            document.setTotalAmount(dto.getTotalAmount() != null ? dto.getTotalAmount() : 0.0);
+            document.setAmountPaid(dto.getAmountPaid() != null ? dto.getAmountPaid() : 0.0);
+            document.setRemainingCredit(dto.getRemainingCredit() != null ? dto.getRemainingCredit() : 0.0);
+            document.setPaymentStatus(dto.getPaymentStatus() != null ? dto.getPaymentStatus() : "NON_PAYE");
+            document.setContent(content);  // ✅ byte[] explicite
+            document.setFileSize(dto.getFileSize());  // ✅ Long explicite
+            document.setMimeType(dto.getMimeType());
             
             document = patientDocumentRepository.save(document);
             patientDocumentRepository.flush(); // ✅ Force l'écriture immédiate en BDD
