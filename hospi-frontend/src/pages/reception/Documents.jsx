@@ -39,7 +39,8 @@ export default function Documents() {
   const [deleting, setDeleting] = useState(false);
 
   // Base API URL for documents
-  const API_DOCUMENTS_URL = '/api/v1/documents';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const API_DOCUMENTS_URL = `${BACKEND_URL}/api/v1/documents`;
 
   // Fetch documents from API
   const fetchDocuments = useCallback(async () => {
