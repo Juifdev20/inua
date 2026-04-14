@@ -75,6 +75,7 @@ import ReceptionDocuments from "./pages/reception/Documents";
 import { Settings as ReceptionSettings } from "./pages/reception/Settings";
 import { ExamReception } from "./pages/reception/ExamReception";
 import ReceptionPayments from "./pages/reception/ReceptionPayments";
+import ReceptionMedicalReport from "./pages/reception/ReceptionMedicalReport";
 
 /* 💰 Finance */
 import FinanceLayout from "./components/finance/FinanceLayout";
@@ -237,7 +238,7 @@ function App() {
                   <Route path="paiements" element={<ReceptionPayments />} />
                   <Route path="documents" element={<ReceptionDocuments />} />
                   <Route path="settings" element={<ReceptionSettings />} />
-                  <Route path="medical-report/:consultationId" element={<MedicalReportView />} />
+                  <Route path="medical-report/:consultationId" element={<ReceptionMedicalReport />} />
                 </Route>
 
                 {/* 💰 ROUTES FINANCE */}
