@@ -237,6 +237,7 @@ function App() {
                   <Route path="paiements" element={<ReceptionPayments />} />
                   <Route path="documents" element={<ReceptionDocuments />} />
                   <Route path="settings" element={<ReceptionSettings />} />
+                  <Route path="medical-report/:consultationId" element={<MedicalReportView />} />
                 </Route>
 
                 {/* 💰 ROUTES FINANCE */}

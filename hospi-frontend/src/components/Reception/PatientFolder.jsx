@@ -37,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
-import FicheDetailModal from './FicheDetailModal';
 
 // ✅ LOGIQUE DE RÉSOLUTION D'IMAGE
 const getCleanImageUrl = (url) => {
@@ -194,9 +193,6 @@ const PatientFolder = () => {
   const [triageToRestore, setTriageToRestore] = useState(null);
   const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
 
-  // ✅ État pour la fiche complète
-  const [selectedFiche, setSelectedFiche] = useState(null);
-  const [isFicheDetailOpen, setIsFicheDetailOpen] = useState(false);
 
   const loadData = async () => {
     try {
@@ -425,7 +421,7 @@ const PatientFolder = () => {
                       ) : (
                         <>
                           <button onClick={() => handleIndividualPrint(fiche)} className="p-2.5 bg-background border border-border hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all shadow-sm" title="Imprimer"><Printer size={16} /></button>
-                          <button onClick={() => { setSelectedFiche(fiche); setIsFicheDetailOpen(true); }} className="p-2.5 bg-background border border-border hover:bg-purple-50 hover:text-purple-600 rounded-xl transition-all shadow-sm" title="Voir fiche complète"><Eye size={16} /></button>
+                          <button onClick={() => navigate(`/reception/medical-report/${fiche.id}`)} className="p-2.5 bg-background border border-border hover:bg-purple-50 hover:text-purple-600 rounded-xl transition-all shadow-sm" title="Voir fiche complète"><Eye size={16} /></button>
                           <button onClick={() => navigate(`/reception/edit-admission/${fiche.id}`)} className="p-2.5 bg-background border border-border hover:bg-amber-50 hover:text-amber-600 rounded-xl transition-all shadow-sm" title="Éditer"><Pencil size={16} /></button>
                           <button onClick={() => { setTriageToArchive(fiche); setIsArchiveDialogOpen(true); }} className="p-2.5 bg-background border border-border hover:bg-red-50 hover:text-red-600 rounded-xl transition-all shadow-sm" title="Archiver"><Trash2 size={16} /></button>
                         </>
@@ -494,14 +490,6 @@ const PatientFolder = () => {
           )}
         </div>
       </div>
-
-      {/* --- MODALE FICHE COMPLÈTE --- */}
-      <FicheDetailModal 
-        fiche={selectedFiche}
-        isOpen={isFicheDetailOpen}
-        onClose={() => setIsFicheDetailOpen(false)}
-        patientInfo={patientInfo}
-      />
 
       {/* --- MODALES DE CONFIRMATION (SHADCN UI) --- */}
       <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
