@@ -65,10 +65,10 @@ public class PatientDocument {
     @Column(name = "payment_status")
     private String paymentStatus;
     
-    // ✅ NOUVEAU: Contenu binaire du document (stocké en Base64 dans PostgreSQL)
+    // ✅ NOUVEAU: Contenu binaire du document (stocké en bytea dans PostgreSQL)
     // Permet de persister les documents même sur Render (filesystem éphémère)
+    // NOTE: Pas de @Lob car bytea est différent de oid en PostgreSQL
     @Column(name = "content", columnDefinition = "bytea")
-    @Lob
     private byte[] content;
     
     // ✅ Taille du fichier en bytes
