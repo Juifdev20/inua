@@ -983,9 +983,9 @@ const Consultations = () => {
       </Dialog>
 
       {/* ✅ Panneau d'historique patient (Épisode de soin - Isolation) */}
-      {selectedConsultation && selectedConsultation.patientId && (
+      {selectedConsultation && (
         <PatientHistoryPanel
-          patientId={selectedConsultation.patientId}
+          patientId={selectedConsultation.patient?.id || selectedConsultation.patientId}
           currentConsultationId={selectedConsultation.id}
           onRenewPrescription={(prescription) => {
             // Fonction pour renouveler une prescription depuis l'historique
