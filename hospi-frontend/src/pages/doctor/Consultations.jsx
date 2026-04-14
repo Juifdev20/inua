@@ -784,11 +784,11 @@ const Consultations = () => {
                 <div className="mt-8 space-y-8 pb-10">
                   {/* Message de verrouillage si consultation terminée */}
                   {!isConsultationEditable(selectedConsultation) && (
-                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-destructive flex-shrink-0" />
                       <div>
-                        <p className="font-bold text-amber-800 dark:text-amber-300">Consultation archivée</p>
-                        <p className="text-sm text-amber-700 dark:text-amber-400">Cette consultation est terminée ou payée et ne peut plus être modifiée.</p>
+                        <p className="font-bold text-destructive">Consultation archivée</p>
+                        <p className="text-sm text-muted-foreground">Cette consultation est terminée ou payée et ne peut plus être modifiée.</p>
                       </div>
                     </div>
                   )}

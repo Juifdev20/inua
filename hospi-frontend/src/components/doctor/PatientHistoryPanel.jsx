@@ -96,83 +96,83 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
   return (
     <div className="space-y-4">
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4"></div>
           <p className="text-sm font-medium">Chargement de l'historique...</p>
         </div>
       ) : history.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
-            <History className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/30 rounded-xl border border-dashed border-border">
+          <div className="w-16 h-16 rounded-full bg-background border-2 border-border flex items-center justify-center mb-4">
+            <History className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-base font-semibold mb-1">Aucun historique disponible</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 text-center max-w-xs">Ce patient n'a pas de consultations antérieures enregistrées</p>
+          <p className="text-base font-semibold mb-1 text-foreground">Aucun historique disponible</p>
+          <p className="text-sm text-muted-foreground text-center max-w-xs">Ce patient n'a pas de consultations antérieures enregistrées</p>
         </div>
       ) : (
         history.map((consultation, index) => (
           <div 
             key={consultation.id} 
-            className="group border rounded-xl overflow-hidden bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-200 border-gray-200 dark:border-gray-700"
+            className="group border rounded-xl overflow-hidden bg-background hover:shadow-md transition-all duration-200 border-border"
           >
             {/* Header de la consultation */}
             <div 
-              className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-750 cursor-pointer hover:from-blue-50/50 hover:to-white dark:hover:from-gray-750 dark:hover:to-gray-800 transition-colors"
+              className="flex items-center justify-between p-3 sm:p-4 bg-muted/30 cursor-pointer hover:bg-accent/50 transition-colors"
               onClick={() => toggleExpand(consultation.id)}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                   #{history.length - index}
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-gray-900 dark:text-white">{formatDate(consultation.consultationDate || consultation.createdAt)}</p>
+                  <p className="font-semibold text-sm text-foreground">{formatDate(consultation.consultationDate || consultation.createdAt)}</p>
                   <div className="mt-1">{getStatusBadge(consultation.status || consultation.statut)}</div>
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
+              <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center group-hover:shadow-sm transition-shadow">
                 {expandedItems[consultation.id] ? (
-                  <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 )}
               </div>
             </div>
 
             {/* Détails expansibles */}
             {expandedItems[consultation.id] && (
-              <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 border-t border-gray-200 dark:border-gray-600">
+              <div className="p-3 sm:p-4 space-y-3 border-t border-border bg-background">
                 {/* Motif */}
                 {consultation.reasonForVisit && (
                   <div className="text-xs sm:text-sm">
-                    <span className="font-medium text-gray-600 dark:text-gray-400">Motif:</span>
-                    <p className="text-gray-800 dark:text-gray-200 mt-1">{consultation.reasonForVisit}</p>
+                    <span className="font-medium text-muted-foreground">Motif:</span>
+                    <p className="text-foreground mt-1">{consultation.reasonForVisit}</p>
                   </div>
                 )}
 
                 {/* Diagnostic */}
                 {consultation.diagnosis && (
                   <div className="text-xs sm:text-sm">
-                    <span className="font-medium text-gray-600 dark:text-gray-400">Diagnostic:</span>
-                    <p className="text-gray-800 dark:text-gray-200 mt-1">{consultation.diagnosis}</p>
+                    <span className="font-medium text-muted-foreground">Diagnostic:</span>
+                    <p className="text-foreground mt-1">{consultation.diagnosis}</p>
                   </div>
                 )}
 
                 {/* Traitement */}
                 {consultation.treatment && (
                   <div className="text-xs sm:text-sm">
-                    <span className="font-medium text-gray-600 dark:text-gray-400">Traitement:</span>
-                    <p className="text-gray-800 dark:text-gray-200 mt-1">{consultation.treatment}</p>
+                    <span className="font-medium text-muted-foreground">Traitement:</span>
+                    <p className="text-foreground mt-1">{consultation.treatment}</p>
                   </div>
                 )}
 
                 {/* Examens */}
                 {consultation.prescribedExams && consultation.prescribedExams.length > 0 && (
                   <div className="text-xs sm:text-sm">
-                    <span className="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                    <span className="font-medium text-muted-foreground flex items-center gap-1">
                       <Beaker className="w-3 h-3" /> Examens:
                     </span>
                     <ul className="mt-1 space-y-1">
                       {consultation.prescribedExams.map((exam, idx) => (
-                        <li key={idx} className="text-gray-700 dark:text-gray-300 text-xs pl-2 border-l-2 border-blue-200 dark:border-blue-800">
+                        <li key={idx} className="text-foreground text-xs pl-2 border-l-2 border-primary/30">
                           {exam.serviceName || exam.examType}
                         </li>
                       ))}
@@ -183,20 +183,20 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
                 {/* Prescriptions */}
                 {consultation.prescriptions && consultation.prescriptions.length > 0 && (
                   <div className="text-xs sm:text-sm">
-                    <span className="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                    <span className="font-medium text-muted-foreground flex items-center gap-1">
                       <Pill className="w-3 h-3" /> Prescriptions:
                     </span>
                     <ul className="mt-1 space-y-1">
                       {consultation.prescriptions.map((prescription, idx) => (
                         <li key={idx} className="flex items-center justify-between gap-2">
-                          <span className="text-gray-700 dark:text-gray-300 text-xs pl-2 border-l-2 border-emerald-200 dark:border-emerald-800 flex-1">
+                          <span className="text-foreground text-xs pl-2 border-l-2 border-emerald-500/30 flex-1">
                             {prescription.medicationName || prescription.prescriptionCode}
                           </span>
                           {onRenewPrescription && (
                             <Button 
                               size="xs" 
                               variant="ghost" 
-                              className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 whitespace-nowrap"
+                              className="text-[10px] text-primary hover:text-primary/80 whitespace-nowrap"
                               onClick={() => onRenewPrescription(prescription)}
                             >
                               Renouveler
@@ -210,9 +210,9 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
 
                 {/* Constantes vitales */}
                 {(consultation.tensionArterielle || consultation.poids || consultation.temperature) && (
-                  <div className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-700/30 p-2 rounded">
-                    <span className="font-medium text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs">Signes vitaux:</span>
-                    <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-1 text-[10px] sm:text-xs text-gray-700 dark:text-gray-300">
+                  <div className="text-xs sm:text-sm bg-muted/30 p-2 rounded-lg">
+                    <span className="font-medium text-muted-foreground text-[10px] sm:text-xs">Signes vitaux:</span>
+                    <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-1 text-[10px] sm:text-xs text-foreground">
                       {consultation.tensionArterielle && (
                         <span>TA: {consultation.tensionArterielle}</span>
                       )}
@@ -232,7 +232,7 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
       )}
       
       {/* Footer */}
-      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 text-center pt-4">
+      <div className="text-[10px] sm:text-xs text-muted-foreground text-center pt-4">
         Historique en lecture seule • Consultation actuelle: #{currentConsultationId}
       </div>
     </div>
