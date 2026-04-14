@@ -17,9 +17,11 @@ import {
   Activity,
   Beaker,
   RefreshCcw,
-  Wallet,        // ✅ AJOUT: Icône caisse
-  CreditCard,    // ✅ AJOUT: Icône paiement
-  ArrowRight     // ✅ AJOUT: Icône workflow
+  Wallet,
+  CreditCard,
+  ArrowRight,
+  History,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -139,6 +141,14 @@ const Consultations = () => {
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  
+  // Fonction pour vérifier si la consultation est modifiable
+  const isConsultationEditable = (consultation) => {
+    const status = (consultation?.status || consultation?.statut || '').toLowerCase();
+    const nonEditableStatuses = ['termine', 'terminée', 'completed', 'payee', 'payée', 'paid'];
+    return !nonEditableStatuses.includes(status);
+  };
   
   const [newConsultation, setNewConsultation] = useState({
     patient_id: '',
@@ -697,68 +707,96 @@ const Consultations = () => {
 
       {/* Consultation Detail Dialog */}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-card border-border shadow-2xl backdrop-blur-sm">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center gap-4 mb-2">
-               <div className="p-3 bg-primary/10 rounded-xl">
-                  <Activity className="w-6 h-6 text-primary" />
-               </div>
-               <div>
-                  <DialogTitle className="text-2xl font-bold">Détails Consultation</DialogTitle>
-                  <DialogDescription className="text-muted-foreground font-medium">
-                    Patient: {selectedConsultation?.patientName || `${selectedConsultation?.patient?.first_name || selectedConsultation?.patient?.firstName || selectedConsultation?.patient?.prenom || ''} ${selectedConsultation?.patient?.last_name || selectedConsultation?.patient?.lastName || selectedConsultation?.patient?.nom || ''}`.trim() || 'Chargement...'}
-                  </DialogDescription>
+        <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-hidden bg-card border-border shadow-2xl backdrop-blur-sm p-0">
+          <DialogHeader className="border-b pb-4 p-6">
+            <div className="flex items-center justify-between gap-4 mb-2">
+               <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                     <Activity className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                     <DialogTitle className="text-2xl font-bold">Détails Consultation</DialogTitle>
+                     <DialogDescription className="text-muted-foreground font-medium">
+                       Patient: {selectedConsultation?.patientName || `${selectedConsultation?.patient?.first_name || selectedConsultation?.patient?.firstName || selectedConsultation?.patient?.prenom || ''} ${selectedConsultation?.patient?.last_name || selectedConsultation?.patient?.lastName || selectedConsultation?.patient?.nom || ''}`.trim() || 'Chargement...'}
+                     </DialogDescription>
+                  </div>
                </div>
             </div>
           </DialogHeader>
           
-          {/* Bandeau Récapitulatif du Triage */}
-          {selectedConsultation && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 mb-6">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-3 flex items-center gap-2">
-                <Activity className="w-4 h-4" /> Signes Vitaux (Triage Réception)
-              </h4>
-              {(() => {
-                const vitalSigns = getVitalSigns(selectedConsultation);
-                const poids = parseFloat(String(vitalSigns.poids || '').replace('Non renseigné', ''));
-                const tailleStr = String(vitalSigns.taille || '').replace(' cm', '').replace('Non renseigné', '');
-                const taille = parseFloat(tailleStr);
-                const imc = (poids && taille && taille > 0) ? (poids / Math.pow(taille / 100, 2)).toFixed(1) : '--';
-                
-                return (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Tension</p>
-                      <p className="text-lg font-black text-foreground">{vitalSigns.tensionArterielle || 'Non renseigné'}</p>
+          {/* Double View Layout */}
+          <div className="flex flex-col lg:flex-row h-[calc(90vh-120px)]">
+            {/* Left: Consultation Form (60-70%) */}
+            <div className="flex-1 lg:w-[65%] overflow-y-auto p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-border">
+              {/* Mobile: Toggle History Button */}
+              <div className="lg:hidden mb-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowHistoryPanel(!showHistoryPanel)}
+                  className="w-full gap-2 border-blue-200 hover:bg-blue-50"
+                >
+                  <History className="w-4 h-4 text-blue-600" />
+                  <span>{showHistoryPanel ? 'Masquer' : 'Afficher'} l'historique</span>
+                </Button>
+              </div>
+              {/* Bandeau Récapitulatif du Triage */}
+              {selectedConsultation && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 mb-6">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4" /> Signes Vitaux (Triage Réception)
+                  </h4>
+                  {(() => {
+                    const vitalSigns = getVitalSigns(selectedConsultation);
+                    const poids = parseFloat(String(vitalSigns.poids || '').replace('Non renseigné', ''));
+                    const tailleStr = String(vitalSigns.taille || '').replace(' cm', '').replace('Non renseigné', '');
+                    const taille = parseFloat(tailleStr);
+                    const imc = (poids && taille && taille > 0) ? (poids / Math.pow(taille / 100, 2)).toFixed(1) : '--';
+                    
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Tension</p>
+                          <p className="text-lg font-black text-foreground">{vitalSigns.tensionArterielle || 'Non renseigné'}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Température</p>
+                          <p className="text-lg font-black text-foreground">{vitalSigns.temperature ? `${vitalSigns.temperature} °C` : 'Non renseigné'}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Poids</p>
+                          <p className="text-lg font-black text-foreground">{vitalSigns.poids ? `${vitalSigns.poids} kg` : 'Non renseigné'}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Taille</p>
+                          <p className="text-lg font-black text-foreground">{vitalSigns.taille ? `${vitalSigns.taille} cm` : 'Non renseigné'}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">IMC</p>
+                          <p className={`text-lg font-black ${imc !== '--' ? (imc < 18.5 || imc > 25 ? 'text-amber-600' : 'text-green-600') : 'text-muted-foreground'}`}>{imc}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+              
+              {selectedConsultation && (
+                <div className="mt-8 space-y-8 pb-10">
+                  {/* Message de verrouillage si consultation terminée */}
+                  {!isConsultationEditable(selectedConsultation) && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-amber-800 dark:text-amber-300">Consultation archivée</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">Cette consultation est terminée ou payée et ne peut plus être modifiée.</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Température</p>
-                      <p className="text-lg font-black text-foreground">{vitalSigns.temperature ? `${vitalSigns.temperature} °C` : 'Non renseigné'}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Poids</p>
-                      <p className="text-lg font-black text-foreground">{vitalSigns.poids ? `${vitalSigns.poids} kg` : 'Non renseigné'}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Taille</p>
-                      <p className="text-lg font-black text-foreground">{vitalSigns.taille ? `${vitalSigns.taille} cm` : 'Non renseigné'}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">IMC</p>
-                      <p className={`text-lg font-black ${imc !== '--' ? (imc < 18.5 || imc > 25 ? 'text-amber-600' : 'text-green-600') : 'text-muted-foreground'}`}>{imc}</p>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-          
-          {selectedConsultation && (
-            <div className="mt-8 space-y-8 pb-10">
-              <div className="p-5 rounded-2xl bg-muted/30 border border-border">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Motif de la visite
-                </h4>
+                  )}
+
+                  <div className="p-5 rounded-2xl bg-muted/30 border border-border">
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" /> Motif de la visite
+                    </h4>
                 <p className="text-foreground leading-relaxed font-medium">
                   {selectedConsultation.reason_for_visit || selectedConsultation.motif || "Non spécifié"}
                 </p>
@@ -771,8 +809,9 @@ const Consultations = () => {
                 <Textarea
                   placeholder="Établissez votre diagnostic ici..."
                   value={activeConsultationData.diagnostic}
-                  onChange={(e) => updateActiveData('diagnostic', e.target.value)}
-                  className="bg-background border-border min-h-[120px] rounded-xl focus:ring-primary"
+                  onChange={(e) => isConsultationEditable(selectedConsultation) && updateActiveData('diagnostic', e.target.value)}
+                  disabled={!isConsultationEditable(selectedConsultation)}
+                  className={`bg-background border-border min-h-[120px] rounded-xl focus:ring-primary ${!isConsultationEditable(selectedConsultation) ? 'bg-muted/50 cursor-not-allowed opacity-60' : ''}`}
                 />
                 {/* Debug pour voir la valeur */}
                 <div className="text-xs text-muted-foreground">
@@ -957,6 +996,7 @@ const Consultations = () => {
                 <Button 
                   className="flex-1 bg-primary text-white shadow-lg shadow-primary/20 h-12 rounded-xl"
                   onClick={handleSaveConsultation}
+                  disabled={!isConsultationEditable(selectedConsultation)}
                 >
                   <CheckCircle className="w-5 h-5 mr-2" />
                   Sauvegarder brouillon
@@ -964,7 +1004,7 @@ const Consultations = () => {
                 <Button 
                   className="flex-1 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 h-12 rounded-xl"
                   onClick={terminerConsultation}
-                  disabled={activeConsultationData.examList.length === 0}
+                  disabled={!isConsultationEditable(selectedConsultation) || activeConsultationData.examList.length === 0}
                 >
                   <ChevronRight className="w-5 h-5 mr-2" />
                   Terminer & envoyer à la caisse
@@ -979,22 +1019,29 @@ const Consultations = () => {
               </div>
             </div>
           )}
+            </div>
+            
+            {/* Right: History Panel (30-40%) */}
+            <div className={`lg:w-[35%] bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto ${showHistoryPanel ? 'block' : 'hidden'} lg:block`}>
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Historique Médical</h3>
+                </div>
+                <PatientHistoryPanel
+                  patientId={selectedConsultation.patient?.id || selectedConsultation.patientId}
+                  currentConsultationId={selectedConsultation.id}
+                  onRenewPrescription={(prescription) => {
+                    console.log('Renouvellement prescription:', prescription);
+                    toast.success('Prescription copiée vers la consultation actuelle');
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ✅ Panneau d'historique patient (Épisode de soin - Isolation) */}
-      {selectedConsultation && (
-        <PatientHistoryPanel
-          patientId={selectedConsultation.patient?.id || selectedConsultation.patientId}
-          currentConsultationId={selectedConsultation.id}
-          onRenewPrescription={(prescription) => {
-            // Fonction pour renouveler une prescription depuis l'historique
-            console.log('Renouvellement prescription:', prescription);
-            // TODO: Implémenter la copie de la prescription vers la consultation actuelle
-            toast.success('Prescription copiée vers la consultation actuelle');
-          }}
-        />
-      )}
     </div>
   );
 };
