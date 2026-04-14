@@ -196,11 +196,12 @@ const Consultations = () => {
 
   useEffect(() => {
     if (!token || typeof token !== 'string' || token.trim().length === 0) return;
-    const intervalId = setInterval(() => {
-      console.log("🔄 Auto-refresh des consultations (toutes les 15s)...");
-      fetchConsultations();
-    }, 15000);
-    return () => clearInterval(intervalId);
+    // Auto-refresh désactivé pour éviter la lenteur
+    // const intervalId = setInterval(() => {
+    //   console.log("🔄 Auto-refresh des consultations (toutes les 15s)...");
+    //   fetchConsultations();
+    // }, 15000);
+    // return () => clearInterval(intervalId);
   }, [token]);
 
   const handleRefresh = useCallback(() => {
