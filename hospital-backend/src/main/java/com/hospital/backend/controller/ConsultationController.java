@@ -482,7 +482,7 @@ public class ConsultationController {
     // --- ✅ DOSSIER PATIENT COMPLET ---
 
     @GetMapping("/{id}/patient-journey")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_PATIENT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_PATIENT', 'ROLE_RECEPTION')")
     @Operation(summary = "Générer le dossier patient complet", description = "Retourne le parcours complet : Triage, Labo, Prescription, Pharmacie, Finance")
     public ResponseEntity<ApiResponse<PatientJourneyDTO>> getPatientJourney(@PathVariable Long id) {
         log.info("📋 Génération du dossier patient complet pour consultation ID: {}", id);

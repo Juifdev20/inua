@@ -1613,7 +1613,7 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_PATIENT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_PATIENT', 'ROLE_RECEPTION')")
     public PatientJourneyDTO getPatientJourney(Long consultationId) {
         log.info("📋 [PARCOURS] Génération du dossier patient complet pour consultation ID: {}", consultationId);
 
