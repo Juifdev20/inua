@@ -46,6 +46,8 @@ import {
 } from '../../components/ui/select';
 import { toast } from 'react-hot-toast';
 import DecisionModal from '../../components/modals/DecisionModal';
+import { useConsultationIsolation } from '../../hooks/useConsultationIsolation';
+import PatientHistoryPanel from '../../components/doctor/PatientHistoryPanel';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const API = `${BACKEND_URL}/api/v1/doctor`;
@@ -113,6 +115,20 @@ const getStatusDisplay = (status) => {
 const Consultations = () => {
   const { token, user } = useAuth();
   const location = useLocation();
+  
+  // ✅ Hook d'isolation par épisode de soin
+  const {
+    activeConsultationData,
+    startNewConsultation,
+    updateActiveData,
+    updateConstantes,
+    addExam,
+    removeExam,
+    resetAll,
+    hasActiveConsultation,
+    getActiveConsultationId
+  } = useConsultationIsolation();
+
   const [consultations, setConsultations] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -130,33 +146,20 @@ const Consultations = () => {
     symptomes: []
   });
 
-  const [editData, setEditData] = useState({
-    diagnostic: '',
-    traitement: '',
-    notes_medicales: '',
-    constantes: { tension: '', temperature: '', poids: '' }
-  });
-
-  // ✅ DEBUG: Surveillance de editData
-  useEffect(() => {
-    console.log("🔄 editData changed:", editData);
-  }, [editData]);
-
   const [examServices, setExamServices] = useState([]);
-  const [examList, setExamList] = useState([]);
   const [newExamItem, setNewExamItem] = useState({ serviceId: '', note: '' });
   
   // ✅ NOUVEAU: État pour les résultats de laboratoire
   const [labResults, setLabResults] = useState([]);
   const [loadingLabResults, setLoadingLabResults] = useState(false);
 
-  // ✅ NOUVEAU: Calcul du montant total des examens sélectionnés
+  // ✅ NOUVEAU: Calcul du montant total des examens sélectionnés (avec isolation)
   const montantTotalExamens = useMemo(() => {
-    return examList.reduce((total, exam) => {
+    return activeConsultationData.examList.reduce((total, exam) => {
       const service = examServices.find(s => s.id?.toString() === exam.serviceId?.toString());
       return total + (service?.prix || service?.price || 0);
     }, 0);
-  }, [examList, examServices]);
+  }, [activeConsultationData.examList, examServices]);
 
   useEffect(() => {
     if (!token || typeof token !== 'string' || token.trim().length === 0) {
@@ -238,6 +241,8 @@ const Consultations = () => {
       toast.success("Consultation créée avec succès");
       setDialogOpen(false);
       setNewConsultation({ patient_id: '', motif: '', symptomes: [] });
+      // Réinitialiser tous les états partagés pour éviter l'accumulation
+      resetAll();
       fetchConsultations();
     } catch (error) {
       toast.error("Erreur lors de la création");
@@ -249,7 +254,7 @@ const Consultations = () => {
   const terminerConsultation = async () => {
     if (!selectedConsultation) return;
     
-    if (examList.length === 0) {
+    if (activeConsultationData.examList.length === 0) {
       toast.error('Veuillez sélectionner au moins un examen avant de terminer');
       return;
     }
@@ -258,9 +263,9 @@ const Consultations = () => {
       const endpoint = `${API}/consultations/${selectedConsultation.id}/terminer`;
       
       const requestData = {
-        diagnostic: editData.diagnostic || '',
-        traitement: editData.traitement || '',
-        exams: examList.map(exam => ({
+        diagnostic: activeConsultationData.diagnostic || '',
+        traitement: activeConsultationData.traitement || '',
+        exams: activeConsultationData.examList.map(exam => ({
           serviceId: parseInt(exam.serviceId),
           note: exam.note || ''
         }))
@@ -271,7 +276,7 @@ const Consultations = () => {
 
       const response = await api.put(endpoint, requestData);
       
-      const examCount = examList.length;
+      const examCount = activeConsultationData.examList.length;
       const montant = response.data?.examTotalAmount || montantTotalExamens;
       
       // ✅ CORRIGÉ: Message indiquant clairement le workflow Caisse → Labo
@@ -285,13 +290,7 @@ const Consultations = () => {
       );
       
       setSheetOpen(false);
-      setExamList([]);
-      setEditData({
-        diagnostic: '',
-        traitement: '',
-        notes_medicales: '',
-        constantes: { tension: '', temperature: '', poids: '' }
-      });
+      resetAll();
       
       fetchConsultations();
     } catch (error) {
@@ -308,10 +307,10 @@ const Consultations = () => {
     try {
       const endpoint = `${API}/consultations/${selectedConsultation.id}`;
       const payload = {
-        diagnostic: editData.diagnostic,
-        traitement: editData.traitement,
-        notes_medicales: editData.notes_medicales,
-        exams: examList.map(e => ({ serviceId: e.serviceId, note: e.note }))
+        diagnostic: activeConsultationData.diagnostic,
+        traitement: activeConsultationData.traitement,
+        notes_medicales: activeConsultationData.notes_medicales,
+        exams: activeConsultationData.examList.map(e => ({ serviceId: e.serviceId, note: e.note }))
       };
 
       const response = await api.put(endpoint, payload);
@@ -324,9 +323,9 @@ const Consultations = () => {
       // Mettre à jour la consultation sélectionnée avec les nouvelles données
       setSelectedConsultation(prev => ({
         ...prev,
-        diagnosis: editData.diagnostic,
-        treatment: editData.traitement,
-        notes_medicales: editData.notes_medicales
+        diagnosis: activeConsultationData.diagnostic,
+        treatment: activeConsultationData.traitement,
+        notes_medicales: activeConsultationData.notes_medicales
       }));
       
     } catch (error) {
@@ -356,29 +355,12 @@ const Consultations = () => {
         
         setSelectedConsultation(consultationDetails);
         
+        // ✅ ISOLATION PAR ÉPISODE DE SOIN - Démarrage d'un nouvel espace de données
+        console.log("🔍 [ISOLATION] Démarrage épisode de soin pour consultation ID:", consultationDetails.id);
+        startNewConsultation(consultationDetails.id);
+        
         // ✅ CHARGEMENT DU DIAGNOSTIC EXISTANT
-        console.log("🔍 Loading consultation data:", consultationDetails);
         console.log("🩺 Existing diagnosis:", consultationDetails.diagnosis);
-        
-        const newEditData = {
-            diagnostic: consultationDetails.diagnosis || '',
-            traitement: consultationDetails.treatment || consultationDetails.traitement || '',
-            notes_medicales: consultationDetails.notes_medicales || '',
-            constantes: { 
-                tension: consultationDetails.tensionArterielle || '', 
-                temperature: consultationDetails.temperature || '', 
-                poids: consultationDetails.poids || '' 
-            }
-        };
-        
-        console.log("✅ Setting editData to:", newEditData);
-        setEditData(newEditData);
-        
-        // Forcer la mise à jour avec un petit délai
-        setTimeout(() => {
-            console.log("🔄 Force updating editData...");
-            setEditData({...newEditData});
-        }, 100);
         
         // ✅ NOUVEAU: Charger les résultats de laboratoire pour cette consultation
         if (consultationDetails.id) {
@@ -493,9 +475,22 @@ const Consultations = () => {
             <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            // Réinitialiser quand on ferme le dialogue sans créer
+            setNewConsultation({ patient_id: '', motif: '', symptomes: [] });
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl" data-testid="new-consultation-btn">
+            <Button 
+              className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl" 
+              data-testid="new-consultation-btn"
+              onClick={() => {
+                // Réinitialiser les états quand on ouvre le dialogue de nouvelle consultation
+                resetAll();
+              }}
+            >
               <Plus className="w-5 h-5 mr-2" />
               Nouvelle consultation
             </Button>
@@ -775,13 +770,13 @@ const Consultations = () => {
                 </Label>
                 <Textarea
                   placeholder="Établissez votre diagnostic ici..."
-                  value={editData.diagnostic}
-                  onChange={(e) => setEditData({ ...editData, diagnostic: e.target.value })}
+                  value={activeConsultationData.diagnostic}
+                  onChange={(e) => updateActiveData('diagnostic', e.target.value)}
                   className="bg-background border-border min-h-[120px] rounded-xl focus:ring-primary"
                 />
                 {/* Debug pour voir la valeur */}
                 <div className="text-xs text-muted-foreground">
-                  Debug diagnostic: "{editData.diagnostic}" | Longueur: {editData.diagnostic?.length || 0}
+                  Debug diagnostic: "{activeConsultationData.diagnostic}" | Longueur: {activeConsultationData.diagnostic?.length || 0}
                 </div>
               </div>
 
@@ -803,7 +798,7 @@ const Consultations = () => {
                     <Beaker className="w-3 h-3" /> Examens / Analyses prescrits
                   </h4>
                   {/* ✅ AJOUT: Affichage du montant total en temps réel */}
-                  {examList.length > 0 && (
+                  {activeConsultationData.examList.length > 0 && (
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total estimé</p>
                       <p className="text-lg font-bold text-orange-600">{formatMontant(montantTotalExamens)}</p>
@@ -812,7 +807,7 @@ const Consultations = () => {
                 </div>
 
                 {/* ✅ AJOUT: Message informatif workflow */}
-                {examList.length > 0 && (
+                {activeConsultationData.examList.length > 0 && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-2">
                     <ArrowRight className="w-4 h-4 text-orange-600 mt-0.5" />
                     <p className="text-xs text-orange-800">
@@ -823,7 +818,7 @@ const Consultations = () => {
                 )}
 
                 {/* liste actuelle */}
-                {examList.map((ex, idx) => {
+                {activeConsultationData.examList.map((ex, idx) => {
                   const svc = examServices.find(s => s.id?.toString() === ex.serviceId?.toString());
                   return (
                     <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-lg border border-blue-100">
@@ -835,7 +830,7 @@ const Consultations = () => {
                       <button
                         type="button"
                         className="text-red-500 hover:text-red-700 p-1"
-                        onClick={() => setExamList(examList.filter((_, i) => i !== idx))}
+                        onClick={() => removeExam(idx)}
                       >×</button>
                     </div>
                   );
@@ -871,7 +866,7 @@ const Consultations = () => {
                       variant="outline"
                       onClick={() => {
                         if (!newExamItem.serviceId) return;
-                        setExamList([...examList, { ...newExamItem }]);
+                        addExam({ ...newExamItem });
                         setNewExamItem({ serviceId: '', note: '' });
                       }}
                     >Ajouter l'examen</Button>
@@ -969,7 +964,7 @@ const Consultations = () => {
                 <Button 
                   className="flex-1 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 h-12 rounded-xl"
                   onClick={terminerConsultation}
-                  disabled={examList.length === 0}
+                  disabled={activeConsultationData.examList.length === 0}
                 >
                   <ChevronRight className="w-5 h-5 mr-2" />
                   Terminer & envoyer à la caisse
@@ -986,6 +981,20 @@ const Consultations = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ✅ Panneau d'historique patient (Épisode de soin - Isolation) */}
+      {selectedConsultation && selectedConsultation.patientId && (
+        <PatientHistoryPanel
+          patientId={selectedConsultation.patientId}
+          currentConsultationId={selectedConsultation.id}
+          onRenewPrescription={(prescription) => {
+            // Fonction pour renouveler une prescription depuis l'historique
+            console.log('Renouvellement prescription:', prescription);
+            // TODO: Implémenter la copie de la prescription vers la consultation actuelle
+            toast.success('Prescription copiée vers la consultation actuelle');
+          }}
+        />
+      )}
     </div>
   );
 };
