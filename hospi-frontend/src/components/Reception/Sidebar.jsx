@@ -9,10 +9,8 @@ import {
   LogOut, 
   ChevronLeft, 
   HeartPulse,
-  Bell,
   X,
-  FolderSearch, // Ajout de cette icône pour illustrer le dossier patient
-  Beaker
+  FolderSearch // Ajout de cette icône pour illustrer le dossier patient
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -65,18 +63,6 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
       label: 'Documents', 
       icon: FileText, 
       color: 'text-purple-500' 
-    },
-    { 
-      path: '/reception/exams', 
-      label: 'Examens / Labo', 
-      icon: Beaker, 
-      color: 'text-blue-500' 
-    },
-    { 
-      path: '/reception/paiements', 
-      label: 'Paiements', 
-      icon: Bell, 
-      color: 'text-amber-500' 
     },
     { 
       path: '/reception/settings', 
