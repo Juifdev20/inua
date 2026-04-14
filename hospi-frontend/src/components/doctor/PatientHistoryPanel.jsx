@@ -36,7 +36,7 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
     setLoading(true);
     try {
       // Récupérer l'historique complet du patient
-      const response = await api.get(`/api/v1/consultations/patient/${patientId}`);
+      const response = await api.get(`/v1/consultations/patient/${patientId}`);
       const consultations = response.data.data || [];
       
       // Filtrer pour exclure la consultation actuelle
@@ -94,42 +94,47 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {loading ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          Chargement de l'historique...
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
+          <p className="text-sm font-medium">Chargement de l'historique...</p>
         </div>
       ) : history.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <History className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm sm:text-base">Aucun historique disponible</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Ce patient n'a pas de consultations antérieures</p>
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+            <History className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+          </div>
+          <p className="text-base font-semibold mb-1">Aucun historique disponible</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center max-w-xs">Ce patient n'a pas de consultations antérieures enregistrées</p>
         </div>
       ) : (
         history.map((consultation, index) => (
           <div 
             key={consultation.id} 
-            className="border rounded-lg overflow-hidden bg-white dark:bg-gray-700/50 hover:shadow-md transition-shadow border-gray-200 dark:border-gray-600"
+            className="group border rounded-xl overflow-hidden bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-200 border-gray-200 dark:border-gray-700"
           >
             {/* Header de la consultation */}
             <div 
-              className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 dark:bg-gray-700/30 cursor-pointer"
+              className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-750 cursor-pointer hover:from-blue-50/50 hover:to-white dark:hover:from-gray-750 dark:hover:to-gray-800 transition-colors"
               onClick={() => toggleExpand(consultation.id)}
             >
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs sm:text-sm">
-                  {history.length - index}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm shadow-sm">
+                  #{history.length - index}
                 </div>
                 <div>
-                  <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white">{formatDate(consultation.consultationDate || consultation.createdAt)}</p>
-                  {getStatusBadge(consultation.status || consultation.statut)}
+                  <p className="font-semibold text-sm text-gray-900 dark:text-white">{formatDate(consultation.consultationDate || consultation.createdAt)}</p>
+                  <div className="mt-1">{getStatusBadge(consultation.status || consultation.statut)}</div>
                 </div>
               </div>
-              {expandedItems[consultation.id] ? (
-                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-              )}
+              <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
+                {expandedItems[consultation.id] ? (
+                  <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                )}
+              </div>
             </div>
 
             {/* Détails expansibles */}

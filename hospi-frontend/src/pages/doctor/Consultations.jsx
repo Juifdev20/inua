@@ -819,17 +819,6 @@ const Consultations = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="font-bold">Prescription Médicale</Label>
-                <Textarea
-                  placeholder="Sera actif après réception des résultats labo"
-                  value=""
-                  disabled
-                  className="bg-muted border-border min-h-[120px] rounded-xl opacity-50 cursor-not-allowed"
-                />
-                <p className="text-xs text-muted-foreground italic">Ce champ sera déverrouillé une fois les résultats d'analyses reçus du laboratoire.</p>
-              </div>
-
               {/* --- SECTION EXAMENS PRESCRITS --- */}
               <div className="bg-blue-50/20 p-4 rounded-2xl border border-blue-200 space-y-4">
                 <div className="flex items-center justify-between">
@@ -866,16 +855,19 @@ const Consultations = () => {
                         {ex.note && <p className="text-xs text-muted-foreground">{ex.note}</p>}
                         {svc && <p className="text-xs font-bold text-orange-600">{formatMontant(svc.prix || svc.price)}</p>}
                       </div>
-                      <button
-                        type="button"
-                        className="text-red-500 hover:text-red-700 p-1"
-                        onClick={() => removeExam(idx)}
-                      >×</button>
+                      {isConsultationEditable(selectedConsultation) && (
+                        <button
+                          type="button"
+                          className="text-red-500 hover:text-red-700 p-1"
+                          onClick={() => removeExam(idx)}
+                        >×</button>
+                      )}
                     </div>
                   );
                 })}
 
-                {/* ajout d'un examen */}
+                {/* ajout d'un examen (caché si consultation terminée) */}
+                {isConsultationEditable(selectedConsultation) && (
                 <div className="grid grid-cols-2 gap-2 items-end pt-2 border-t border-blue-100">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Type d'examen</label>
@@ -911,6 +903,7 @@ const Consultations = () => {
                     >Ajouter l'examen</Button>
                   </div>
                 </div>
+                )}
               </div>
 
               {/* ✅ NOUVEAU: SECTION RÉSULTATS DE LABORATOIRE */}
