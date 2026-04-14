@@ -1022,22 +1022,24 @@ const Consultations = () => {
             </div>
             
             {/* Right: History Panel (30-40%) */}
-            <div className={`lg:w-[35%] bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto ${showHistoryPanel ? 'block' : 'hidden'} lg:block`}>
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Historique Médical</h3>
+            {selectedConsultation && (
+              <div className={`lg:w-[35%] bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto ${showHistoryPanel ? 'block' : 'hidden'} lg:block`}>
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">Historique Médical</h3>
+                  </div>
+                  <PatientHistoryPanel
+                    patientId={selectedConsultation.patient?.id || selectedConsultation.patientId}
+                    currentConsultationId={selectedConsultation.id}
+                    onRenewPrescription={(prescription) => {
+                      console.log('Renouvellement prescription:', prescription);
+                      toast.success('Prescription copiée vers la consultation actuelle');
+                    }}
+                  />
                 </div>
-                <PatientHistoryPanel
-                  patientId={selectedConsultation.patient?.id || selectedConsultation.patientId}
-                  currentConsultationId={selectedConsultation.id}
-                  onRenewPrescription={(prescription) => {
-                    console.log('Renouvellement prescription:', prescription);
-                    toast.success('Prescription copiée vers la consultation actuelle');
-                  }}
-                />
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
