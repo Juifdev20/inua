@@ -16,6 +16,8 @@ import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import AppLauncher from "./components/AppLauncher";
+import AuthWrapper from "./components/auth/AuthWrapper";
+import AppLock from "./components/auth/AppLock";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -172,6 +174,7 @@ function App() {
           <ThemeProvider>
             <AppLauncher>
               <BrowserRouter>
+                <AuthWrapper>
                 <Routes>
                 {/* 🌍 ROUTES PUBLIQUES */}
                 <Route path="/" element={<LandingPage />} />
@@ -376,6 +379,10 @@ function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </AuthWrapper>
+
+                {/* 🔐 Verrouillage biométrique de l'app */}
+                <AppLock />
 
                 <Toaster position="top-right" richColors />
                 <PWAInstallPrompt />

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import authAPI from "../services/authAPI";
+import AuthService from "../services/AuthService";
 import { safeLocalStorageSet, safeLocalStorageGet } from "../utils/storagePersistence.js";
 
 const AuthContext = createContext();
@@ -12,36 +13,25 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
-        const storedToken = safeLocalStorageGet("token");
-        const storedUser = safeLocalStorageGet("user");
-
-        if (storedToken && storedUser && storedUser !== "undefined" && storedUser !== "null") {
-          // Validation du token avant de l'utiliser
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            if (parsedUser && parsedUser.id) {
-              setToken(storedToken);
-              setUser(parsedUser);
-              console.log("[Auth] Session restaurée pour:", parsedUser.username);
-            } else {
-              console.warn("[Auth] Données utilisateur invalides");
-            }
-          } catch (parseError) {
-            console.error("[Auth] Erreur parsing user:", parseError);
-            // Ne pas tout effacer, juste les données corrompues
-            safeLocalStorageSet("user", "");
-            safeLocalStorageSet("token", "");
-            localStorage.removeItem("user");
-            localStorage.removeItem("token");
+        // 🔥 Utilisation du AuthService pour récupérer les données
+        const authData = AuthService.getAuthData();
+        
+        if (authData) {
+          const { token: storedToken, user: storedUser } = authData;
+          
+          // Vérification expiration session (7 jours max)
+          if (AuthService.isSessionExpired(168)) {
+            console.warn("[Auth] Session expirée, reconnexion nécessaire");
+            AuthService.clearAuthData();
+          } else {
+            setToken(storedToken);
+            setUser(storedUser);
+            console.log("[Auth] ✅ Session restaurée pour:", storedUser.username);
           }
         }
       } catch (error) {
-        console.error("[Auth] Erreur d'initialisation:", error);
-        // Ne pas effacer tout le localStorage, juste les clés d'auth
-        safeLocalStorageSet("token", "");
-        safeLocalStorageSet("user", "");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        console.error("[Auth] ❌ Erreur d'initialisation:", error);
+        AuthService.clearAuthData();
       } finally {
         setLoading(false);
       }
@@ -53,10 +43,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /* ===================== LOGIN ===================== */
-  const login = async (credentials) => {
+  const login = async (credentials, rememberMe = true) => {
     try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      // Nettoyage préalable
+      AuthService.clearAuthData();
 
       const response = await authAPI.login(credentials);
       // Support de la structure Spring Boot data.data ou data directe
@@ -100,8 +90,8 @@ export const AuthProvider = ({ children }) => {
         preferredLanguage: userFromApi.preferredLanguage || "fr"
       };
 
-      safeLocalStorageSet("token", tokenFromApi);
-      safeLocalStorageSet("user", JSON.stringify(userData));
+      // 🔥 Utilisation du AuthService pour sauvegarder
+      AuthService.saveAuthData(tokenFromApi, userData, rememberMe);
       
       setToken(tokenFromApi);
       setUser(userData);
@@ -157,13 +147,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    safeLocalStorageSet("token", "");
-    safeLocalStorageSet("user", "");
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    AuthService.clearAuthData();
     setUser(null);
     setToken(null);
-    console.log("[Auth] Déconnexion - session nettoyée");
+    console.log("[Auth] 🚪 Déconnexion - session nettoyée");
   };
 
   // ✅ Cette fonction est utilisée par les ProtectedRoutes (AdminRoute, ReceptionRoute)

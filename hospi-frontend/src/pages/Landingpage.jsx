@@ -1,7 +1,6 @@
-// 🏥 Page d'accueil (Landing page)
+// 🏥 Page d'accueil (Landing page) - Version Cinématique
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Users,
   Calendar,
@@ -10,9 +9,13 @@ import {
   Clock,
   CheckCircle,
   Moon,
-  Sun
+  Sun,
+  ArrowRight,
+  Sparkles,
+  Activity
 } from 'lucide-react';
 import LogoInuaAfya from '../components/LogoInuaAfya';
+import AuthModal from '../components/auth/AuthModal';
 
 // 👉 Image de background
 import heroBg from '../images/medical-bg.jpg';
@@ -22,6 +25,10 @@ const LandingPage = () => {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
+  
+  /* ================= AUTH MODAL STATE ================= */
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
 
   useEffect(() => {
     if (darkMode) {
@@ -111,9 +118,12 @@ const LandingPage = () => {
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Connexion (TOUJOURS VISIBLE) */}
-        <Link
-          to="/login"
+        {/* Connexion (ouvre le modal) */}
+        <button
+          onClick={() => {
+            setAuthModalMode('login');
+            setIsAuthModalOpen(true);
+          }}
           className="
             text-sm sm:text-base
             text-gray-800 dark:text-gray-200
@@ -123,11 +133,14 @@ const LandingPage = () => {
           "
         >
           Connexion
-        </Link>
+        </button>
 
-        {/* Inscription */}
-        <Link
-          to="/register"
+        {/* Inscription (ouvre le modal) */}
+        <button
+          onClick={() => {
+            setAuthModalMode('register');
+            setIsAuthModalOpen(true);
+          }}
           className="
             px-3 sm:px-6 py-2
             bg-blue-600 text-white
@@ -138,7 +151,7 @@ const LandingPage = () => {
           "
         >
           S'inscrire
-        </Link>
+        </button>
       </div>
 
     </div>
@@ -173,18 +186,26 @@ const LandingPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to="/register"
-              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold text-lg hover:scale-105 transition shadow-xl"
+            <button
+              onClick={() => {
+                setAuthModalMode('register');
+                setIsAuthModalOpen(true);
+              }}
+              className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold text-lg hover:scale-105 transition shadow-xl flex items-center gap-2"
             >
+              <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
               Commencer gratuitement
-            </Link>
-            <Link
-              to="/login"
-              className="px-8 py-4 bg-white text-gray-900 rounded-xl font-semibold text-lg hover:bg-gray-100 transition shadow-xl"
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button
+              onClick={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              className="px-8 py-4 bg-white/90 backdrop-blur text-gray-900 rounded-xl font-semibold text-lg hover:bg-white transition shadow-xl"
             >
               Se connecter
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -234,24 +255,40 @@ const LandingPage = () => {
           <p className="text-xl text-blue-100 mb-8">
             Sécurité • Performance • Simplicité
           </p>
-          <Link
-            to="/register"
-            className="inline-block px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:scale-105 transition shadow-lg"
+          <button
+            onClick={() => {
+              setAuthModalMode('register');
+              setIsAuthModalOpen(true);
+            }}
+            className="group inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:scale-105 transition shadow-lg"
           >
             Commencer maintenant
-          </Link>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
       </section>
 
-      {/* ===== Séparateur de la  derniere page de notre footer===== */}
-<div className="h-px w-full bg-gray-200 dark:bg-gray-700"></div>
+      {/* ===== Séparateur ===== */}
+      <div className="h-px w-full bg-gray-200 dark:bg-gray-700"></div>
 
       {/* ================= FOOTER ================= */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-8 px-4">
         <div className="max-w-7xl mx-auto text-center text-gray-600 dark:text-gray-400">
-          <p>© 2025 Inua Afia team Student from UCBC DRC</p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Activity className="w-5 h-5 text-blue-500" />
+            <span className="font-semibold text-gray-800 dark:text-white">INUA AFIA</span>
+          </div>
+          <p>© 2025 Inua Afia Team - UCBC DRC</p>
+          <p className="text-sm mt-1">Santé • Technologie • Innovation</p>
         </div>
       </footer>
+      
+      {/* 🎭 Auth Modal avec effet de flou */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 };

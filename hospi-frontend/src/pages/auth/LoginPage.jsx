@@ -1,10 +1,10 @@
-// 🏥 Page de connexion - Version Professionnelle Optimisée
+// 🏥 Page de connexion - Version Cinématique Sans Scroll
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Activity, Lock, LogIn, Loader2 } from 'lucide-react';
-// 🔥 Utilisation de Sonner pour des alertes style Facebook/Meta
+import { Lock, LogIn, Loader2, Eye, EyeOff, Fingerprint, User, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import LogoInuaAfya from '../../components/LogoInuaAfya';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -16,6 +16,8 @@ const LoginPage = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleChange = (e) => {
     setFormData({
@@ -54,8 +56,8 @@ const LoginPage = () => {
         password: formData.password
       };
 
-      // 🔐 Appel au contexte Auth
-      const result = await login(payload);
+      // 🔐 Appel au contexte Auth avec option "Se souvenir de moi"
+      const result = await login(payload, rememberMe);
 
       // Log de diagnostic pour vérifier la structure reçue
       console.log("DEBUG - Login Result:", result);
@@ -68,8 +70,7 @@ const LoginPage = () => {
           throw new Error("Structure de réponse invalide : rôle manquant.");
         }
 
-        // 💾 Sauvegarder l'utilisateur complet pour la session (déjà fait dans AuthContext, mais on garde)
-        localStorage.setItem('user', JSON.stringify(userData));
+        // 💾 La sauvegarde est gérée par AuthService dans AuthContext
 
         // 🔔 Notification de succès
         toast.success("Connexion réussie", {
@@ -113,101 +114,123 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full">
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 overflow-hidden">
+      {/* 🔙 Back to Landing */}
+      <Link 
+        to="/" 
+        className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="text-sm font-medium">Retour</span>
+      </Link>
 
-        {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-green-500 mb-4 shadow-lg animate-in fade-in zoom-in duration-700">
-            <Activity className="w-8 h-8 text-white" />
+      <div className="w-full max-w-sm">
+        {/* Logo & Header - Compact */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center mb-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-xl animate-pulse" />
+              <LogoInuaAfya size={64} className="relative drop-shadow-lg" />
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2 tracking-tight">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent tracking-tight">
             INUA AFIA
           </h1>
-          <p className="text-gray-500 font-medium italic">"Votre santé, notre priorité"</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Votre santé, notre priorité</p>
         </div>
 
-        {/* Card de connexion */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100 animate-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Connexion</h2>
+        {/* Card de connexion - Sans scroll */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/50 dark:border-gray-700/50">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 text-center">Connexion</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Input Identifiant */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nom d'utilisateur ou Email</label>
-              <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors">
-                  <UserIcon className="w-5 h-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
-                  placeholder="votre_nom ou email"
-                />
-              </div>
+            <div className="relative group">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-400 text-sm"
+                placeholder="Nom d'utilisateur ou Email"
+              />
             </div>
 
             {/* Input Password */}
-            <div>
-              <div className="flex justify-between mb-1.5">
-                <label className="text-sm font-semibold text-gray-700">Mot de passe</label>
-                <Link to="/forgot-password" size="sm" className="text-xs text-blue-600 hover:underline font-medium">
-                  Mot de passe Oublié ?
-                </Link>
-              </div>
-              <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
+            <div className="relative group">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full pl-11 pr-12 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-400 text-sm"
+                placeholder="Mot de passe"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
+            
+            {/* Forgot password link */}
+            <div className="text-right">
+              <Link to="/forgot-password" className="text-xs text-blue-600 hover:underline font-medium">
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
+            {/* Option "Se souvenir de moi" */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                Se souvenir de moi
+              </span>
+            </label>
 
             {/* Bouton de soumission */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 rounded-xl font-bold shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-green-500 text-white py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <Loader2 className="animate-spin w-5 h-5" />
-              ) : (
-                <LogIn className="w-5 h-5" />
-              )}
-              <span>{loading ? "Vérification..." : "Se connecter"}</span>
+              {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+              <span>{loading ? "Connexion..." : "Se connecter"}</span>
             </button>
           </form>
 
-          {/* Footer Card */}
-          <div className="mt-8 pt-6 border-t border-gray-50 text-center">
-            <p className="text-sm text-gray-600">
-              Nouveau sur Inua Afia ?{' '}
-              <Link to="/register" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                Créer un compte patient
+          {/* Footer */}
+          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Pas encore de compte ?{' '}
+              <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                S'inscrire
               </Link>
             </p>
+          </div>
+        </div>
+        
+        {/* Security badge */}
+        <div className="mt-4 text-center">
+          <div className="inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <Fingerprint className="w-3.5 h-3.5" />
+            <span>Connexion sécurisée • Chiffrement AES-256</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-// Helper interne pour l'icône utilisateur
-const UserIcon = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
 
 export default LoginPage;

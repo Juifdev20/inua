@@ -294,3 +294,50 @@
 /* Helper classes */
 .font-inter { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 .font-space-grotesk { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; }
+
+/* --- 4. FIX AUTOFILL DARK MODE (CRITICAL) --- */
+/* Force les styles d'autofill à respecter le thème sombre */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill:active,
+.dark select:-webkit-autofill,
+.dark select:-webkit-autofill:hover,
+.dark select:-webkit-autofill:focus,
+.dark select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px hsl(231 25% 14%) inset !important;
+  -webkit-text-fill-color: hsl(210 20% 98%) !important;
+  caret-color: hsl(210 20% 98%) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Light mode autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px hsl(0 0% 100%) inset !important;
+  -webkit-text-fill-color: hsl(231 30% 11%) !important;
+  caret-color: hsl(231 30% 11%) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Firefox autofill fix */
+.dark input:autofill,
+.dark textarea:autofill,
+.dark select:autofill {
+  background-color: hsl(231 25% 14%) !important;
+  color: hsl(210 20% 98%) !important;
+}

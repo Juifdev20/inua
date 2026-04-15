@@ -1,10 +1,11 @@
+// 🏥 Page d'inscription - Version Cinématique Sans Scroll
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-// ✅ Correction de l'import (HeartPulse sans espace)
-import { Activity, Mail, Lock, User, Phone, UserPlus, Loader2, HeartPulse } from 'lucide-react';
+import { Activity, Mail, Lock, User, Phone, UserPlus, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import confetti from 'canvas-confetti'; // 🎉 L'effet magique
+import confetti from 'canvas-confetti';
+import LogoInuaAfya from '../../components/LogoInuaAfya';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -91,74 +92,159 @@ const RegisterPage = () => {
     }
   };
 
-  // 🏥 Écran de transition "Pro"
+  // 🏥 Écran de transition
   if (isRedirecting) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white text-center p-4">
+      <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 text-center p-4">
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-blue-200 rounded-full blur-2xl animate-pulse"></div>
-          <Activity className="w-20 h-20 text-blue-600 relative animate-bounce" />
+          <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-2xl animate-pulse" />
+          <LogoInuaAfya size={80} className="relative animate-bounce" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Initialisation de votre espace santé...</h2>
-        <p className="text-gray-500 animate-pulse">Préparation de vos dossiers médicaux sécurisés</p>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Initialisation de votre espace santé...</h2>
+        <p className="text-gray-500 dark:text-gray-400 animate-pulse">Préparation de vos dossiers médicaux sécurisés</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-green-500 mb-4 shadow-lg">
-            <Activity className="w-8 h-8 text-white" />
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 overflow-hidden">
+      {/* 🔙 Back to Landing */}
+      <Link 
+        to="/" 
+        className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="text-sm font-medium">Retour</span>
+      </Link>
+
+      <div className="w-full max-w-sm">
+        {/* Logo & Header - Compact */}
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center mb-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500/20 rounded-2xl blur-xl animate-pulse" />
+              <LogoInuaAfya size={56} className="relative drop-shadow-lg" />
+            </div>
           </div>
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent tracking-tight">
             INUA AFIA
           </h1>
-          <p className="text-gray-500 font-medium">Votre santé, notre priorité</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Créez votre compte patient</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Inscription Patient</h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Prénom" />
-              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nom" />
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl p-5 border border-white/50 dark:border-gray-700/50">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Nom complet */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text" 
+                  name="firstName" 
+                  value={formData.firstName} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                  placeholder="Prénom" 
+                />
+              </div>
+              <input 
+                type="text" 
+                name="lastName" 
+                value={formData.lastName} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                placeholder="Nom" 
+              />
             </div>
 
-            <input type="text" name="username" value={formData.username} onChange={handleChange} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nom d'utilisateur" />
+            {/* Username */}
+            <input 
+              type="text" 
+              name="username" 
+              value={formData.username} 
+              onChange={handleChange}
+              className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+              placeholder="Nom d'utilisateur"
+            />
             
+            {/* Email */}
             <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Email" />
+              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                required 
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                placeholder="Email" 
+              />
             </div>
 
+            {/* Téléphone */}
             <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Téléphone" />
+              <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="tel" 
+                name="phone" 
+                value={formData.phone} 
+                onChange={handleChange} 
+                required 
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                placeholder="Téléphone" 
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <input type="password" name="password" value={formData.password} onChange={handleChange} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Mot de passe" />
-              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Confirmer" />
+            {/* Password */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="password" 
+                  name="password" 
+                  value={formData.password} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                  placeholder="Mot de passe" 
+                />
+              </div>
+              <input 
+                type="password" 
+                name="confirmPassword" 
+                value={formData.confirmPassword} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
+                placeholder="Confirmer" 
+              />
             </div>
 
+            {/* Submit */}
             <button 
               type="submit" 
               disabled={loading} 
-              className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 rounded-xl font-bold shadow-lg hover:shadow-blue-500/20 transform hover:-translate-y-0.5 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-blue-600 to-green-500 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
             >
-              {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-              <span>{loading ? "Création..." : "S'inscrire"}</span>
+              {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+              <span>{loading ? "Création..." : "Créer mon compte"}</span>
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Déjà inscrit ? <Link to="/login" className="text-blue-600 font-bold hover:underline">Se connecter</Link>
+          <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+            Déjà inscrit ?{' '}
+            <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+              Se connecter
+            </Link>
           </p>
         </div>
+        
+        {/* Footer note */}
+        <p className="mt-3 text-center text-xs text-gray-400 dark:text-gray-500">
+          En vous inscrivant, vous acceptez nos conditions d'utilisation
+        </p>
       </div>
     </div>
   );
