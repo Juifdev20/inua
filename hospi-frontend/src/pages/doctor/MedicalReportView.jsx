@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { consultationService } from '../../services/consultationService';
+import { admissionService } from '../../services/admissionService';
 import { toast } from 'sonner';
 
 const MedicalReportView = () => {
@@ -32,7 +32,7 @@ const MedicalReportView = () => {
     const fetchReport = async () => {
       try {
         setLoading(true);
-        const response = await consultationService.getPatientJourney(consultationId);
+        const response = await admissionService.getPatientJourney(consultationId);
         setReport(response);
       } catch (err) {
         console.error('Erreur:', err);

@@ -382,6 +382,19 @@ export const admissionService = {
       console.error("Erreur getDashboardStats:", error);
       return null;
     }
+  },
+
+  // --- SECTION : PATIENT JOURNEY (FICHE MEDICALE COMPLETE) ---
+  getPatientJourney: async (id) => {
+    try {
+      const validId = validateId(id, 'getPatientJourney');
+      console.log(`📡 Appel API: GET /v1/consultations/${validId}/patient-journey`);
+      const response = await api.get(`/v1/consultations/${validId}/patient-journey`);
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.error('❌ Erreur getPatientJourney:', error.message);
+      throw error.response?.data || { message: error.message };
+    }
   }
 };
 
