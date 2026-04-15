@@ -410,30 +410,40 @@ const PatientFolder = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
                       {showArchives ? (
                         <button 
                           onClick={() => { setTriageToRestore(fiche); setIsRestoreDialogOpen(true); }}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-tighter shadow-sm"
+                          className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white rounded-lg sm:rounded-xl transition-all font-black text-[9px] sm:text-[10px] uppercase tracking-tighter shadow-sm"
                         >
-                          <RefreshCcw size={14} /> Restaurer
+                          <RefreshCcw size={12} className="sm:w-3.5 sm:h-3.5" /> 
+                          <span className="hidden sm:inline">Restaurer</span>
+                          <span className="sm:hidden">Rest.</span>
                         </button>
                       ) : (
                         <>
-                          <button onClick={() => handleIndividualPrint(fiche)} className="p-2.5 bg-background border border-border hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all shadow-sm" title="Imprimer"><Printer size={16} /></button>
-                          <button onClick={() => navigate(`/reception/medical-report/${fiche.id}`)} className="p-2.5 bg-background border border-border hover:bg-purple-50 hover:text-purple-600 rounded-xl transition-all shadow-sm" title="Voir fiche complète"><Eye size={16} /></button>
-                          <button onClick={() => navigate(`/reception/edit-admission/${fiche.id}`)} className="p-2.5 bg-background border border-border hover:bg-amber-50 hover:text-amber-600 rounded-xl transition-all shadow-sm" title="Éditer"><Pencil size={16} /></button>
-                          <button onClick={() => { setTriageToArchive(fiche); setIsArchiveDialogOpen(true); }} className="p-2.5 bg-background border border-border hover:bg-red-50 hover:text-red-600 rounded-xl transition-all shadow-sm" title="Archiver"><Trash2 size={16} /></button>
+                          <button onClick={() => handleIndividualPrint(fiche)} className="p-2 sm:p-2.5 bg-background border border-border hover:bg-blue-50 hover:text-blue-600 rounded-lg sm:rounded-xl transition-all shadow-sm" title="Imprimer">
+                            <Printer size={14} className="sm:w-4 sm:h-4" />
+                          </button>
+                          <button onClick={() => navigate(`/reception/medical-report/${fiche.id}`)} className="p-2 sm:p-2.5 bg-background border border-border hover:bg-purple-50 hover:text-purple-600 rounded-lg sm:rounded-xl transition-all shadow-sm" title="Voir fiche complète">
+                            <Eye size={14} className="sm:w-4 sm:h-4" />
+                          </button>
+                          <button onClick={() => navigate(`/reception/edit-admission/${fiche.id}`)} className="p-2 sm:p-2.5 bg-background border border-border hover:bg-amber-50 hover:text-amber-600 rounded-lg sm:rounded-xl transition-all shadow-sm" title="Éditer">
+                            <Pencil size={14} className="sm:w-4 sm:h-4" />
+                          </button>
+                          <button onClick={() => { setTriageToArchive(fiche); setIsArchiveDialogOpen(true); }} className="p-2 sm:p-2.5 bg-background border border-border hover:bg-red-50 hover:text-red-600 rounded-lg sm:rounded-xl transition-all shadow-sm" title="Archiver">
+                            <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                          </button>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <div className="p-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div className="space-y-1"><p className="text-[10px] uppercase font-black text-rose-500">Tension</p><p className="text-2xl font-black">{fiche.tension || '--/--'}</p></div>
-                    <div className="space-y-1"><p className="text-[10px] uppercase font-black text-amber-500">Temp.</p><p className="text-2xl font-black">{fiche.temperature || '--'}°C</p></div>
-                    <div className="space-y-1"><p className="text-[10px] uppercase font-black text-blue-500">Poids</p><p className="text-2xl font-black">{fiche.poids || '--'}kg</p></div>
-                    <div className="space-y-1"><p className="text-[10px] uppercase font-black text-emerald-500">Taille</p><p className="text-2xl font-black">{fiche.taille || '--'}cm</p></div>
+                  <div className="p-4 sm:p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+                    <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-rose-500">Tension</p><p className="text-xl sm:text-2xl font-black">{fiche.tension || '--/--'}</p></div>
+                    <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-amber-500">Temp.</p><p className="text-xl sm:text-2xl font-black">{fiche.temperature || '--'}°C</p></div>
+                    <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-blue-500">Poids</p><p className="text-xl sm:text-2xl font-black">{fiche.poids || '--'}kg</p></div>
+                    <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-emerald-500">Taille</p><p className="text-xl sm:text-2xl font-black">{fiche.taille || '--'}cm</p></div>
                   </div>
                   
                   {/* ✅ NOUVEAU: Section Diagnostic du Médecin */}

@@ -683,26 +683,27 @@ const MedicalReportView = () => {
   return (
     <div className="min-h-screen bg-gray-50 print:bg-white">
       {/* Header - Non imprimable */}
-      <div className="print:hidden bg-white border-b p-4 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1000px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour
+      <div className="print:hidden bg-white border-b p-3 sm:p-4 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="h-9 px-2 sm:px-3">
+              <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="text-sm">Retour</span>
             </Button>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Fiche Medicale Individuelle</h1>
-              <p className="text-sm text-gray-500">Consultation #{report.consultationCode}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Fiche Medicale Individuelle</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Consultation #{report.consultationCode}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={handlePrint} variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50">
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimer
+            <Button onClick={handlePrint} variant="outline" size="sm" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 h-9">
+              <Printer className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Imprimer</span>
             </Button>
-            <Button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <FileDown className="w-4 h-4 mr-2" />
-              Telecharger PDF
+            <Button onClick={handleDownloadPDF} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+              <FileDown className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">PDF</span>
+              <span className="sm:hidden">PDF</span>
             </Button>
           </div>
         </div>
@@ -712,14 +713,14 @@ const MedicalReportView = () => {
       <div className="max-w-[900px] mx-auto p-6 print:p-0">
         
         {/* Bandeau d'en-tete INUA AFIA */}
-        <div className="bg-emerald-600 text-white rounded-t-lg p-4 print:rounded-none print:bg-emerald-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <Heart className="w-6 h-6 text-emerald-600" />
+        <div className="bg-emerald-600 text-white rounded-t-lg p-3 sm:p-4 print:rounded-none print:bg-emerald-600">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shrink-0">
+                <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-wide">INUA AFIA</h1>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-wide">INUA AFIA</h1>
                 <p className="text-sm text-emerald-100">Systeme de Gestion Hospitaliere</p>
               </div>
             </div>
@@ -735,39 +736,39 @@ const MedicalReportView = () => {
           
           {/* Section 1: Identification Patient */}
           <div className="border-b border-emerald-200">
-            <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-              <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                <User className="w-4 h-4" />
+            <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+              <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                <User className="w-3 h-3 sm:w-4 sm:h-4" />
                 Identification du Patient
               </h2>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Nom:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.patientName}</span>
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Nom:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1 truncate">{report.patientName}</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Code Patient:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.patientCode}</span>
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Code:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.patientCode}</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Age:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.patientAge} ans</span>
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Age:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.patientAge} ans</span>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Sexe:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.patientGender}</span>
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Sexe:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.patientGender}</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Telephone:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.patientPhone || '-'}</span>
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Tel:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.patientPhone || '-'}</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Consultation:</span>
-                  <span className="text-sm border-b border-gray-300 flex-1 pb-1">{formatDate(report.consultationDate)}</span>
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Date:</span>
+                  <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{formatDate(report.consultationDate)}</span>
                 </div>
               </div>
             </div>
@@ -775,20 +776,20 @@ const MedicalReportView = () => {
 
           {/* Section 2: Medecin Traitant */}
           <div className="border-b border-emerald-200">
-            <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-              <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                <Stethoscope className="w-4 h-4" />
+            <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+              <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4" />
                 Medecin Traitant
               </h2>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Nom:</span>
-                <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.doctorName}</span>
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Nom:</span>
+                <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1 truncate">{report.doctorName}</span>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-semibold text-gray-700 min-w-[100px]">Specialite:</span>
-                <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.doctorSpecialty}</span>
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700 sm:min-w-[90px]">Specialite:</span>
+                <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.doctorSpecialty}</span>
               </div>
             </div>
           </div>
@@ -796,29 +797,29 @@ const MedicalReportView = () => {
           {/* Section 3: Constantes Vitales (Triage) */}
           {report.triageInfo && (
             <div className="border-b border-emerald-200">
-              <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-                <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
+              <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
                   Constantes Vitales
                 </h2>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="border border-gray-200 rounded p-3 text-center bg-gray-50">
-                    <p className="text-xs text-gray-500 mb-1">Temperature</p>
-                    <p className="text-lg font-semibold text-emerald-700">{report.triageInfo.temperature || '-'}°C</p>
+              <div className="p-3 sm:p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="border border-gray-200 rounded p-2 sm:p-3 text-center bg-gray-50">
+                    <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Temperature</p>
+                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.temperature || '-'}°C</p>
                   </div>
-                  <div className="border border-gray-200 rounded p-3 text-center bg-gray-50">
-                    <p className="text-xs text-gray-500 mb-1">Tension</p>
-                    <p className="text-lg font-semibold text-emerald-700">{report.triageInfo.tensionArterielle || '-'}</p>
+                  <div className="border border-gray-200 rounded p-2 sm:p-3 text-center bg-gray-50">
+                    <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Tension</p>
+                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.tensionArterielle || '-'}</p>
                   </div>
-                  <div className="border border-gray-200 rounded p-3 text-center bg-gray-50">
-                    <p className="text-xs text-gray-500 mb-1">Poids</p>
-                    <p className="text-lg font-semibold text-emerald-700">{report.triageInfo.poids || '-'} kg</p>
+                  <div className="border border-gray-200 rounded p-2 sm:p-3 text-center bg-gray-50">
+                    <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Poids</p>
+                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.poids || '-'} kg</p>
                   </div>
-                  <div className="border border-gray-200 rounded p-3 text-center bg-gray-50">
-                    <p className="text-xs text-gray-500 mb-1">Taille</p>
-                    <p className="text-lg font-semibold text-emerald-700">{report.triageInfo.taille || '-'} cm</p>
+                  <div className="border border-gray-200 rounded p-2 sm:p-3 text-center bg-gray-50">
+                    <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1">Taille</p>
+                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.taille || '-'} cm</p>
                   </div>
                 </div>
                 {report.triageInfo.motifVisite && (
@@ -834,14 +835,14 @@ const MedicalReportView = () => {
           {/* Section 4: Resultats Laboratoire */}
           {report.labResults && report.labResults.length > 0 && (
             <div className="border-b border-emerald-200">
-              <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-                <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                  <FlaskConical className="w-4 h-4" />
+              <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                  <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4" />
                   Resultats de Laboratoire
                 </h2>
               </div>
-              <div className="p-4">
-                <table className="w-full border-collapse">
+              <div className="p-2 sm:p-4 overflow-x-auto">
+                <table className="w-full border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-emerald-100">
                       <th className="border border-emerald-300 px-3 py-2 text-left text-xs font-semibold text-emerald-800">Examen</th>
@@ -879,17 +880,17 @@ const MedicalReportView = () => {
           {/* Section 5: Prescription */}
           {report.prescription && (
             <div className="border-b border-emerald-200">
-              <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-                <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
+              <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                  <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                   Prescription Medicale
                 </h2>
               </div>
-              <div className="p-4">
+              <div className="p-3 sm:p-4">
                 {report.prescription.diagnosis && (
-                  <div className="mb-4 flex items-baseline gap-2">
-                    <span className="text-sm font-semibold text-gray-700">Diagnostic:</span>
-                    <span className="text-sm border-b border-gray-300 flex-1 pb-1">{report.prescription.diagnosis}</span>
+                  <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700">Diagnostic:</span>
+                    <span className="text-sm sm:text-base border-b border-gray-300 flex-1 pb-1">{report.prescription.diagnosis}</span>
                   </div>
                 )}
                 <table className="w-full border-collapse">
@@ -924,14 +925,14 @@ const MedicalReportView = () => {
           {/* Section 6: Pharmacie */}
           {report.pharmacyStatus && (
             <div className="border-b border-emerald-200">
-              <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-                <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                  <Pill className="w-4 h-4" />
+              <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                  <Pill className="w-3 h-3 sm:w-4 sm:h-4" />
                   Dispensation Pharmacie
                 </h2>
               </div>
-              <div className="p-4">
-                <table className="w-full border-collapse">
+              <div className="p-2 sm:p-4 overflow-x-auto">
+                <table className="w-full border-collapse min-w-[400px]">
                   <thead>
                     <tr className="bg-emerald-100">
                       <th className="border border-emerald-300 px-3 py-2 text-left text-xs font-semibold text-emerald-800">Medicament</th>
@@ -965,15 +966,16 @@ const MedicalReportView = () => {
           {/* Section 7: Facturation */}
           {report.billingSummary && (
             <div>
-              <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200">
-                <h2 className="text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
+              <div className="bg-emerald-50 px-3 sm:px-4 py-2 border-b border-emerald-200">
+                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
+                  <Wallet className="w-3 h-3 sm:w-4 sm:h-4" />
                   Facturation
                 </h2>
               </div>
-              <div className="p-4">
+              <div className="p-3 sm:p-4">
                 {/* Tableau des transactions detaillees */}
-                <table className="w-full border-collapse mb-6">
+                <div className="overflow-x-auto mb-4 sm:mb-6">
+                  <table className="w-full border-collapse min-w-[400px]">
                   <thead>
                     <tr className="bg-emerald-100">
                       <th className="border border-emerald-300 px-3 py-2 text-left text-xs font-semibold text-emerald-800">Libelle</th>
@@ -1128,24 +1130,25 @@ const MedicalReportView = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 
                 {/* Recapitulatif des montants */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {/* Colonne gauche - Totaux */}
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-emerald-800 mb-3 uppercase">Recapitulatif</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">TOTAL GENERAL</span>
-                        <span className="font-bold text-lg text-emerald-700">{report.billingSummary.totalAmount?.toLocaleString()} $</span>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 sm:p-4">
+                    <h3 className="text-xs sm:text-sm font-bold text-emerald-800 mb-2 sm:mb-3 uppercase">Recapitulatif</h3>
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span className="text-gray-600">TOTAL</span>
+                        <span className="font-bold text-base sm:text-lg text-emerald-700">{report.billingSummary.totalAmount?.toLocaleString()} $</span>
                       </div>
-                      <div className="h-px bg-emerald-200 my-2"></div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">ACOMPTE VERSE</span>
+                      <div className="h-px bg-emerald-200 my-1 sm:my-2"></div>
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span className="text-gray-600">PAYE</span>
                         <span className="font-semibold text-emerald-600">{report.billingSummary.totalPaid?.toLocaleString()} $</span>
                       </div>
-                      <div className="flex justify-between text-sm bg-white p-2 rounded border border-emerald-200">
-                        <span className="text-gray-700 font-medium">RESTE A PAYER</span>
+                      <div className="flex justify-between text-xs sm:text-sm bg-white p-1.5 sm:p-2 rounded border border-emerald-200">
+                        <span className="text-gray-700 font-medium">RESTE</span>
                         <span className={`font-bold ${report.billingSummary.balanceDue > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                           {report.billingSummary.balanceDue?.toLocaleString()} $
                         </span>
@@ -1154,12 +1157,12 @@ const MedicalReportView = () => {
                   </div>
                   
                   {/* Colonne droite - Statut global */}
-                  <div className="flex flex-col justify-center items-center bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <span className="text-sm text-gray-500 mb-2">Statut de paiement</span>
-                    <Badge className={`${getPaymentStatusColor(report.billingSummary.paymentStatus)} px-6 py-3 text-base font-bold`}>
-                      {report.billingSummary.paymentStatus === 'SOLDE' && <CheckCircle2 className="w-5 h-5 mr-2" />}
-                      {report.billingSummary.paymentStatus === 'PARTIEL' && <AlertCircle className="w-5 h-5 mr-2" />}
-                      {report.billingSummary.paymentStatus === 'NON_PAYE' && <XCircle className="w-5 h-5 mr-2" />}
+                  <div className="flex flex-col justify-center items-center bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <span className="text-xs sm:text-sm text-gray-500 mb-2">Statut</span>
+                    <Badge className={`${getPaymentStatusColor(report.billingSummary.paymentStatus)} px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold`}>
+                      {report.billingSummary.paymentStatus === 'SOLDE' && <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+                      {report.billingSummary.paymentStatus === 'PARTIEL' && <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+                      {report.billingSummary.paymentStatus === 'NON_PAYE' && <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
                       {report.billingSummary.paymentStatus}
                     </Badge>
                     {report.billingSummary.lastPaymentDate && (
