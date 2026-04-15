@@ -24,6 +24,7 @@ const AppLock = () => {
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasLeftApp, setHasLeftApp] = useState(false);
 
   // Vérifier si l'utilisateur est connecté et initialiser
   useEffect(() => {
@@ -45,6 +46,14 @@ const AppLock = () => {
     if (isAuthenticated && !hasInitialized && isBiometricSupported) {
       setHasInitialized(true);
       console.log('🔐 AppLock - Activation automatique de la biométrie');
+      
+      // Vérifier si on revient d'une sortie (via sessionStorage)
+      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
+      if (wasLocked) {
+        console.log('🔐 AppLock - Application était verrouillée, restauration');
+        setIsLocked(true);
+        sessionStorage.removeItem('inua_afya_app_was_locked');
+      }
     }
   }, [isAuthenticated, isBiometricSupported, hasInitialized]);
 
@@ -95,6 +104,8 @@ const AppLock = () => {
       if (assertion) {
         setIsLocked(false);
         setLastActiveTime(Date.now());
+        // Nettoyer le flag de verrouillage
+        sessionStorage.removeItem('inua_afya_app_was_locked');
         toast.success('Déverrouillage réussi', {
           description: 'Bienvenue !',
           duration: 2000,
@@ -126,34 +137,102 @@ const AppLock = () => {
 
   // Détecter quand l'app revient au premier plan - verrouillage automatique
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!isAuthenticated || !isBiometricSupported) return;
+    console.log('🔐 AppLock - Initialisation des événements mobile');
+    
+    // Marquer quand on quitte l'app
+    const handleBeforeUnload = () => {
+      console.log('🔐 AppLock - Application quittée (beforeunload)');
+      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+    };
+    
+    const handlePageHide = () => {
+      console.log('🔐 AppLock - Page cachée');
+      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+    };
+    
+    const handleBlur = () => {
+      console.log('🔐 AppLock - Fenêtre perdue le focus');
+      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+    };
 
+    // Verrouiller quand on revient
+    const handleVisibilityChange = () => {
+      console.log('🔐 AppLock - Visibility change:', document.visibilityState);
+      
+      if (!isAuthenticated || !isBiometricSupported) {
+        console.log('🔐 AppLock - Pas d\'auth ou pas de support biométrique');
+        return;
+      }
+
+      // Quand on revient et qu'on avait marqué la sortie
       if (document.visibilityState === 'visible') {
-        // Verrouillage IMMÉDIAT dès qu'on revient dans l'app
-        console.log('🔐 App verrouillée - retour immédiat');
+        const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
+        console.log('🔐 AppLock - Retour visible, wasLocked:', wasLocked);
+        
+        if (wasLocked) {
+          console.log('🔐 AppLock - VERROUILLAGE ACTIVÉ');
+          setIsLocked(true);
+          sessionStorage.removeItem('inua_afya_app_was_locked');
+        }
+      } else if (document.visibilityState === 'hidden') {
+        // Page cachée = on marque pour verrouiller au retour
+        console.log('🔐 AppLock - Page cachée, marquage pour verrouillage');
+        sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+      }
+    };
+
+    // Événements pour mobile (plus fiables)
+    const handlePageShow = (e) => {
+      console.log('🔐 AppLock - Page show event, persisted:', e.persisted);
+      if (!isAuthenticated || !isBiometricSupported) return;
+      
+      // Si on revient d'une cache/page cachée
+      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
+      if (wasLocked || e.persisted) {
+        console.log('🔐 AppLock - VERROUILLAGE via pageshow');
         setIsLocked(true);
+        sessionStorage.removeItem('inua_afya_app_was_locked');
+      }
+    };
+
+    const handleResume = () => {
+      console.log('🔐 AppLock - Resume event');
+      if (!isAuthenticated || !isBiometricSupported) return;
+      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
+      if (wasLocked) {
+        setIsLocked(true);
+        sessionStorage.removeItem('inua_afya_app_was_locked');
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    const handleFocus = () => {
-      if (!isAuthenticated || !isBiometricSupported) return;
-      setIsLocked(true);
-    };
-
-    window.addEventListener('focus', handleFocus);
+    document.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('resume', handleResume);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('resume', handleResume);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [isBiometricSupported, isAuthenticated]);
 
   // Fonction pour activer/désactiver (gardée pour compatibilité)
   const toggleBiometricLock = () => {
     toast.info('Verrouillage automatique actif');
+  };
+
+  // Déverrouiller avec mot de passe (fallback)
+  const unlockWithPassword = () => {
+    // Pour l'instant, accès direct (à améliorer avec vrai mot de passe)
+    setIsLocked(false);
+    sessionStorage.removeItem('inua_afya_app_was_locked');
+    toast.success('Déverrouillé avec succès');
   };
 
   // Si pas connecté ou pas de support biométrique, pas de verrouillage
