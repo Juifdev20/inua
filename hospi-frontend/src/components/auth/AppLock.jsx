@@ -22,8 +22,31 @@ const AppLock = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
-  const [lastActiveTime, setLastActiveTime] = useState(Date.now());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Vérifier si l'utilisateur est connecté et initialiser
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const user = localStorage.getItem('user') || sessionStorage.getItem('user');
+      const isAuthed = !!(token && user);
+      setIsAuthenticated(isAuthed);
+    };
+
+    checkAuth();
+    const interval = setInterval(checkAuth, 500);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Activer automatiquement la biométrie au premier montage si supportée
+  useEffect(() => {
+    if (isAuthenticated && !hasInitialized && isBiometricSupported) {
+      setHasInitialized(true);
+      console.log('🔐 AppLock - Activation automatique de la biométrie');
+    }
+  }, [isAuthenticated, isBiometricSupported, hasInitialized]);
 
   // Vérifier le support biométrique au chargement
   useEffect(() => {
@@ -33,12 +56,7 @@ const AppLock = () => {
         const supported = window.PublicKeyCredential !== undefined;
         setIsBiometricSupported(supported);
         
-        // Vérifier si l'utilisateur a activé la biométrie dans ses préférences
-        const biometricEnabled = localStorage.getItem('inua_afya_biometric_lock') === 'true';
-        setIsBiometricEnabled(biometricEnabled);
-        
         console.log('🔐 AppLock - Biométrie supportée:', supported);
-        console.log('🔐 AppLock - Biométrie activée:', biometricEnabled);
       } catch (error) {
         console.error('Erreur vérification biométrie:', error);
       }
@@ -49,7 +67,7 @@ const AppLock = () => {
 
   // Fonction d'authentification biométrique
   const authenticateBiometric = useCallback(async () => {
-    if (!isBiometricSupported || !isBiometricEnabled) {
+    if (!isBiometricSupported) {
       // Pas de biométrie → accès direct
       setIsLocked(false);
       return true;
@@ -104,154 +122,79 @@ const AppLock = () => {
     }
 
     return false;
-  }, [isBiometricSupported, isBiometricEnabled]);
+  }, [isBiometricSupported]);
 
-  // Détecter quand l'app revient au premier plan
+  // Détecter quand l'app revient au premier plan - verrouillage automatique
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        const timeAway = Date.now() - lastActiveTime;
-        const LOCK_DELAY = 30000; // 30 secondes avant verrouillage
+      if (!isAuthenticated || !isBiometricSupported) return;
 
-        // Vérifier si assez de temps s'est écoulé pour verrouiller
-        if (timeAway > LOCK_DELAY && isBiometricEnabled) {
-          console.log('🔐 App verrouillée - temps écoulé:', timeAway);
-          setIsLocked(true);
-        } else {
-          setLastActiveTime(Date.now());
-        }
-      } else {
-        // App en arrière-plan → sauvegarder l'heure
-        setLastActiveTime(Date.now());
+      if (document.visibilityState === 'visible') {
+        // Verrouillage IMMÉDIAT dès qu'on revient dans l'app
+        console.log('🔐 App verrouillée - retour immédiat');
+        setIsLocked(true);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Détecter le réveil de l'écran (mobile)
-    const handleWake = () => {
-      const timeAway = Date.now() - lastActiveTime;
-      if (timeAway > 30000 && isBiometricEnabled) {
-        setIsLocked(true);
-      }
+
+    const handleFocus = () => {
+      if (!isAuthenticated || !isBiometricSupported) return;
+      setIsLocked(true);
     };
-    
-    window.addEventListener('focus', handleWake);
+
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleWake);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, [lastActiveTime, isBiometricEnabled]);
+  }, [isBiometricSupported, isAuthenticated]);
 
-  // Activer/désactiver le verrouillage biométrique
-  const toggleBiometricLock = async () => {
-    if (!isBiometricSupported) {
-      toast.error('Biométrie non supportée', {
-        description: 'Votre appareil ne supporte pas cette fonctionnalité',
-      });
-      return;
-    }
-
-    const newState = !isBiometricEnabled;
-    
-    if (newState) {
-      // Tester la biométrie avant d'activer
-      try {
-        const challenge = new Uint8Array(32);
-        window.crypto.getRandomValues(challenge);
-
-        const options = {
-          challenge,
-          rpId: window.location.hostname,
-          allowCredentials: [],
-          userVerification: 'required',
-          timeout: 60000,
-        };
-
-        await navigator.credentials.get({ publicKey: options });
-        
-        // Succès → activer
-        localStorage.setItem('inua_afya_biometric_lock', 'true');
-        setIsBiometricEnabled(true);
-        toast.success('Verrouillage biométrique activé', {
-          description: 'Votre app sera protégée par Face ID/Fingerprint',
-        });
-      } catch (error) {
-        toast.error('Configuration échouée', {
-          description: 'Impossible de configurer la biométrie',
-        });
-      }
-    } else {
-      // Désactiver
-      localStorage.setItem('inua_afya_biometric_lock', 'false');
-      setIsBiometricEnabled(false);
-      toast.success('Verrouillage biométrique désactivé');
-    }
+  // Fonction pour activer/désactiver (gardée pour compatibilité)
+  const toggleBiometricLock = () => {
+    toast.info('Verrouillage automatique actif');
   };
 
-  // Déverrouiller avec mot de passe (fallback)
-  const unlockWithPassword = () => {
-    // Pour l'instant, accès direct (à améliorer avec vrai mot de passe)
-    setIsLocked(false);
-    setLastActiveTime(Date.now());
-  };
-
-  // Si pas verrouillé et biométrie désactivée, ne rien afficher
-  if (!isLocked && !isBiometricEnabled) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={toggleBiometricLock}
-          className="p-3 rounded-full shadow-lg transition-all bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-600 dark:text-gray-300"
-          title="Activer le verrouillage biométrique"
-        >
-          <Lock className="w-5 h-5" />
-        </button>
-      </div>
-    );
+  // Si pas connecté ou pas de support biométrique, pas de verrouillage
+  if (!isAuthenticated || !isBiometricSupported) {
+    return null;
   }
 
-  // Si pas verrouillé mais biométrie activée → juste le bouton de désactivation
-  if (!isLocked && isBiometricEnabled) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={toggleBiometricLock}
-          className="p-3 rounded-full shadow-lg transition-all bg-emerald-500 hover:bg-emerald-600 text-white"
-          title="Désactiver le verrouillage"
-        >
-          <Fingerprint className="w-5 h-5" />
-        </button>
-      </div>
-    );
+  // Si pas verrouillé, ne rien afficher (transparent pour l'utilisateur)
+  if (!isLocked) {
+    return null;
   }
 
-  // Écran de verrouillage
+  // Écran de verrouillage - Overlay sur l'application
   return (
-    <div className="fixed inset-0 z-[200] bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
-      <div className="text-center px-6">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      {/* Backdrop blur - l'application est visible en arrière-plan */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
+
+      {/* Contenu du verrouillage */}
+      <div className="relative text-center px-6 max-w-sm">
         {/* Logo animé */}
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-blue-500/30 rounded-3xl blur-2xl animate-pulse" />
-          <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20">
-            <LogoInuaAfya size={80} className="mx-auto" />
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse" />
+          <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20">
+            <LogoInuaAfya size={64} className="mx-auto" />
           </div>
         </div>
 
         {/* Titre */}
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Inua Afya
-        </h2>
-        <p className="text-blue-200 mb-8">
+        <h2 className="text-xl font-bold text-white mb-1 drop-shadow-lg">
           Application verrouillée
+        </h2>
+        <p className="text-blue-200 text-sm mb-6 drop-shadow">
+          Utilisez votre empreinte pour déverrouiller
         </p>
 
-        {/* Bouton biométrique */}
+        {/* Bouton biométrique principal */}
         <button
           onClick={authenticateBiometric}
           disabled={isChecking}
-          className="w-full max-w-xs mx-auto py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all disabled:opacity-70 flex items-center justify-center gap-3 group"
+          className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-semibold shadow-2xl hover:shadow-emerald-500/25 transition-all disabled:opacity-70 flex items-center justify-center gap-3 group"
         >
           {isChecking ? (
             <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -261,33 +204,35 @@ const AppLock = () => {
                 <Fingerprint className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <div className="absolute inset-0 bg-white/30 rounded-full blur animate-pulse" />
               </div>
-              <span>Déverrouiller</span>
+              <span>Déverrouiller avec empreinte</span>
               <ScanFace className="w-5 h-5 opacity-80" />
             </>
           )}
         </button>
 
         {/* Options alternatives */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
+        <div className="mt-5 flex items-center justify-center gap-3 text-sm">
           <button
             onClick={unlockWithPassword}
-            className="text-blue-300 hover:text-white transition-colors"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
           >
-            Utiliser le mot de passe
+            Code PIN
           </button>
-          <span className="text-gray-500">|</span>
           <button
-            onClick={() => window.location.reload()}
-            className="text-gray-400 hover:text-white transition-colors"
+            onClick={() => {
+              localStorage.removeItem('inua_afya_biometric_lock');
+              window.location.href = '/login';
+            }}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
           >
-            Reconnecter
+            Se reconnecter
           </button>
         </div>
 
         {/* Info support biométrie */}
         {!isBiometricSupported && (
-          <p className="mt-4 text-xs text-orange-400">
-            Votre appareil ne supporte pas la biométrie
+          <p className="mt-4 text-xs text-orange-300 bg-orange-500/20 px-3 py-2 rounded-lg">
+            ⚠️ Votre appareil ne supporte pas la biométrie
           </p>
         )}
       </div>

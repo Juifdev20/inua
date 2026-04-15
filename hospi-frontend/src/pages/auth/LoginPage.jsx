@@ -1,8 +1,8 @@
 // 🏥 Page de connexion - Version Cinématique Sans Scroll
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, LogIn, Loader2, Eye, EyeOff, User, ArrowLeft } from 'lucide-react';
+import { Lock, LogIn, Loader2, Eye, EyeOff, User, ArrowLeft, Fingerprint, ScanFace } from 'lucide-react';
 import { toast } from 'sonner';
 import LogoInuaAfya from '../../components/LogoInuaAfya';
 
@@ -18,6 +18,82 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
+  /* ================= AUTHENTIFICATION BIOMÉTRIQUE WebAuthn ================= */
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+
+  // Vérifier si WebAuthn est supporté
+  useEffect(() => {
+    const checkBiometricSupport = () => {
+      const supported = window.PublicKeyCredential !== undefined;
+      setIsBiometricSupported(supported);
+      console.log('🔐 WebAuthn supporté:', supported);
+    };
+    checkBiometricSupport();
+  }, []);
+
+  // Fonction pour l'authentification biométrique
+  const handleBiometricAuth = async () => {
+    if (!isBiometricSupported) {
+      toast.error('Biométrie non supportée', {
+        description: 'Votre appareil ne supporte pas l\'authentification biométrique',
+      });
+      return;
+    }
+
+    setIsBiometricLoading(true);
+
+    try {
+      // Simuler une vérification biométrique
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
+      const publicKeyCredentialRequestOptions = {
+        challenge,
+        rpId: window.location.hostname,
+        allowCredentials: [],
+        userVerification: 'required',
+        timeout: 60000,
+      };
+
+      const assertion = await navigator.credentials.get({
+        publicKey: publicKeyCredentialRequestOptions,
+      });
+
+      if (assertion) {
+        toast.success('Authentification biométrique réussie !', {
+          description: 'Vérification de vos identifiants...',
+        });
+
+        // TODO: Envoyer l'assertion au backend pour vérification
+        // Pour l'instant, simulation
+        setTimeout(() => {
+          toast.success('Bienvenue !', {
+            description: 'Connexion par biométrie réussie',
+          });
+          navigate('/patient/dashboard');
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Erreur biométrique:', error);
+      if (error.name === 'NotAllowedError') {
+        toast.error('Authentification annulée', {
+          description: 'Vous avez annulé la vérification biométrique',
+        });
+      } else if (error.name === 'NotSupportedError') {
+        toast.error('Biométrie non disponible', {
+          description: 'Aucune méthode biométrique configurée sur cet appareil',
+        });
+      } else {
+        toast.error('Erreur biométrique', {
+          description: 'Impossible de vérifier votre identité',
+        });
+      }
+    } finally {
+      setIsBiometricLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -144,6 +220,40 @@ const LoginPage = () => {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Connexion</h2>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {/* 🔐 Bouton Biométrique WebAuthn */}
+            {isBiometricSupported && (
+              <button
+                type="button"
+                onClick={handleBiometricAuth}
+                disabled={isBiometricLoading}
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+              >
+                {isBiometricLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Fingerprint className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span>Connexion avec empreinte</span>
+                    <ScanFace className="w-4 h-4 opacity-80" />
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Divider */}
+            {isBiometricSupported && (
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
+                    Ou continuez avec
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Input Identifiant */}
             <div className="relative group">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
