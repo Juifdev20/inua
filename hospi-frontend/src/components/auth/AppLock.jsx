@@ -25,6 +25,9 @@ const AppLock = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [hasLeftApp, setHasLeftApp] = useState(false);
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [pinValue, setPinValue] = useState('');
+  const [pinError, setPinError] = useState('');
 
   // Vérifier si l'utilisateur est connecté et initialiser
   useEffect(() => {
@@ -47,12 +50,22 @@ const AppLock = () => {
       setHasInitialized(true);
       console.log('🔐 AppLock - Activation automatique de la biométrie');
       
-      // Vérifier si on revient d'une sortie (via sessionStorage)
-      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
-      if (wasLocked) {
-        console.log('🔐 AppLock - Application était verrouillée, restauration');
-        setIsLocked(true);
-        sessionStorage.removeItem('inua_afya_app_was_locked');
+      // Vérifier si on revient d'une sortie (via localStorage qui persiste sur mobile)
+      const lastExitTime = localStorage.getItem('inua_afya_app_exit_time');
+      const now = Date.now();
+      
+      if (lastExitTime) {
+        const timeAway = now - parseInt(lastExitTime);
+        console.log('🔐 AppLock - Temps écoulé depuis la sortie:', timeAway, 'ms');
+        
+        // Si plus de 2 secondes sont passées, verrouiller (immédiat sur mobile)
+        if (timeAway > 2000) {
+          console.log('🔐 AppLock - VERROUILLAGE AU MONTAGE - temps écoulé:', timeAway);
+          setIsLocked(true);
+        }
+        
+        // Nettoyer
+        localStorage.removeItem('inua_afya_app_exit_time');
       }
     }
   }, [isAuthenticated, isBiometricSupported, hasInitialized]);
@@ -105,7 +118,7 @@ const AppLock = () => {
         setIsLocked(false);
         setLastActiveTime(Date.now());
         // Nettoyer le flag de verrouillage
-        sessionStorage.removeItem('inua_afya_app_was_locked');
+        localStorage.removeItem('inua_afya_app_exit_time');
         toast.success('Déverrouillage réussi', {
           description: 'Bienvenue !',
           duration: 2000,
@@ -139,69 +152,82 @@ const AppLock = () => {
   useEffect(() => {
     console.log('🔐 AppLock - Initialisation des événements mobile');
     
-    // Marquer quand on quitte l'app
-    const handleBeforeUnload = () => {
-      console.log('🔐 AppLock - Application quittée (beforeunload)');
-      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+    // Marquer quand on quitte l'app avec timestamp
+    const markExit = () => {
+      const now = Date.now();
+      console.log('🔐 AppLock - Marquage sortie à:', now);
+      localStorage.setItem('inua_afya_app_exit_time', now.toString());
     };
     
-    const handlePageHide = () => {
-      console.log('🔐 AppLock - Page cachée');
-      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
-    };
+    const handleBeforeUnload = markExit;
+    const handlePageHide = markExit;
+    const handleBlur = markExit;
     
-    const handleBlur = () => {
-      console.log('🔐 AppLock - Fenêtre perdue le focus');
-      sessionStorage.setItem('inua_afya_app_was_locked', 'true');
-    };
-
-    // Verrouiller quand on revient
+    // Détection quand on revient
     const handleVisibilityChange = () => {
       console.log('🔐 AppLock - Visibility change:', document.visibilityState);
       
-      if (!isAuthenticated || !isBiometricSupported) {
-        console.log('🔐 AppLock - Pas d\'auth ou pas de support biométrique');
-        return;
-      }
+      if (!isAuthenticated || !isBiometricSupported) return;
 
-      // Quand on revient et qu'on avait marqué la sortie
       if (document.visibilityState === 'visible') {
-        const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
-        console.log('🔐 AppLock - Retour visible, wasLocked:', wasLocked);
-        
-        if (wasLocked) {
-          console.log('🔐 AppLock - VERROUILLAGE ACTIVÉ');
-          setIsLocked(true);
-          sessionStorage.removeItem('inua_afya_app_was_locked');
+        // Vérifier si on doit verrouiller
+        const lastExitTime = localStorage.getItem('inua_afya_app_exit_time');
+        if (lastExitTime) {
+          const timeAway = Date.now() - parseInt(lastExitTime);
+          console.log('🔐 AppLock - Retour après:', timeAway, 'ms');
+          
+          // Si plus de 1 seconde, verrouiller
+          if (timeAway > 1000) {
+            console.log('🔐 AppLock - VERROUILLAGE ACTIVÉ');
+            setIsLocked(true);
+          }
+          localStorage.removeItem('inua_afya_app_exit_time');
         }
-      } else if (document.visibilityState === 'hidden') {
-        // Page cachée = on marque pour verrouiller au retour
-        console.log('🔐 AppLock - Page cachée, marquage pour verrouillage');
-        sessionStorage.setItem('inua_afya_app_was_locked', 'true');
+      } else {
+        // Sortie de l'app
+        markExit();
       }
     };
 
-    // Événements pour mobile (plus fiables)
+    // Pour mobile - pageshow avec persisted
     const handlePageShow = (e) => {
-      console.log('🔐 AppLock - Page show event, persisted:', e.persisted);
+      console.log('🔐 AppLock - Page show, persisted:', e.persisted);
       if (!isAuthenticated || !isBiometricSupported) return;
       
-      // Si on revient d'une cache/page cachée
-      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
-      if (wasLocked || e.persisted) {
-        console.log('🔐 AppLock - VERROUILLAGE via pageshow');
-        setIsLocked(true);
-        sessionStorage.removeItem('inua_afya_app_was_locked');
+      const lastExitTime = localStorage.getItem('inua_afya_app_exit_time');
+      if (lastExitTime || e.persisted) {
+        const timeAway = Date.now() - parseInt(lastExitTime || '0');
+        console.log('🔐 AppLock - PageShow après:', timeAway, 'ms');
+        
+        if (timeAway > 1000 || e.persisted) {
+          console.log('🔐 AppLock - VERROUILLAGE via pageshow');
+          setIsLocked(true);
+        }
+        localStorage.removeItem('inua_afya_app_exit_time');
       }
     };
 
     const handleResume = () => {
       console.log('🔐 AppLock - Resume event');
       if (!isAuthenticated || !isBiometricSupported) return;
-      const wasLocked = sessionStorage.getItem('inua_afya_app_was_locked') === 'true';
-      if (wasLocked) {
+      
+      const lastExitTime = localStorage.getItem('inua_afya_app_exit_time');
+      if (lastExitTime) {
+        console.log('🔐 AppLock - VERROUILLAGE via resume');
         setIsLocked(true);
-        sessionStorage.removeItem('inua_afya_app_was_locked');
+        localStorage.removeItem('inua_afya_app_exit_time');
+      }
+    };
+
+    // Pour mobile - détecter quand l'écran se rallume
+    const handleWake = () => {
+      console.log('🔐 AppLock - Écran rallumé');
+      if (!isAuthenticated || !isBiometricSupported) return;
+      
+      const lastExitTime = localStorage.getItem('inua_afya_app_exit_time');
+      if (lastExitTime) {
+        setIsLocked(true);
+        localStorage.removeItem('inua_afya_app_exit_time');
       }
     };
 
@@ -211,6 +237,11 @@ const AppLock = () => {
     document.addEventListener('resume', handleResume);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('blur', handleBlur);
+    
+    // Pour détecter le réveil de l'écran sur mobile
+    if ('wakeLock' in navigator) {
+      // API WakeLock disponible
+    }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -227,12 +258,38 @@ const AppLock = () => {
     toast.info('Verrouillage automatique actif');
   };
 
-  // Déverrouiller avec mot de passe (fallback)
-  const unlockWithPassword = () => {
-    // Pour l'instant, accès direct (à améliorer avec vrai mot de passe)
-    setIsLocked(false);
-    sessionStorage.removeItem('inua_afya_app_was_locked');
-    toast.success('Déverrouillé avec succès');
+  // Afficher le champ de saisie du PIN
+  const showPinEntry = () => {
+    setShowPinInput(true);
+    setPinError('');
+    setPinValue('');
+  };
+
+  // Vérifier le PIN saisi
+  const verifyPin = () => {
+    // Récupérer le PIN stocké ou utiliser un PIN par défaut (à remplacer par vérification backend)
+    const storedPin = localStorage.getItem('inua_afya_app_pin') || '0000';
+    
+    if (pinValue === storedPin) {
+      setIsLocked(false);
+      setShowPinInput(false);
+      setPinValue('');
+      setPinError('');
+      localStorage.removeItem('inua_afya_app_exit_time');
+      toast.success('Déverrouillé avec succès');
+    } else {
+      setPinError('PIN incorrect');
+      toast.error('PIN incorrect', {
+        description: 'Veuillez réessayer',
+      });
+    }
+  };
+
+  // Annuler la saisie du PIN
+  const cancelPinEntry = () => {
+    setShowPinInput(false);
+    setPinValue('');
+    setPinError('');
   };
 
   // Si pas connecté ou pas de support biométrique, pas de verrouillage
@@ -290,23 +347,60 @@ const AppLock = () => {
         </button>
 
         {/* Options alternatives */}
-        <div className="mt-5 flex items-center justify-center gap-3 text-sm">
-          <button
-            onClick={unlockWithPassword}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
-          >
-            Code PIN
-          </button>
-          <button
-            onClick={() => {
-              localStorage.removeItem('inua_afya_biometric_lock');
-              window.location.href = '/login';
-            }}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
-          >
-            Se reconnecter
-          </button>
-        </div>
+        {!showPinInput ? (
+          <div className="mt-5 flex items-center justify-center gap-3 text-sm">
+            <button
+              onClick={showPinEntry}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
+            >
+              Code PIN
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem('inua_afya_app_exit_time');
+                window.location.href = '/login';
+              }}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white/80 hover:text-white transition-all"
+            >
+              Se reconnecter
+            </button>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-3">
+            <p className="text-white/80 text-sm">Entrez votre code PIN :</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pinValue}
+              onChange={(e) => {
+                setPinValue(e.target.value);
+                setPinError('');
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && verifyPin()}
+              placeholder="••••"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-center text-2xl tracking-widest placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              autoFocus
+            />
+            {pinError && (
+              <p className="text-red-400 text-sm">{pinError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={verifyPin}
+                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white font-medium transition-all"
+              >
+                Valider
+              </button>
+              <button
+                onClick={cancelPinEntry}
+                className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80 transition-all"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Info support biométrie */}
         {!isBiometricSupported && (
