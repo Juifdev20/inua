@@ -4,6 +4,7 @@ import com.hospital.backend.entity.Role;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.service.HospitalConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -27,6 +28,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HospitalConfigService hospitalConfigService;
 
     @Override
     @Transactional
@@ -34,6 +36,7 @@ public class DataInitializer implements CommandLineRunner {
         log.info("🚀 Initialisation des données de base...");
         
         initializeRoles();
+        initializeHospitalConfig();
         initializeAdminUser();
         initializeDoctorUser();
         initializeReceptionUser();
@@ -42,6 +45,15 @@ public class DataInitializer implements CommandLineRunner {
         initializeFinanceUser();
         
         log.info("✅ Initialisation terminée!");
+    }
+    
+    private void initializeHospitalConfig() {
+        if (!hospitalConfigService.exists()) {
+            hospitalConfigService.initializeDefault();
+            log.info("🏥 Configuration hospitalière initialisée");
+        } else {
+            log.info("🏥 Configuration hospitalière existe déjà");
+        }
     }
 
     private void initializeRoles() {

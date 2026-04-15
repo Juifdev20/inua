@@ -36,6 +36,7 @@ import Departments from "./pages/admin/Departments";
 import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Profile from "./pages/admin/Profile";
+import HospitalSettings from "./pages/admin/HospitalSettings";
 
 /* 👤 Patient layout + pages */
 import PatientLayout from "./components/patients/PatientLayout";
@@ -368,6 +369,7 @@ function App() {
                   <Route path="services" element={<Services />} />
                   <Route path="departements" element={<Departments />} />
                   <Route path="parametres" element={<Settings />} />
+                  <Route path="hospital-settings" element={<HospitalSettings />} />
                   <Route path="audit" element={<AuditLogs />} />
                   <Route path="profil" element={<Profile />} />
                 </Route>

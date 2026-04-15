@@ -14,11 +14,13 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Heart
+  Heart,
+  Building2
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { admissionService } from '../../services/admissionService';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { toast } from 'sonner';
 
 const MedicalReportView = () => {
@@ -27,6 +29,7 @@ const MedicalReportView = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { config } = useHospitalConfig();
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -138,23 +141,57 @@ const MedicalReportView = () => {
 
       {/* Contenu du rapport */}
       <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-none print:m-0 print:p-0">
-        {/* Bandeau d-en-tete INUA AFIA */}
-        <div className="bg-emerald-600 text-white rounded-t-lg p-3 sm:p-4 print:rounded-none print:bg-emerald-600">
+        {/* Bandeau d'en-tête dynamique avec config hospitalière */}
+        <div 
+          className="text-white rounded-t-lg p-3 sm:p-4 print:rounded-none"
+          style={{ backgroundColor: config.primaryColor || '#059669' }}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Logo ou icône par défaut */}
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shrink-0">
-                <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
+                {config.hospitalLogoUrl ? (
+                  <img 
+                    src={config.hospitalLogoUrl} 
+                    alt={config.hospitalName}
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                  />
+                ) : (
+                  <Building2 
+                    className="w-5 h-5 sm:w-6 sm:h-6"
+                    style={{ color: config.primaryColor || '#059669' }}
+                  />
+                )}
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-wide">INUA AFIA</h1>
-                <p className="text-sm text-emerald-100">Systeme de Gestion Hospitaliere</p>
+                {/* Nom de l'hôpital et informations ministère/zone */}
+                <h1 className="text-xl sm:text-2xl font-bold tracking-wide">
+                  {config.hospitalName || 'INUA AFIA'}
+                </h1>
+                <p className="text-sm text-white/90">
+                  {config.ministryName && `${config.ministryName} - `}
+                  {config.zoneName || config.headerSubtitle || 'Système de Gestion Hospitalière'}
+                </p>
               </div>
             </div>
             <div className="text-right">
               <p className="text-sm font-medium">FICHE MEDICALE INDIVIDUELLE</p>
-              <p className="text-xs text-emerald-100">Genere: {formatDate(report.reportGeneratedAt)}</p>
+              <p className="text-xs text-white/80">
+                {config.city && `${config.city}, `}
+                Genere: {formatDate(report.reportGeneratedAt)}
+              </p>
             </div>
           </div>
+          
+          {/* Informations supplémentaires (département, région) */}
+          {(config.departmentName || config.region) && (
+            <div className="mt-2 pt-2 border-t border-white/20 text-xs text-white/80">
+              {config.departmentName && <span>{config.departmentName}</span>}
+              {config.departmentName && config.region && <span className="mx-2">|</span>}
+              {config.region && <span>{config.region}</span>}
+              {config.country && <span className="ml-2">- {config.country}</span>}
+            </div>
+          )}
         </div>
 
         {/* Contenu avec bordure */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Mail, Phone, Calendar, Shield, Save, Camera, Lock, 
-  Loader2, Eye, EyeOff, CheckCircle2, XCircle 
+  Loader2, Eye, EyeOff, CheckCircle2, XCircle
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';

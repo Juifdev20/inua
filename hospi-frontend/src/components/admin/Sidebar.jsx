@@ -14,7 +14,8 @@ import {
   Activity,
   Bell,
   CheckCircle2,
-  HeartPulse // Ajout d'une icône pour les patients
+  HeartPulse,
+  Cog
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -71,6 +72,7 @@ const Sidebar = () => {
     { name: 'Rôles', path: '/admin/roles', icon: Shield, color: 'text-accent' },
     { name: 'Services', path: '/admin/services', icon: Stethoscope, color: 'text-primary' },
     { name: 'Départements', path: '/admin/departements', icon: Building2, color: 'text-secondary' },
+    { name: 'Configuration', path: '/admin/hospital-settings', icon: Cog, color: 'text-emerald-500' },
     { name: 'Paramètres', path: '/admin/parametres', icon: Settings, color: 'text-muted-foreground' },
     { name: 'Audit & Logs', path: '/admin/audit', icon: FileText, color: 'text-warning' },
   ];
