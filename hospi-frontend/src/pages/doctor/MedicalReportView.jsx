@@ -505,14 +505,10 @@ const MedicalReportView = () => {
             content: none !important;
           }
           
-          /* Cacher tous les éléments non désirés */
+          /* Cacher uniquement les éléments UI non désirés */
           .print\\:hidden,
-          nav, aside, .sidebar, header, footer,
-          .fixed, .sticky, [role="banner"],
-          .no-print, .dont-print,
-          #__next > div > div:first-child,
-          [class*="footer"], [class*="nav"],
-          [id*="footer"], [id*="nav"] {
+          nav, aside, .sidebar, header,
+          .fixed, .sticky, [role="banner"] {
             display: none !important;
           }
           
@@ -761,15 +757,63 @@ const MedicalReportView = () => {
             width: 100% !important;
           }
           
-          /* Cacher tout élément qui n'est pas dans la fiche */
-          body > *:not(.min-h-screen) {
-            display: none !important;
-          }
-          
           /* Supprimer les marges automatiques */
           .mx-auto {
             margin-left: 0 !important;
             margin-right: 0 !important;
+          }
+          
+          /* Afficher tout le contenu principal */
+          .min-h-screen,
+          .min-h-screen > div {
+            visibility: visible !important;
+            opacity: 1 !important;
+            overflow: visible !important;
+          }
+          
+          /* S'assurer que le contenu est visible */
+          div.min-h-screen,
+          .bg-card, .bg-background,
+          .border-2.border-emerald-600,
+          .print\\:break-inside-avoid {
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          
+          /* Réafficher les sections */
+          .print\\:w-full,
+          .print\\:max-w-full,
+          .print\\:rounded-none,
+          .print\\:break-inside-avoid {
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          
+          /* Forcer l'affichage des tableaux */
+          table, thead, tbody, tr, td, th {
+            display: table !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          
+          table {
+            width: 100% !important;
+          }
+          
+          thead {
+            display: table-header-group !important;
+          }
+          
+          tbody {
+            display: table-row-group !important;
+          }
+          
+          tr {
+            display: table-row !important;
+          }
+          
+          td, th {
+            display: table-cell !important;
           }
         }
       `}</style>
