@@ -137,7 +137,7 @@ const MedicalReportView = () => {
       </div>
 
       {/* Contenu du rapport */}
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-full print:m-0 print:p-0">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-none print:m-0 print:p-1 print:mx-0">
         {/* Bandeau d-en-tete INUA AFIA */}
         <div className="bg-emerald-600 text-white rounded-t-lg p-3 sm:p-4 print:rounded-none print:bg-emerald-600">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
@@ -485,14 +485,17 @@ const MedicalReportView = () => {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 5mm 3mm;
           }
           
-          body {
+          html, body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: visible !important;
           }
           
           /* Cacher l'URL et le footer du navigateur */
@@ -646,19 +649,37 @@ const MedicalReportView = () => {
             page-break-before: auto;
           }
           
-          /* Utiliser toute la largeur de la page */
-          .max-w-5xl {
-            max-width: 100% !important;
+          /* Utiliser toute la largeur de la page sans marges */
+          .max-w-5xl,
+          .max-w-5xl.mx-auto {
+            max-width: none !important;
             width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
             margin: 0 !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
+            padding: 2mm !important;
+          }
+          
+          /* Supprimer les contraintes de largeur */
+          [class*="max-w-"] {
+            max-width: none !important;
           }
           
           /* Augmenter la taille du conteneur principal */
           .min-h-screen > div {
             width: 100% !important;
-            max-width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* Le conteneur de la fiche en pleine largeur */
+          .min-h-screen .border-2.border-emerald-600 {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            border-left: none !important;
+            border-right: none !important;
           }
           
           /* Augmenter les tailles de police en impression */
@@ -757,10 +778,15 @@ const MedicalReportView = () => {
             width: 100% !important;
           }
           
-          /* Supprimer les marges automatiques */
-          .mx-auto {
+          /* Supprimer toutes les marges automatiques */
+          .mx-auto, .mx-auto > * {
             margin-left: 0 !important;
             margin-right: 0 !important;
+          }
+          
+          /* Tous les conteneurs en pleine largeur */
+          * {
+            box-sizing: border-box !important;
           }
           
           /* Afficher tout le contenu principal */
