@@ -137,7 +137,7 @@ const MedicalReportView = () => {
       </div>
 
       {/* Contenu du rapport */}
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-none print:m-0 print:p-1 print:mx-0">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-none print:m-0 print:p-0">
         {/* Bandeau d-en-tete INUA AFIA */}
         <div className="bg-emerald-600 text-white rounded-t-lg p-3 sm:p-4 print:rounded-none print:bg-emerald-600">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
@@ -485,7 +485,7 @@ const MedicalReportView = () => {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 5mm 3mm;
+            margin: 0;
           }
           
           html, body {
@@ -651,13 +651,12 @@ const MedicalReportView = () => {
           
           /* Utiliser toute la largeur de la page sans marges */
           .max-w-5xl,
-          .max-w-5xl.mx-auto {
+          .max-w-5xl.mx-auto,
+          .mx-auto {
             max-width: none !important;
             width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
             margin: 0 !important;
-            padding: 2mm !important;
+            padding: 0 !important;
           }
           
           /* Supprimer les contraintes de largeur */
@@ -673,11 +672,25 @@ const MedicalReportView = () => {
             padding: 0 !important;
           }
           
-          /* Le conteneur de la fiche en pleine largeur */
+          /* Le conteneur de la fiche en pleine largeur sans bordures */
           .min-h-screen .border-2.border-emerald-600 {
             width: 100% !important;
             max-width: none !important;
             margin: 0 !important;
+            border: none !important;
+            border-top: 2px solid #059669 !important;
+          }
+          
+          /* Supprimer toutes les bordures verticales */
+          .border-l-2, .border-r-2,
+          .border-l, .border-r,
+          [class*="border-l"], [class*="border-r"] {
+            border-left: none !important;
+            border-right: none !important;
+          }
+          
+          /* Supprimer les bordures internes sauf horizontales */
+          .border-2, .border {
             border-left: none !important;
             border-right: none !important;
           }
