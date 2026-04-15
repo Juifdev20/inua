@@ -137,7 +137,7 @@ const MedicalReportView = () => {
       </div>
 
       {/* Contenu du rapport */}
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:p-0">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-full print:m-0 print:p-0">
         {/* Bandeau d-en-tete INUA AFIA */}
         <div className="bg-emerald-600 text-white rounded-t-lg p-3 sm:p-4 print:rounded-none print:bg-emerald-600">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
@@ -158,10 +158,10 @@ const MedicalReportView = () => {
         </div>
 
         {/* Contenu avec bordure */}
-        <div className="border-2 border-emerald-600 border-t-0 rounded-b-lg bg-card print:border-2 print:rounded-none">
+        <div className="border-2 border-emerald-600 border-t-0 rounded-b-lg bg-card print:border-2 print:rounded-none print:w-full print:min-h-[calc(100vh-20mm)]">
           
           {/* Section 1: Identification Patient */}
-          <div className="border-b border-border">
+          <div className="border-b border-border print:break-inside-avoid">
             <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
               <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                 <User className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -201,7 +201,7 @@ const MedicalReportView = () => {
           </div>
 
           {/* Section 2: Medecin Traitant */}
-          <div className="border-b border-border">
+          <div className="border-b border-border print:break-inside-avoid">
             <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
               <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                 <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -222,7 +222,7 @@ const MedicalReportView = () => {
 
           {/* Section 3: Constantes Vitales */}
           {report.triageInfo && (
-            <div className="border-b border-border">
+            <div className="border-b border-border print:break-inside-avoid">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -260,7 +260,7 @@ const MedicalReportView = () => {
 
           {/* Section 4: Resultats Laboratoire */}
           {report.labResults && report.labResults.length > 0 && (
-            <div className="border-b border-border">
+            <div className="border-b border-border print:break-inside-avoid">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -298,7 +298,7 @@ const MedicalReportView = () => {
 
           {/* Section 5: Prescription */}
           {report.prescription && (
-            <div className="border-b border-border">
+            <div className="border-b border-border print:break-inside-avoid">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -340,7 +340,7 @@ const MedicalReportView = () => {
 
           {/* Section 6: Pharmacie */}
           {report.pharmacyStatus && (
-            <div className="border-b border-border">
+            <div className="border-b border-border print:break-inside-avoid">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Pill className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -372,7 +372,7 @@ const MedicalReportView = () => {
 
           {/* Section 7: Facturation */}
           {report.billingSummary && (
-            <div>
+            <div className="print:break-inside-avoid">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Wallet className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -484,19 +484,41 @@ const MedicalReportView = () => {
       <style>{`
         @media print {
           @page {
-            size: A4;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 8mm;
           }
           
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+            margin: 0;
+            padding: 0;
           }
           
+          /* Cacher l'URL et le footer du navigateur */
+          @page :first {
+            margin-top: 0;
+          }
+          
+          /* Cacher les liens et URLs */
+          a[href]:after {
+            content: none !important;
+          }
+          
+          /* Cacher tous les éléments non désirés */
           .print\\:hidden,
-          nav, aside, .sidebar, header,
-          .fixed, .sticky, [role="banner"] {
+          nav, aside, .sidebar, header, footer,
+          .fixed, .sticky, [role="banner"],
+          .no-print, .dont-print,
+          #__next > div > div:first-child,
+          [class*="footer"], [class*="nav"],
+          [id*="footer"], [id*="nav"] {
             display: none !important;
+          }
+          
+          /* Cacher les URLs après les liens */
+          a:after {
+            content: "" !important;
           }
           
           .bg-emerald-600 {
@@ -564,27 +586,190 @@ const MedicalReportView = () => {
             display: block !important;
           }
           
-          /* Éviter les sauts de page à l'intérieur des sections */
+          /* Gestion des sauts de page */
+          .print\\:break-inside-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
           .border-b {
+            break-inside: avoid;
             page-break-inside: avoid;
           }
           
           .grid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          /* Forcer les sauts de page intelligents */
+          .border-b + .border-b {
+            page-break-before: auto;
+            break-before: auto;
+          }
+          
+          /* Si une section est trop grande, permettre le saut */
+          .print\\:break-inside-avoid {
+            break-inside: avoid-page;
             page-break-inside: avoid;
           }
           
           table {
+            break-inside: auto;
             page-break-inside: auto;
           }
           
           tr {
+            break-inside: avoid;
             page-break-inside: avoid;
+            break-after: auto;
             page-break-after: auto;
           }
           
-          td {
+          td, th {
+            break-inside: avoid;
             page-break-inside: avoid;
-            page-break-after: auto;
+          }
+          
+          /* Empêcher les coupures dans les blocs importants */
+          .bg-emerald-50, .bg-muted\\/50, .bg-amber-50,
+          .p-3, .p-4, .sm\\:p-4 {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          /* Saut de page pour les sections */
+          div[class*="border-b"] {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          /* Permettre les sauts entre les grandes sections si nécessaire */
+          div.print\\:break-inside-avoid + div.print\\:break-inside-avoid {
+            break-before: auto;
+            page-break-before: auto;
+          }
+          
+          /* Utiliser toute la largeur de la page */
+          .max-w-5xl {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+          
+          /* Augmenter la taille du conteneur principal */
+          .min-h-screen > div {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          
+          /* Augmenter les tailles de police en impression */
+          body {
+            font-size: 11pt !important;
+            line-height: 1.4 !important;
+          }
+          
+          .text-xs {
+            font-size: 9pt !important;
+          }
+          
+          .text-sm {
+            font-size: 10pt !important;
+          }
+          
+          .text-base {
+            font-size: 11pt !important;
+          }
+          
+          .text-lg {
+            font-size: 13pt !important;
+          }
+          
+          .text-xl {
+            font-size: 15pt !important;
+          }
+          
+          .text-2xl {
+            font-size: 18pt !important;
+          }
+          
+          /* Réduire les paddings en impression */
+          .p-2 {
+            padding: 4px !important;
+          }
+          
+          .p-3, .sm\\:p-3 {
+            padding: 6px !important;
+          }
+          
+          .p-4, .sm\\:p-4 {
+            padding: 8px !important;
+          }
+          
+          .px-2 {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+          }
+          
+          .px-3, .sm\\:px-3 {
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+          }
+          
+          .px-4, .sm\\:px-4 {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+          }
+          
+          .py-2 {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+          }
+          
+          /* Espacement réduit */
+          .gap-2 {
+            gap: 4px !important;
+          }
+          
+          .gap-3, .sm\\:gap-3 {
+            gap: 6px !important;
+          }
+          
+          .gap-4, .sm\\:gap-4 {
+            gap: 8px !important;
+          }
+          
+          /* Espacement vertical réduit */
+          .space-y-2 > * + * {
+            margin-top: 4px !important;
+          }
+          
+          .space-y-3 > * + * {
+            margin-top: 6px !important;
+          }
+          
+          /* Ajuster la hauteur du header */
+          .bg-emerald-600 {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+          }
+          
+          /* Tables en pleine largeur */
+          table {
+            width: 100% !important;
+          }
+          
+          /* Cacher tout élément qui n'est pas dans la fiche */
+          body > *:not(.min-h-screen) {
+            display: none !important;
+          }
+          
+          /* Supprimer les marges automatiques */
+          .mx-auto {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
           }
         }
       `}</style>
