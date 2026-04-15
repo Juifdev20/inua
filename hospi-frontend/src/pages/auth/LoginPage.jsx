@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, LogIn, Loader2, Eye, EyeOff, Fingerprint, User, ArrowLeft } from 'lucide-react';
+import { Lock, LogIn, Loader2, Eye, EyeOff, User, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import LogoInuaAfya from '../../components/LogoInuaAfya';
 
@@ -114,7 +114,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col items-center justify-start pt-8 sm:pt-12 bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4">
       {/* 🔙 Back to Landing */}
       <Link 
         to="/" 
@@ -125,12 +125,12 @@ const LoginPage = () => {
       </Link>
 
       <div className="w-full max-w-sm">
-        {/* Logo & Header - Compact */}
-        <div className="text-center mb-6">
+        {/* Logo & Header */}
+        <div className="text-center mb-5">
           <div className="inline-flex items-center justify-center mb-3">
             <div className="relative">
               <div className="absolute inset-0 bg-blue-500/20 rounded-2xl blur-xl animate-pulse" />
-              <LogoInuaAfya size={64} className="relative drop-shadow-lg" />
+              <LogoInuaAfya size={56} className="relative drop-shadow-lg" />
             </div>
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent tracking-tight">
@@ -139,11 +139,11 @@ const LoginPage = () => {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Votre santé, notre priorité</p>
         </div>
 
-        {/* Card de connexion - Sans scroll */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 text-center">Connexion</h2>
+        {/* Card de connexion */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl p-5 border border-white/50 dark:border-gray-700/50">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Connexion</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {/* Input Identifiant */}
             <div className="relative group">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
@@ -211,23 +211,18 @@ const LoginPage = () => {
           </form>
 
           {/* Footer */}
-          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Pas encore de compte ?{' '}
-              <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                S'inscrire
-              </Link>
-            </p>
-          </div>
+          <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+            Pas encore de compte ?{' '}
+            <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+              S'inscrire
+            </Link>
+          </p>
         </div>
         
         {/* Security badge */}
-        <div className="mt-4 text-center">
-          <div className="inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <Fingerprint className="w-3.5 h-3.5" />
-            <span>Connexion sécurisée • Chiffrement AES-256</span>
-          </div>
-        </div>
+        <p className="mt-3 text-center text-xs text-gray-400 dark:text-gray-500">
+          Connexion sécurisée • Chiffrement AES-256
+        </p>
       </div>
     </div>
   );

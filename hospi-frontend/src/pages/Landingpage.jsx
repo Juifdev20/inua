@@ -1,6 +1,7 @@
 // 🏥 Page d'accueil (Landing page) - Version Cinématique
 
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users,
   Calendar,
@@ -12,10 +13,11 @@ import {
   Sun,
   ArrowRight,
   Sparkles,
-  Activity
+  Activity,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import LogoInuaAfya from '../components/LogoInuaAfya';
-import AuthModal from '../components/auth/AuthModal';
 
 // 👉 Image de background
 import heroBg from '../images/medical-bg.jpg';
@@ -25,10 +27,6 @@ const LandingPage = () => {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
-  
-  /* ================= AUTH MODAL STATE ================= */
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('login');
 
   useEffect(() => {
     if (darkMode) {
@@ -118,12 +116,9 @@ const LandingPage = () => {
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Connexion (ouvre le modal) */}
-        <button
-          onClick={() => {
-            setAuthModalMode('login');
-            setIsAuthModalOpen(true);
-          }}
+        {/* Connexion - Redirection vers page professionnelle */}
+        <Link
+          to="/login"
           className="
             text-sm sm:text-base
             text-gray-800 dark:text-gray-200
@@ -133,14 +128,11 @@ const LandingPage = () => {
           "
         >
           Connexion
-        </button>
+        </Link>
 
-        {/* Inscription (ouvre le modal) */}
-        <button
-          onClick={() => {
-            setAuthModalMode('register');
-            setIsAuthModalOpen(true);
-          }}
+        {/* Inscription - Redirection vers page professionnelle */}
+        <Link
+          to="/register"
           className="
             px-3 sm:px-6 py-2
             bg-blue-600 text-white
@@ -151,7 +143,7 @@ const LandingPage = () => {
           "
         >
           S'inscrire
-        </button>
+        </Link>
       </div>
 
     </div>
@@ -186,26 +178,21 @@ const LandingPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              onClick={() => {
-                setAuthModalMode('register');
-                setIsAuthModalOpen(true);
-              }}
+            <Link
+              to="/register"
               className="group px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold text-lg hover:scale-105 transition shadow-xl flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
               Commencer gratuitement
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button
-              onClick={() => {
-                setAuthModalMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              className="px-8 py-4 bg-white/90 backdrop-blur text-gray-900 rounded-xl font-semibold text-lg hover:bg-white transition shadow-xl"
+            </Link>
+            <Link
+              to="/login"
+              className="px-8 py-4 bg-white/90 backdrop-blur text-gray-900 rounded-xl font-semibold text-lg hover:bg-white transition shadow-xl flex items-center gap-2"
             >
+              <LogIn className="w-5 h-5" />
               Se connecter
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -255,16 +242,13 @@ const LandingPage = () => {
           <p className="text-xl text-blue-100 mb-8">
             Sécurité • Performance • Simplicité
           </p>
-          <button
-            onClick={() => {
-              setAuthModalMode('register');
-              setIsAuthModalOpen(true);
-            }}
+          <Link
+            to="/register"
             className="group inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:scale-105 transition shadow-lg"
           >
             Commencer maintenant
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -283,12 +267,6 @@ const LandingPage = () => {
         </div>
       </footer>
       
-      {/* 🎭 Auth Modal avec effet de flou */}
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authModalMode}
-      />
     </div>
   );
 };
