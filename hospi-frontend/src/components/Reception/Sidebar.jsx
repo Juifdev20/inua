@@ -157,6 +157,7 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
 
         <div className="p-4 mt-auto">
           <Separator className="mb-4 bg-border" />
+          
           <Button
             variant="ghost" 
             onClick={handleLogout}

@@ -201,9 +201,10 @@ const Sidebar = () => {
           </nav>
         </ScrollArea>
 
-        {/* Footer (Déconnexion) */}
+        {/* Footer (PIN + Déconnexion) */}
         <div className="p-3 border-t border-border">
           <Separator className="mb-3 opacity-50" />
+          
           <Button
             variant="ghost" 
             onClick={handleLogout}
