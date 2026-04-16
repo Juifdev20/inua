@@ -185,6 +185,13 @@ public class ConsultationDTO {
         this.admissionId = admissionId; 
     }
 
+    // --- VALIDATION ET SIGNATURE ---
+    private String numeroFiche;
+    private LocalDateTime dateValidation;
+    private Long signataireId;
+    private String signatureImage;
+    private Boolean isValidated;
+
     // --- LOGIQUE DE COMPATIBILITÉ FRONTEND ---
 
     @JsonProperty("statut")

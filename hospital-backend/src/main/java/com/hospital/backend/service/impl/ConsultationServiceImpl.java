@@ -61,7 +61,13 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final EntityManager entityManager;
 
     private final Object ficheNumberLock = new Object();
+    private final Object numeroFicheLock = new Object();
 
+    /**
+     * ✅ Génère un numéro de consultation aléatoire unique
+     * Format: NNNN/YYYY (ex: 4523/2026)
+     * @deprecated Utilisez generateSequentialNumeroFiche() pour un numérotage séquentiel
+     */
     private String generateFicheNumber() {
         int currentYear = Year.now().getValue();
 
@@ -72,7 +78,6 @@ public class ConsultationServiceImpl implements ConsultationService {
 
             do {
                 // Utilise un random + timestamp pour éviter les collisions
-                // Format: NNNN/YYYY (ex: 4523/2026)
                 int random = (int) (Math.random() * 9000) + 1000; // 4 chiffres entre 1000-9999
                 int sequence = (attempts + 1) % 10000;
                 int combined = (random + sequence) % 10000;
@@ -86,6 +91,52 @@ public class ConsultationServiceImpl implements ConsultationService {
             } while (consultationRepository.findByConsultationCode(nextCode).isPresent());
 
             return nextCode;
+        }
+    }
+
+    /**
+     * ✅ Génère un numéro de fiche séquentiel immuable au format SEQ/ANNEE
+     * Format: XXXX/YYYY (ex: 0001/2026)
+     * Le numéro est incrémenté pour chaque consultation dans l'année
+     */
+    private String generateSequentialNumeroFiche() {
+        int currentYear = Year.now().getValue();
+
+        synchronized (numeroFicheLock) {
+            // Récupérer le dernier numéro de fiche pour l'année courante
+            String yearSuffix = "/" + currentYear;
+            Optional<String> lastNumeroFiche = consultationRepository.findLastNumeroFicheByYear(yearSuffix);
+
+            int nextSequence = 1; // Par défaut, commencer à 1
+
+            if (lastNumeroFiche.isPresent()) {
+                String lastNumero = lastNumeroFiche.get();
+                // Extraire la partie séquence du format XXXX/YYYY
+                try {
+                    String[] parts = lastNumero.split("/");
+                    if (parts.length == 2) {
+                        int lastSequence = Integer.parseInt(parts[0]);
+                        nextSequence = lastSequence + 1;
+                    }
+                } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                    log.warn("⚠️ Format de numeroFiche invalide: {}, utilisation de la séquence par défaut", lastNumero);
+                    // Fallback: compter les consultations de l'année
+                    Long count = consultationRepository.countByYear(currentYear);
+                    nextSequence = count != null ? count.intValue() + 1 : 1;
+                }
+            }
+
+            // Générer le nouveau numéro formaté
+            String newNumeroFiche = String.format("%04d/%d", nextSequence, currentYear);
+
+            // Vérifier l'unicité (sécurité supplémentaire)
+            if (consultationRepository.findByNumeroFiche(newNumeroFiche).isPresent()) {
+                log.error("❌ Collision détectée pour numeroFiche: {}", newNumeroFiche);
+                throw new RuntimeException("Numéro de fiche déjà existant: " + newNumeroFiche);
+            }
+
+            log.info("✅ Numéro de fiche généré: {} pour l'année {}", newNumeroFiche, currentYear);
+            return newNumeroFiche;
         }
     }
 
@@ -1615,7 +1666,25 @@ public class ConsultationServiceImpl implements ConsultationService {
         consultation.setStatus(ConsultationStatus.TERMINE);
         consultation.setStatut("TERMINE");
         consultation.setUpdatedAt(LocalDateTime.now());
-        
+
+        // ✅ Générer le numéro de fiche séquentiel si non existant (immuable)
+        if (consultation.getNumeroFiche() == null || consultation.getNumeroFiche().isEmpty()) {
+            String numeroFiche = generateSequentialNumeroFiche();
+            consultation.setNumeroFiche(numeroFiche);
+            log.info("✅ [FINALISER] Numéro de fiche généré: {} pour consultation {}", numeroFiche, id);
+        }
+
+        // ✅ Ajouter la validation et signature si fournies dans la requête
+        if (request != null) {
+            Long signataireId = request.getSignataireId();
+            String signatureImage = request.getSignatureImage();
+
+            if (signataireId != null || (signatureImage != null && !signatureImage.isEmpty())) {
+                consultation.validate(signataireId, signatureImage);
+                log.info("✅ [FINALISER] Consultation {} validée par signataire: {}", id, signataireId);
+            }
+        }
+
         try {
             Consultation saved = consultationRepository.save(consultation);
             log.info("✅ [FINALISER] Consultation ID: {} - Statut changé en TERMINE avec succès", id);
@@ -1676,6 +1745,13 @@ public class ConsultationServiceImpl implements ConsultationService {
                 // Métadonnées
                 .reportGeneratedAt(LocalDateTime.now())
                 .generatedBy(generatedBy)
+
+                // Validation et Signature
+                .numeroFiche(consultation.getNumeroFiche())
+                .dateValidation(consultation.getDateValidation())
+                .signataireId(consultation.getSignataireId())
+                .signatureImage(consultation.getSignatureImage())
+                .isValidated(consultation.getIsValidated())
                 .build();
 
         log.info("✅ [PARCOURS] Dossier patient généré avec succès pour consultation ID: {}", consultationId);

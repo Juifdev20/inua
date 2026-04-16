@@ -96,8 +96,15 @@ public class ConsultationMapper {
                 .departmentName(consultation.getDoctor() != null &&
                         consultation.getDoctor().getDepartment() != null ?
                         consultation.getDoctor().getDepartment().getNom() : null)
+                // --- VALIDATION ET SIGNATURE ---
+                .numeroFiche(consultation.getNumeroFiche())
+                .dateValidation(consultation.getDateValidation())
+                .signataireId(consultation.getSignataireId())
+                .signatureImage(consultation.getSignatureImage())
+                .isValidated(consultation.getIsValidated())
 
                 .build();
+
 
         // 🔍 VÉRIFICATION POST-MAPPING
         log.info("📊 DTO MAPPÉ:");
@@ -163,6 +170,12 @@ public class ConsultationMapper {
 
                 // --- FRAIS ---
                 .fraisFiche(dto.getFraisFiche())
+                // --- VALIDATION ET SIGNATURE ---
+                .numeroFiche(dto.getNumeroFiche())
+                .dateValidation(dto.getDateValidation())
+                .signataireId(dto.getSignataireId())
+                .signatureImage(dto.getSignatureImage())
+                .isValidated(dto.getIsValidated() != null ? dto.getIsValidated() : false)
 
                 .build();
     }

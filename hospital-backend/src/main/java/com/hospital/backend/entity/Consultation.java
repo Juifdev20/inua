@@ -208,6 +208,23 @@ public class Consultation {
         }
     }
 
+    // --- VALIDATION ET SIGNATURE ---
+    @Column(name = "numero_fiche", unique = true, length = 20)
+    private String numeroFiche;
+
+    @Column(name = "date_validation")
+    private LocalDateTime dateValidation;
+
+    @Column(name = "signataire_id")
+    private Long signataireId;
+
+    @Column(name = "signature_image", columnDefinition = "TEXT")
+    private String signatureImage;
+
+    @Column(name = "is_validated")
+    @Builder.Default
+    private Boolean isValidated = false;
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
@@ -218,6 +235,28 @@ public class Consultation {
 
         if (examTotalAmount == null) {
             examTotalAmount = BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Génère le numéro de fiche format SEQ/ANNEE si non existant
+     */
+    public void generateNumeroFicheIfNeeded(int sequence) {
+        if (this.numeroFiche == null || this.numeroFiche.isEmpty()) {
+            int year = LocalDateTime.now().getYear();
+            this.numeroFiche = String.format("%04d/%d", sequence, year);
+        }
+    }
+
+    /**
+     * Marque la consultation comme validée avec signature
+     */
+    public void validate(Long signataireId, String signatureImage) {
+        this.isValidated = true;
+        this.dateValidation = LocalDateTime.now();
+        this.signataireId = signataireId;
+        if (signatureImage != null && !signatureImage.isEmpty()) {
+            this.signatureImage = signatureImage;
         }
     }
 }

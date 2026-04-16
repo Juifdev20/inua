@@ -308,4 +308,24 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
             "AND c.ficheAmountPaid > 0 " +
             "ORDER BY c.createdAt DESC")
     List<Consultation> findLastPaidConsultation(@Param("patientId") Long patientId);
+
+    // ==========================================
+    // ✅ MÉTHODES POUR NUMÉROTAGE SÉQUENTIEL
+    // ==========================================
+
+    /**
+     * Compte le nombre de consultations créées dans une année donnée
+     * Utilisé pour générer le numéro de fiche séquentiel format SEQ/ANNEE
+     */
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE YEAR(c.createdAt) = :year")
+    Long countByYear(@Param("year") int year);
+
+    /**
+     * Récupère le dernier numéro de fiche généré pour une année donnée
+     * Format attendu: XXXX/YYYY
+     */
+    @Query("SELECT MAX(c.numeroFiche) FROM Consultation c WHERE c.numeroFiche LIKE %:yearSuffix")
+    Optional<String> findLastNumeroFicheByYear(@Param("yearSuffix") String yearSuffix);
+
+    Optional<Consultation> findByNumeroFiche(String numeroFiche);
 }

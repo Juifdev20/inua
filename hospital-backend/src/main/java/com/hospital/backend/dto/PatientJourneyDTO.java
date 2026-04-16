@@ -58,6 +58,13 @@ public class PatientJourneyDTO {
     private LocalDateTime reportGeneratedAt;
     private String generatedBy;
 
+    // --- VALIDATION ET SIGNATURE ---
+    private String numeroFiche;
+    private LocalDateTime dateValidation;
+    private Long signataireId;
+    private String signatureImage;
+    private Boolean isValidated;
+
     /**
      * DTO pour les informations de triage
      */

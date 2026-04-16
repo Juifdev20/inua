@@ -17,6 +17,10 @@ public class FinaliserConsultationRequest {
     private String diagnosticFinal;
     private String notes;
     private List<PrescriptionItemDTO> items;
+
+    // ✅ Champs pour validation et signature
+    private Long signataireId;
+    private String signatureImage;
     
     @Data
     @Builder

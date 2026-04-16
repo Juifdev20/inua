@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Printer, 
-  FileDown, 
-  User, 
-  Stethoscope, 
-  Activity, 
-  FlaskConical, 
-  FileText, 
-  Pill, 
+import { useReactToPrint } from 'react-to-print';
+import {
+  ArrowLeft,
+  Printer,
+  FileDown,
+  User,
+  Stethoscope,
+  Activity,
+  FlaskConical,
+  FileText,
+  Pill,
   Wallet,
   CheckCircle2,
   AlertCircle,
@@ -22,6 +23,8 @@ import { Badge } from '../../components/ui/badge';
 import { admissionService } from '../../services/admissionService';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { toast } from 'sonner';
+import MedicalRecordPrint from '../../components/reports/MedicalRecordPrint';
+import '../../styles/print.css';
 
 const MedicalReportView = () => {
   const { consultationId } = useParams();
@@ -61,14 +64,24 @@ const MedicalReportView = () => {
     });
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const printRef = useRef();
+
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Fiche_Medicale_${report?.numeroFiche || report?.consultationCode || consultationId}`,
+    onPrintError: (error) => {
+      console.error('Erreur d\'impression:', error);
+      toast.error('Erreur lors de l\'impression');
+    },
+    onAfterPrint: () => {
+      toast.success('Document imprimé avec succès');
+    }
+  });
 
   const handleDownloadPDF = () => {
     toast.info('Sélectionnez "Enregistrer au format PDF" comme destination d\'impression');
     setTimeout(() => {
-      window.print();
+      handlePrint();
     }, 500);
   };
 
@@ -666,6 +679,11 @@ const MedicalReportView = () => {
           .space-y-3 > * + * { margin-top: 4px !important; }
         }
       `}</style>
+
+      {/* Composant d'impression caché - utilisation de react-to-print */}
+      <div style={{ display: 'none' }}>
+        <MedicalRecordPrint ref={printRef} report={report} config={config} />
+      </div>
     </div>
   );
 };
