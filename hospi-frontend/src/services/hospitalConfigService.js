@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
+// Helper pour obtenir les headers avec authentification
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+};
+
 /**
  * Service pour gérer la configuration hospitalière
  */
@@ -10,7 +21,7 @@ export const hospitalConfigService = {
    * Récupère la configuration de l'hôpital
    */
   getConfig: async () => {
-    const response = await axios.get(`${API_URL}/hospital-config`);
+    const response = await axios.get(`${API_URL}/hospital-config`, getAuthHeaders());
     return response.data.data;
   },
 
@@ -18,7 +29,7 @@ export const hospitalConfigService = {
    * Met à jour la configuration (Admin uniquement)
    */
   updateConfig: async (configData) => {
-    const response = await axios.put(`${API_URL}/hospital-config`, configData);
+    const response = await axios.put(`${API_URL}/hospital-config`, configData, getAuthHeaders());
     return response.data;
   },
 
@@ -26,7 +37,7 @@ export const hospitalConfigService = {
    * Initialise la configuration par défaut (Admin uniquement)
    */
   initializeDefault: async () => {
-    const response = await axios.post(`${API_URL}/hospital-config/initialize`);
+    const response = await axios.post(`${API_URL}/hospital-config/initialize`, {}, getAuthHeaders());
     return response.data;
   }
 };

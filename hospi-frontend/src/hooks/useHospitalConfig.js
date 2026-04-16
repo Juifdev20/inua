@@ -33,12 +33,24 @@ export const useHospitalConfig = () => {
       const response = await hospitalConfigService.updateConfig(newConfig);
       if (response.success) {
         setConfig({ ...defaultHospitalConfig, ...response.data });
-        toast.success('Configuration mise à jour avec succès');
+        toast.success('Configuration enregistrée avec succès');
         return true;
       }
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
-      toast.error('Erreur lors de la mise à jour de la configuration');
+      if (err.response?.status === 403) {
+        toast.error('Accès refusé', {
+          description: 'Vous devez être connecté en tant qu\'administrateur',
+        });
+      } else if (err.response?.status === 401) {
+        toast.error('Session expirée', {
+          description: 'Veuillez vous reconnecter',
+        });
+      } else {
+        toast.error('Erreur lors de la sauvegarde', {
+          description: err.response?.data?.message || 'Une erreur est survenue',
+        });
+      }
       return false;
     }
   }, []);
