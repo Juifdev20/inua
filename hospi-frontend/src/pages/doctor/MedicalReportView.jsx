@@ -36,6 +36,8 @@ const MedicalReportView = () => {
       try {
         setLoading(true);
         const response = await admissionService.getPatientJourney(consultationId);
+        console.log('Données du rapport:', response);
+        console.log('ConsultationCode:', response.consultationCode);
         setReport(response);
       } catch (err) {
         console.error('Erreur:', err);
@@ -64,8 +66,10 @@ const MedicalReportView = () => {
   };
 
   const handleDownloadPDF = () => {
-    toast.info('Téléchargement PDF en cours...');
-    // TODO: Implémenter le téléchargement PDF
+    toast.info('Sélectionnez "Enregistrer au format PDF" comme destination d\'impression');
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const getPaymentStatusColor = (status) => {
@@ -532,76 +536,42 @@ const MedicalReportView = () => {
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            overflow: visible !important;
           }
           
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
-            height: 100% !important;
             overflow: visible !important;
-            position: static !important;
           }
           
-          /* Cacher tous les éléments UI sauf la fiche */
-          body > *:not(.min-h-screen) {
-            display: none !important;
-          }
-          
-          .min-h-screen {
-            display: block !important;
-            position: static !important;
-            overflow: visible !important;
-            height: auto !important;
-            min-height: auto !important;
-          }
-          
-          /* Cacher le header et les boutons d'action */
-          .min-h-screen > div:first-child {
-            display: none !important;
-          }
-          
-          /* Conteneur principal de la fiche */
-          .min-h-screen > div:nth-child(2) {
-            display: block !important;
-            width: 100% !important;
+          /* Supprimer les contraintes de largeur */
+          .max-w-5xl, .max-w-5xl.mx-auto, .mx-auto {
             max-width: none !important;
+            width: 100% !important;
             margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            position: static !important;
+          }
+          
+          [class*="max-w-"] {
+            max-width: none !important;
+          }
+          
+          /* Conteneur principal */
+          .min-h-screen {
+            min-height: auto !important;
+            height: auto !important;
           }
           
           /* Bandeau d'en-tête */
           .bg-emerald-600 {
             background-color: #059669 !important;
             color: white !important;
-            padding: 10px !important;
           }
           
           /* Contenu principal */
           .border-2.border-emerald-600 {
-            display: block !important;
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 10px !important;
             border: 2px solid #059669 !important;
             border-top: none !important;
-            overflow: visible !important;
-            position: static !important;
-          }
-          
-          /* Supprimer les contraintes de largeur */
-          [class*="max-w-"] {
-            max-width: none !important;
-            width: 100% !important;
-          }
-          
-          /* Supprimer les marges automatiques */
-          .mx-auto {
-            margin: 0 !important;
           }
           
           /* Gestion des sauts de page */
@@ -610,7 +580,6 @@ const MedicalReportView = () => {
             page-break-inside: avoid !important;
           }
           
-          /* Permettre les sauts de page entre les sections */
           .border-b.border-border + .border-b.border-border {
             break-before: auto !important;
             page-break-before: auto !important;
@@ -628,11 +597,6 @@ const MedicalReportView = () => {
             page-break-inside: avoid !important;
           }
           
-          td, th {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-          }
-          
           /* Couleurs de fond */
           .bg-emerald-50 {
             background-color: #ecfdf5 !important;
@@ -640,10 +604,6 @@ const MedicalReportView = () => {
           
           .bg-muted\\/50 {
             background-color: #f5f5f5 !important;
-          }
-          
-          .bg-white {
-            background-color: #ffffff !important;
           }
           
           /* Couleurs de texte */
@@ -676,35 +636,18 @@ const MedicalReportView = () => {
             border-color: #e5e7eb !important;
           }
           
-          /* Police */
+          /* Police réduite */
           body {
             font-size: 10pt !important;
             line-height: 1.3 !important;
           }
           
-          .text-xs {
-            font-size: 8pt !important;
-          }
-          
-          .text-sm {
-            font-size: 9pt !important;
-          }
-          
-          .text-base {
-            font-size: 10pt !important;
-          }
-          
-          .text-lg {
-            font-size: 11pt !important;
-          }
-          
-          .text-xl {
-            font-size: 12pt !important;
-          }
-          
-          .text-2xl {
-            font-size: 14pt !important;
-          }
+          .text-xs { font-size: 8pt !important; }
+          .text-sm { font-size: 9pt !important; }
+          .text-base { font-size: 10pt !important; }
+          .text-lg { font-size: 11pt !important; }
+          .text-xl { font-size: 12pt !important; }
+          .text-2xl { font-size: 14pt !important; }
           
           /* Padding réduit */
           .p-2 { padding: 3px !important; }
