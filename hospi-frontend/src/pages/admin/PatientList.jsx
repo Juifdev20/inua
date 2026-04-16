@@ -12,6 +12,7 @@ import api from '../../api/axios';
 import { Button } from '../../components/ui/button';
 import { toast } from "sonner";
 import { cn } from '../../lib/utils';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 
 // Imports PDF corrigés pour éviter l'erreur TypeError
 import { jsPDF } from 'jspdf';
@@ -19,6 +20,7 @@ import autoTable from 'jspdf-autotable';
 
 const PatientList = () => {
   const navigate = useNavigate(); 
+  const { config } = useHospitalConfig();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,9 +47,45 @@ const PatientList = () => {
   const exportToPDF = () => {
     try {
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
       
-      doc.setFontSize(16);
-      doc.text("LISTE DES PATIENTS", 14, 15);
+      // Logo
+      if (config.hospitalLogoUrl) {
+        try {
+          doc.addImage(config.hospitalLogoUrl, 'PNG', 10, 10, 30, 30);
+        } catch (e) {
+          // Continuer sans logo
+        }
+      }
+      
+      // Nom de l'hôpital
+      doc.setFontSize(14);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text(config.hospitalName?.toUpperCase() || 'INUA AFIA', pageWidth - 10, 20, { align: "right" });
+      
+      // Sous-titre
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text(config.headerSubtitle || 'Système de Gestion Hospitalière', pageWidth - 10, 26, { align: "right" });
+      
+      // Titre du document
+      doc.setFontSize(18);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("LISTE DES PATIENTS", 14, 50);
+      
+      // Date de génération
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Généré le: ${new Date().toLocaleDateString()} - Total: ${patients.length} patients`, 14, 58);
+      
+      // Ligne séparatrice
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(14, 62, pageWidth - 14, 62);
       
       const tableColumn = ["Code", "Nom & Prénom", "Genre", "Groupe Sanguin", "Statut"];
       const tableRows = patients.map((patient) => [
@@ -62,17 +100,41 @@ const PatientList = () => {
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: 25,
-        headStyles: { fillColor: [55, 244, 158] }, // Ton vert #37f49e
+        startY: 68,
+        headStyles: { 
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
         styles: { fontSize: 9 }
       });
 
-      doc.save("liste_patients.pdf");
+      // Pied de page
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(config.footerText || `© ${config.hospitalName || 'INUA AFIA'} - Tous droits réservés`, pageWidth / 2, pageHeight - 15, { align: "center" });
+      
+      if (config.address) {
+        doc.text(config.address, pageWidth / 2, pageHeight - 10, { align: "center" });
+      }
+
+      doc.save(`liste_patients_${config.hospitalName || 'INUA'}_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success("PDF généré avec succès");
     } catch (error) {
       console.error("Erreur PDF détaillée:", error);
       toast.error("Erreur PDF", { description: "Le moteur PDF a rencontré un problème." });
     }
+  };
+
+  // Helper pour convertir hex en RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [5, 150, 105];
   };
 
   const handleSearch = async (e) => {

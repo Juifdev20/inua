@@ -30,6 +30,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import axios from '../../api/axios.js';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { formatCurrencyPDF, formatCurrency, getCurrencySymbol } from '../../utils/currencyFormat';
 
 // Fonction utilitaire pour obtenir le vrai statut de paiement (utilisée par tous les composants)
 const getPaymentStatusLabel = (sale) => {
@@ -39,7 +41,7 @@ const getPaymentStatusLabel = (sale) => {
   
   // Si statut PAYEE mais pas complètement payé
   if (status === 'PAYEE' && !isFullyPaid && remainingAmount > 0) {
-    return `Partiellement payé (Reste: $${remainingAmount.toFixed(2)})`;
+    return `Partiellement payé (Reste: ${formatCurrency(remainingAmount)})`;
   }
   
   // Sinon retourner le statut normal
@@ -162,8 +164,8 @@ const SaleDetailsModal = ({ sale, onClose }) => {
       
       const itemsData = sale.items?.map(item => [
         item.medicationName,
-        `${item.quantity} x $${item.unitPrice?.toFixed(2)}`,
-        `$${(item.quantity * (item.unitPrice || 0)).toFixed(2)}`
+        `${item.quantity} x ${formatCurrencyPDF(item.unitPrice)}`,
+        `${formatCurrencyPDF(item.quantity * (item.unitPrice || 0))}`
       ]) || [];
 
       if (itemsData.length > 0) {
@@ -197,21 +199,21 @@ const SaleDetailsModal = ({ sale, onClose }) => {
       doc.setFontSize(12);
       doc.setTextColor(75, 85, 99);
       doc.text('Sous-total:', 120, currentY);
-      doc.text(`$${sale.totalAmount?.toFixed(2)}`, 180, currentY, { align: 'right' });
+      doc.text(`${formatCurrencyPDF(sale.totalAmount)}`, 180, currentY, { align: 'right' });
 
       currentY += 10;
       doc.setFontSize(14);
       doc.setTextColor(16, 185, 129);
       doc.setFont(undefined, 'bold');
       doc.text('TOTAL:', 120, currentY);
-      doc.text(`$${sale.totalAmount?.toFixed(2)}`, 180, currentY, { align: 'right' });
+      doc.text(`${formatCurrencyPDF(sale.totalAmount)}`, 180, currentY, { align: 'right' });
 
       if (sale.amountPaid) {
         currentY += 8;
         doc.setFontSize(10);
         doc.setTextColor(16, 185, 129);
         doc.setFont(undefined, 'normal');
-        doc.text(`Montant payé: $${sale.amountPaid?.toFixed(2)}`, 120, currentY);
+        doc.text(`Montant payé: ${formatCurrencyPDF(sale.amountPaid)}`, 120, currentY);
       }
 
       // Pied de page

@@ -10,6 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 import { Badge } from '../../components/ui/badge';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { formatCurrencyPDF } from '../../utils/currencyFormat';
 
 // Imports PDF corrigés pour éviter l'erreur "doc.autoTable is not a function"
 import jsPDF from 'jspdf';
@@ -27,6 +29,7 @@ const ExamenClinique = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+  const { config } = useHospitalConfig();
   
   const [loading, setLoading] = useState(false);
   const [consultationData, setConsultationData] = useState(null);
@@ -92,36 +95,95 @@ const ExamenClinique = () => {
     setAntecedents({ ...antecedents, [category]: newList });
   };
 
-  // 2. Génération PDF (Version corrigée)
+  // 2. Génération PDF avec config hospitalière
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
       const patientName = consultationData?.patientName || "Patient";
+      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105]; // Emerald default
       
+      // Logo et en-tête
+      if (config.hospitalLogoUrl) {
+        try {
+          doc.addImage(config.hospitalLogoUrl, 'PNG', 10, 10, 30, 30);
+        } catch (e) {
+          // Si l'image ne charge pas, on continue sans
+        }
+      }
+      
+      // Nom de l'hôpital
+      doc.setFontSize(16);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text(config.hospitalName?.toUpperCase() || 'INUA AFIA', 105, 20, { align: "center" });
+      
+      // Sous-titre
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(config.headerSubtitle || 'Système de Gestion Hospitalière', 105, 27, { align: "center" });
+      
+      // Titre du document
       doc.setFontSize(22);
-      doc.setTextColor(16, 185, 129); // Couleur Emeraude
-      doc.text("META CARE - ORDONNANCE", 105, 20, { align: "center" });
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("ORDONNANCE MÉDICALE", 105, 40, { align: "center" });
       
+      // Ligne séparatrice
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(20, 45, 190, 45);
+      
+      // Informations patient
       doc.setFontSize(11);
       doc.setTextColor(0);
-      doc.text(`Patient : ${patientName}`, 20, 40);
-      doc.text(`Code : ${consultationData?.consultationCode || 'N/A'}`, 20, 48);
-      doc.text(`Date : ${new Date().toLocaleDateString()}`, 150, 40);
+      doc.text(`Patient : ${patientName}`, 20, 55);
+      doc.text(`Code consultation : ${consultationData?.consultationCode || 'N/A'}`, 20, 62);
+      doc.text(`Médecin : ${consultationData?.doctorName || 'Dr. '}`, 20, 69);
+      doc.text(`Date : ${new Date().toLocaleDateString()}`, 150, 55);
 
-      // Appel direct à autoTable pour éviter l'erreur de fonction
+      // Diagnostic
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("DIAGNOSTIC", 20, 85);
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(formData.diagnosis || "Non spécifié", 20, 92);
+
+      // Prescription
       autoTable(doc, {
-        startY: 60,
+        startY: 105,
         head: [['PRESCRIPTION MÉDICALE']],
         body: [[formData.treatment || "Aucun traitement spécifié"]],
         theme: 'grid',
-        headStyles: { fillColor: [16, 185, 129] },
-        styles: { fontSize: 12, cellPadding: 8 }
+        headStyles: { 
+          fillColor: primaryColor,
+          textColor: [255, 255, 255]
+        },
+        styles: { fontSize: 11, cellPadding: 8 }
       });
+
+      // Pied de page
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(config.footerText || `© ${config.hospitalName || 'INUA AFIA'} - Tous droits réservés`, 105, pageHeight - 15, { align: "center" });
+      
+      if (config.address) {
+        doc.text(config.address, 105, pageHeight - 10, { align: "center" });
+      }
 
       doc.save(`Ordonnance_${patientName.replace(/\s+/g, '_')}.pdf`);
     } catch (error) {
       console.error("Erreur PDF:", error);
     }
+  };
+
+  // Helper pour convertir hex en RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [5, 150, 105];
   };
 
   // 3. Action : Envoyer au Laboratoire

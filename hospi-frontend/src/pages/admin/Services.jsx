@@ -51,7 +51,8 @@ const API_BASE_URL = BACKEND_URL;
 // --- IMPORTS PDF ---
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import logoHopital from '../../assets/images/logo.png'; 
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { formatCurrencyPDF, getCurrencySymbol } from '../../utils/currencyFormat'; 
 
 // --- CONFIGURATION AXIOS ---
 const API_URL = `${API_BASE_URL}/api/admin/services`;
@@ -72,6 +73,7 @@ const Services = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [serviceToDelete, setServiceToDelete] = useState(null);
+  const { config } = useHospitalConfig();
 
   // État pour les infos admin (Photo & Nom)
   const [adminProfile, setAdminProfile] = useState({
@@ -152,25 +154,25 @@ const Services = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       
-      // COULEUR THÈME (Bleu Médical Professionnel)
-      const bleuMedical = [41, 128, 185]; 
+      // Couleur depuis la config
+      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
 
       // 1. EN-TÊTE (LOGO / PHOTO PROFIL)
-      try {
-        let imageSrc = adminProfile.photo ? await getBase64ImageFromURL(adminProfile.photo) : logoHopital;
-        doc.addImage(imageSrc, 'PNG', pageWidth - 40, 10, 25, 25);
-      } catch (e) {
-        doc.setFillColor(bleuMedical[0], bleuMedical[1], bleuMedical[2]);
-        doc.circle(pageWidth - 27.5, 22.5, 12, 'F');
+      if (config.hospitalLogoUrl) {
+        try {
+          doc.addImage(config.hospitalLogoUrl, 'PNG', pageWidth - 40, 10, 25, 25);
+        } catch (e) {
+          // Continuer sans logo
+        }
       }
 
-      doc.setTextColor(60, 60, 60);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("CLINIC UCBC", pageWidth - 10, 40, { align: "right" });
+      doc.text(config.hospitalName?.toUpperCase() || 'INUA AFIA', pageWidth - 10, 40, { align: "right" });
 
       // 2. TITRE
-      doc.setTextColor(bleuMedical[0], bleuMedical[1], bleuMedical[2]);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.text("LISTE DES SERVICES", 14, 25);
@@ -180,7 +182,7 @@ const Services = () => {
       doc.setFont("helvetica", "normal");
       doc.text(`Nombre total de services : ${filteredServices.length}`, 14, 35);
 
-      doc.setDrawColor(bleuMedical[0], bleuMedical[1], bleuMedical[2]);
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setLineWidth(0.5);
       doc.line(14, 50, pageWidth - 14, 50);
 
@@ -189,7 +191,7 @@ const Services = () => {
         index + 1,
         s.nom ? s.nom.toUpperCase() : 'N/A',
         s.departement ? s.departement.toUpperCase() : 'N/A',
-        `${s.prix || 0} USD`,
+        formatCurrencyPDF(s.prix || 0),
         `${s.duree || 0} min`,
         s.isActive ? "ACTIF" : "INACTIF"
       ]);
@@ -199,7 +201,7 @@ const Services = () => {
         head: [['N°', 'SERVICE', 'DÉPARTEMENT', 'TARIF', 'DURÉE', 'STATUT']],
         body: tableRows,
         theme: 'grid',
-        headStyles: { fillColor: bleuMedical, textColor: [255, 255, 255], halign: 'center' },
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], halign: 'center' },
         styles: { fontSize: 8.5, cellPadding: 3 },
         columnStyles: {
           0: { halign: 'center', cellWidth: 10 },
@@ -210,7 +212,7 @@ const Services = () => {
       });
 
       // 4. BLOC DE SIGNATURE (BAS À DROITE)
-      const finalY = doc.lastAutoTable.finalY + 20; // Position après le tableau
+      const finalY = doc.lastAutoTable.finalY + 20;
       const dateComplete = new Intl.DateTimeFormat('fr-FR', { 
         day: 'numeric', 
         month: 'long', 
@@ -222,26 +224,44 @@ const Services = () => {
       doc.setFont("helvetica", "normal");
       
       // Texte "Fait à..."
-      doc.text(`Fait à Beni, le ${dateComplete}`, pageWidth - 15, finalY, { align: "right" });
+      const city = config.city || 'Beni';
+      doc.text(`Fait à ${city}, le ${dateComplete}`, pageWidth - 15, finalY, { align: "right" });
       
       // Texte "Signé par..."
       doc.setFont("helvetica", "bold");
       doc.text("Signé par l'Administration,", pageWidth - 15, finalY + 7, { align: "right" });
       
-      doc.setTextColor(bleuMedical[0], bleuMedical[1], bleuMedical[2]);
-      doc.text(adminProfile.nom, pageWidth - 15, finalY + 15, { align: "right" });
+      if (adminProfile.nom) {
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(adminProfile.nom, pageWidth - 15, finalY + 15, { align: "right" });
+      }
 
       // Ligne pour la signature physique
       doc.setDrawColor(200);
       doc.line(pageWidth - 60, finalY + 18, pageWidth - 15, finalY + 18);
 
-      doc.save(`Rapport_Services_UCBC_${new Date().getTime()}.pdf`);
+      // Pied de page
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(config.footerText || `© ${config.hospitalName || 'INUA AFIA'} - Tous droits réservés`, pageWidth / 2, pageHeight - 15, { align: "center" });
+
+      doc.save(`Rapport_Services_${config.hospitalName || 'INUA'}_${new Date().getTime()}.pdf`);
       toast.success("PDF généré avec succès");
 
     } catch (error) {
       console.error("Erreur PDF:", error);
       toast.error("Erreur lors de la génération");
     }
+  };
+
+  // Helper pour convertir hex en RGB
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [5, 150, 105];
   };
 
   // --- ACTIONS ---
