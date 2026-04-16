@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // import { useReactToPrint } from 'react-to-print'; // Temporairement dÃ©sactivÃ©
 import {
@@ -149,7 +149,7 @@ const MedicalReportView = () => {
       </div>
 
       {/* Contenu du rapport - OptimisÃ© pour impression */}
-      <div className="medical-print-container w-full mx-auto p-4 sm:p-6 lg:max-w-5xl">
+      <div className="medical-print-container w-full mx-auto p-2 sm:p-3 print:p-2">
         {/* Bandeau d'en-tÃªte dynamique avec config hospitaliÃ¨re */}
         <div
           className="print-header text-white rounded-t-lg p-3 sm:p-4"
