@@ -149,16 +149,16 @@ const MedicalReportView = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Logo ou icône par défaut */}
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shrink-0">
                 {config.hospitalLogoUrl ? (
                   <img 
                     src={config.hospitalLogoUrl} 
                     alt={config.hospitalName}
-                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                    className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                   />
                 ) : (
                   <Building2 
-                    className="w-5 h-5 sm:w-6 sm:h-6"
+                    className="w-8 h-8 sm:w-10 sm:h-10"
                     style={{ color: config.primaryColor || '#059669' }}
                   />
                 )}
@@ -522,7 +522,7 @@ const MedicalReportView = () => {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 10mm;
           }
           
           html, body {
@@ -532,7 +532,8 @@ const MedicalReportView = () => {
             padding: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            overflow-x: visible !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
           }
           
           /* Cacher l'URL et le footer du navigateur */
@@ -627,6 +628,17 @@ const MedicalReportView = () => {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
+
+          /* Permettre les sauts de page entre les sections */
+          .border-b.border-border {
+            break-after: auto !important;
+            page-break-after: auto !important;
+          }
+
+          /* Éviter de couper les tableaux */
+          .overflow-x-auto {
+            overflow-x: visible !important;
+          }
           
           .border-b {
             break-inside: avoid;
@@ -665,6 +677,7 @@ const MedicalReportView = () => {
           td, th {
             break-inside: avoid;
             page-break-inside: avoid;
+            overflow-x: hidden !important;
           }
           
           /* Empêcher les coupures dans les blocs importants */
@@ -678,6 +691,12 @@ const MedicalReportView = () => {
           div[class*="border-b"] {
             break-inside: avoid;
             page-break-inside: avoid;
+          }
+
+          /* Permettre les sauts de page entre les sections principales */
+          .border-b.border-border + .border-b.border-border {
+            break-before: auto;
+            page-break-before: auto;
           }
           
           /* Permettre les sauts entre les grandes sections si nécessaire */
@@ -694,6 +713,7 @@ const MedicalReportView = () => {
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow-x: hidden !important;
           }
           
           /* Supprimer les contraintes de largeur */
@@ -707,6 +727,7 @@ const MedicalReportView = () => {
             max-width: none !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow-x: hidden !important;
           }
           
           /* Le conteneur de la fiche en pleine largeur sans bordures */
@@ -716,6 +737,7 @@ const MedicalReportView = () => {
             margin: 0 !important;
             border: none !important;
             border-top: 2px solid #059669 !important;
+            overflow-x: hidden !important;
           }
           
           /* Supprimer toutes les bordures verticales */
@@ -823,9 +845,12 @@ const MedicalReportView = () => {
             padding-bottom: 8px !important;
           }
           
-          /* Tables en pleine largeur */
+          /* Tables en pleine largeur sans overflow */
           table {
             width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            table-layout: fixed !important;
           }
           
           /* Supprimer toutes les marges automatiques */
@@ -837,6 +862,7 @@ const MedicalReportView = () => {
           /* Tous les conteneurs en pleine largeur */
           * {
             box-sizing: border-box !important;
+            overflow-x: hidden !important;
           }
           
           /* Afficher tout le contenu principal */
@@ -844,7 +870,14 @@ const MedicalReportView = () => {
           .min-h-screen > div {
             visibility: visible !important;
             opacity: 1 !important;
-            overflow: visible !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+          }
+
+          /* Conteneur principal de la fiche */
+          .border-2.border-emerald-600 {
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
           }
           
           /* S'assurer que le contenu est visible */

@@ -60,18 +60,33 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final PrescriptionRepository prescriptionRepository;
     private final EntityManager entityManager;
 
+    private final Object ficheNumberLock = new Object();
+
     private String generateFicheNumber() {
         int currentYear = Year.now().getValue();
-        long count = consultationRepository.count();
-        String nextCode;
-        long offset = 1;
 
-        do {
-            nextCode = String.format("%04d/%d", count + offset, currentYear);
-            offset++;
-        } while (consultationRepository.findByConsultationCode(nextCode).isPresent());
+        synchronized (ficheNumberLock) {
+            String nextCode;
+            int attempts = 0;
+            final int maxAttempts = 100;
 
-        return nextCode;
+            do {
+                // Utilise un random + timestamp pour éviter les collisions
+                // Format: NNNN/YYYY (ex: 4523/2026)
+                int random = (int) (Math.random() * 9000) + 1000; // 4 chiffres entre 1000-9999
+                int sequence = (attempts + 1) % 10000;
+                int combined = (random + sequence) % 10000;
+
+                nextCode = String.format("%04d/%d", combined, currentYear);
+                attempts++;
+
+                if (attempts >= maxAttempts) {
+                    throw new RuntimeException("Impossible de générer un numéro de fiche unique après " + maxAttempts + " tentatives");
+                }
+            } while (consultationRepository.findByConsultationCode(nextCode).isPresent());
+
+            return nextCode;
+        }
     }
 
     @Override

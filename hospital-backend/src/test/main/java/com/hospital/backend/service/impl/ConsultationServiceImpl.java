@@ -36,10 +36,32 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
+    private final Object ficheNumberLock = new Object();
+
     private String generateFicheNumber() {
         int currentYear = Year.now().getValue();
-        long count = consultationRepository.count();
-        return String.format("%04d/%d", count + 1, currentYear);
+
+        synchronized (ficheNumberLock) {
+            String nextCode;
+            int attempts = 0;
+            final int maxAttempts = 100;
+
+            do {
+                // Utilise un random + sequence pour éviter les collisions
+                int random = (int) (Math.random() * 9000) + 1000;
+                int sequence = (attempts + 1) % 10000;
+                int combined = (random + sequence) % 10000;
+
+                nextCode = String.format("%04d/%d", combined, currentYear);
+                attempts++;
+
+                if (attempts >= maxAttempts) {
+                    throw new RuntimeException("Impossible de générer un numéro de fiche unique après " + maxAttempts + " tentatives");
+                }
+            } while (consultationRepository.findByConsultationCode(nextCode).isPresent());
+
+            return nextCode;
+        }
     }
 
     /**
