@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
+// import { useReactToPrint } from 'react-to-print'; // Temporairement désactivé
 import {
   ArrowLeft,
   Printer,
@@ -66,22 +66,15 @@ const MedicalReportView = () => {
 
   const printRef = useRef();
 
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `Fiche_Medicale_${report?.numeroFiche || report?.consultationCode || consultationId}`,
-    onPrintError: (error) => {
-      console.error('Erreur d\'impression:', error);
-      toast.error('Erreur lors de l\'impression');
-    },
-    onAfterPrint: () => {
-      toast.success('Document imprimé avec succès');
-    }
-  });
+  const handlePrint = () => {
+    // Fallback sans react-to-print
+    window.print();
+  };
 
   const handleDownloadPDF = () => {
     toast.info('Sélectionnez "Enregistrer au format PDF" comme destination d\'impression');
     setTimeout(() => {
-      handlePrint();
+      window.print();
     }, 500);
   };
 
@@ -679,11 +672,6 @@ const MedicalReportView = () => {
           .space-y-3 > * + * { margin-top: 4px !important; }
         }
       `}</style>
-
-      {/* Composant d'impression caché - utilisation de react-to-print */}
-      <div style={{ display: 'none' }}>
-        <MedicalRecordPrint ref={printRef} report={report} config={config} />
-      </div>
     </div>
   );
 };
