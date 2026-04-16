@@ -612,7 +612,7 @@ const HospitalConfigForm = () => {
                     name="fichePrice"
                     type="number"
                     min="0"
-                    step="100"
+                    step="any"
                     value={formData.fichePrice || 5000}
                     onChange={handleChange}
                     className="flex-1"
