@@ -23,14 +23,24 @@ const HospitalConfigForm = () => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : 
+              type === 'number' ? (value === '' ? '' : parseFloat(value)) : value
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const success = await updateConfig(formData);
+    
+    // Nettoyer les données avant envoi: convertir les valeurs vides en null
+    const cleanedData = Object.fromEntries(
+      Object.entries(formData).map(([key, value]) => [
+        key, 
+        value === '' ? null : value
+      ])
+    );
+    
+    const success = await updateConfig(cleanedData);
     setSaving(false);
     if (success) {
       toast.success('Configuration enregistrée avec succès');
@@ -613,8 +623,9 @@ const HospitalConfigForm = () => {
                     type="number"
                     min="0"
                     step="any"
-                    value={formData.fichePrice || 5000}
+                    value={formData.fichePrice ?? ''}
                     onChange={handleChange}
+                    placeholder="Ex: 5000"
                     className="flex-1"
                   />
                   <span className="text-muted-foreground whitespace-nowrap">
