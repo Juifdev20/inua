@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// import { useReactToPrint } from 'react-to-print'; // Temporairement désactivé
+// import { useReactToPrint } from 'react-to-print'; // Temporairement dÃ©sactivÃ©
 import {
   ArrowLeft,
   Printer,
@@ -39,12 +39,12 @@ const MedicalReportView = () => {
       try {
         setLoading(true);
         const response = await admissionService.getPatientJourney(consultationId);
-        console.log('Données du rapport:', response);
+        console.log('DonnÃ©es du rapport:', response);
         console.log('ConsultationCode:', response.consultationCode);
         setReport(response);
       } catch (err) {
         console.error('Erreur:', err);
-        setError('Impossible de charger la fiche médicale');
+        setError('Impossible de charger la fiche mÃ©dicale');
         toast.error('Erreur lors du chargement de la fiche');
       } finally {
         setLoading(false);
@@ -67,12 +67,11 @@ const MedicalReportView = () => {
   const printRef = useRef();
 
   const handlePrint = () => {
-    // Fallback sans react-to-print
     window.print();
   };
 
   const handleDownloadPDF = () => {
-    toast.info('Sélectionnez "Enregistrer au format PDF" comme destination d\'impression');
+    toast.info("SÃ©lectionnez 'Enregistrer au format PDF' comme destination d'impression");
     setTimeout(() => {
       window.print();
     }, 500);
@@ -93,10 +92,10 @@ const MedicalReportView = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center print:hidden">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Chargement de la fiche médicale...</p>
+          <p className="text-muted-foreground">Chargement de la fiche mÃ©dicale...</p>
         </div>
       </div>
     );
@@ -104,13 +103,13 @@ const MedicalReportView = () => {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 print:hidden">
         <div className="bg-card border border-border rounded-xl p-8 max-w-md text-center">
           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-rose-600" />
           </div>
           <h2 className="text-xl font-bold mb-2">Dossier introuvable</h2>
-          <p className="text-muted-foreground mb-6">{error || 'La fiche médicale n\'a pas pu être chargée.'}</p>
+          <p className="text-muted-foreground mb-6">{error || 'La fiche mÃ©dicale n\'a pas pu Ãªtre chargÃ©e.'}</p>
           <Button onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Retour
@@ -121,9 +120,9 @@ const MedicalReportView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background print:bg-white print:text-black">
+    <div className="min-h-screen bg-background">
       {/* Header - Non imprimable */}
-      <div className="print:hidden bg-background border-b border-border p-3 sm:p-4 sticky top-0 z-50 shadow-sm">
+      <div className="print:hidden bg-background border-b border-border p-3 sm:p-4 sticky top-0 z-50 shadow-sm no-print">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="h-9 px-2 sm:px-3 shrink-0">
@@ -149,44 +148,44 @@ const MedicalReportView = () => {
         </div>
       </div>
 
-      {/* Contenu du rapport */}
-      <div className="w-full mx-auto p-4 sm:p-6 lg:max-w-5xl print:w-full print:max-w-none print:m-0 print:p-2">
-        {/* Bandeau d'en-tête dynamique avec config hospitalière */}
-        <div 
-          className="text-white rounded-t-lg p-3 sm:p-4 print:rounded-none"
+      {/* Contenu du rapport - OptimisÃ© pour impression */}
+      <div className="medical-print-container w-full mx-auto p-4 sm:p-6 lg:max-w-5xl">
+        {/* Bandeau d'en-tÃªte dynamique avec config hospitaliÃ¨re */}
+        <div
+          className="print-header text-white rounded-t-lg p-3 sm:p-4"
           style={{ backgroundColor: config.primaryColor || '#059669' }}
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Logo ou icône par défaut */}
+              {/* Logo ou icÃ´ne par dÃ©faut */}
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shrink-0">
                 {config.hospitalLogoUrl ? (
-                  <img 
-                    src={config.hospitalLogoUrl} 
+                  <img
+                    src={config.hospitalLogoUrl}
                     alt={config.hospitalName}
                     className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                   />
                 ) : (
-                  <Building2 
+                  <Building2
                     className="w-8 h-8 sm:w-10 sm:h-10"
                     style={{ color: config.primaryColor || '#059669' }}
                   />
                 )}
               </div>
               <div>
-                {/* Nom de l'hôpital et informations ministère/zone */}
+                {/* Nom de l'hÃ´pital et informations ministÃ¨re/zone */}
                 <h1 className="text-xl sm:text-2xl font-bold tracking-wide">
                   {config.hospitalName || 'INUA AFIA'}
                 </h1>
                 <p className="text-sm text-white/90">
                   {config.ministryName && `${config.ministryName} - `}
-                  {config.zoneName || config.headerSubtitle || 'Système de Gestion Hospitalière'}
+                  {config.zoneName || config.headerSubtitle || 'SystÃ¨me de Gestion HospitaliÃ¨re'}
                 </p>
               </div>
             </div>
             <div className="text-right">
               <div className="bg-white/20 backdrop-blur-sm rounded px-3 py-1.5 mb-2">
-                <p className="text-xs text-white/70 mb-0.5">N° DE FICHE</p>
+                <p className="text-xs text-white/70 mb-0.5">NÂ° DE FICHE</p>
                 <p className="text-lg font-bold">
                   {report.numeroFiche || report.consultationCode || 'N/A'}
                 </p>
@@ -198,8 +197,8 @@ const MedicalReportView = () => {
               </p>
             </div>
           </div>
-          
-          {/* Informations supplémentaires (département, région) */}
+
+          {/* Informations supplÃ©mentaires (dÃ©partement, rÃ©gion) */}
           {(config.departmentName || config.region) && (
             <div className="mt-2 pt-2 border-t border-white/20 text-xs text-white/80">
               {config.departmentName && <span>{config.departmentName}</span>}
@@ -211,10 +210,10 @@ const MedicalReportView = () => {
         </div>
 
         {/* Contenu avec bordure */}
-        <div className="border-2 border-emerald-600 border-t-0 rounded-b-lg bg-card print:border-2 print:rounded-none print:w-full print:min-h-[calc(100vh-20mm)]">
-          
+        <div className="print-content border-2 border-emerald-600 border-t-0 rounded-b-lg bg-card">
+
           {/* Section 1: Identification Patient */}
-          <div className="border-b border-border print:break-inside-avoid">
+          <div className="border-b border-border print-section">
             <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
               <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                 <User className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -232,7 +231,7 @@ const MedicalReportView = () => {
                   <span className="text-sm sm:text-base border-b border-border flex-1 pb-1">{report.patientCode}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
-                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">N° Fiche:</span>
+                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">NÂ° Fiche:</span>
                   <span className="text-sm sm:text-base border-b border-border flex-1 pb-1 font-bold text-emerald-700">{report.consultationCode}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
@@ -258,7 +257,7 @@ const MedicalReportView = () => {
           </div>
 
           {/* Section 2: Medecin Traitant */}
-          <div className="border-b border-border print:break-inside-avoid">
+          <div className="border-b border-border print-section">
             <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
               <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                 <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -279,7 +278,7 @@ const MedicalReportView = () => {
 
           {/* Section 3: Constantes Vitales */}
           {report.triageInfo && (
-            <div className="border-b border-border print:break-inside-avoid">
+            <div className="border-b border-border print-section">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -290,7 +289,7 @@ const MedicalReportView = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                   <div className="border border-border rounded p-2 sm:p-3 text-center bg-muted/50">
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Temperature</p>
-                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.temperature || '-'}°C</p>
+                    <p className="text-base sm:text-lg font-semibold text-emerald-700">{report.triageInfo.temperature || '-'}Â°C</p>
                   </div>
                   <div className="border border-border rounded p-2 sm:p-3 text-center bg-muted/50">
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Tension</p>
@@ -317,7 +316,7 @@ const MedicalReportView = () => {
 
           {/* Section 4: Resultats Laboratoire */}
           {report.labResults && report.labResults.length > 0 && (
-            <div className="border-b border-border print:break-inside-avoid">
+            <div className="border-b border-border print-section">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -325,7 +324,7 @@ const MedicalReportView = () => {
                 </h2>
               </div>
               <div className="p-2 sm:p-4 overflow-x-auto">
-                <table className="w-full border-collapse min-w-[500px]">
+                <table className="w-full border-collapse min-w-[500px] print-table">
                   <thead>
                     <tr className="bg-muted/50">
                       <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Examen</th>
@@ -355,7 +354,7 @@ const MedicalReportView = () => {
 
           {/* Section 5: Prescription */}
           {report.prescription && (
-            <div className="border-b border-border print:break-inside-avoid">
+            <div className="border-b border-border print-section">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -371,7 +370,7 @@ const MedicalReportView = () => {
                 )}
                 {report.prescription.items && report.prescription.items.length > 0 && (
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse min-w-[400px]">
+                    <table className="w-full border-collapse min-w-[400px] print-table">
                       <thead>
                         <tr className="bg-muted/50">
                           <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Medicament</th>
@@ -397,7 +396,7 @@ const MedicalReportView = () => {
 
           {/* Section 6: Pharmacie */}
           {report.pharmacyStatus && (
-            <div className="border-b border-border print:break-inside-avoid">
+            <div className="border-b border-border print-section">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Pill className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -405,7 +404,7 @@ const MedicalReportView = () => {
                 </h2>
               </div>
               <div className="p-2 sm:p-4 overflow-x-auto">
-                <table className="w-full border-collapse min-w-[400px]">
+                <table className="w-full border-collapse min-w-[400px] print-table">
                   <thead>
                     <tr className="bg-muted/50">
                       <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Medicament</th>
@@ -429,7 +428,7 @@ const MedicalReportView = () => {
 
           {/* Section 7: Facturation */}
           {report.billingSummary && (
-            <div className="print:break-inside-avoid">
+            <div className="print-section">
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Wallet className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -439,7 +438,7 @@ const MedicalReportView = () => {
               <div className="p-3 sm:p-4">
                 {/* Tableau des transactions detaillees */}
                 <div className="overflow-x-auto mb-4 sm:mb-6">
-                  <table className="w-full border-collapse min-w-[400px]">
+                  <table className="w-full border-collapse min-w-[400px] print-table">
                     <thead>
                       <tr className="bg-muted/50">
                         <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Description</th>
@@ -490,7 +489,7 @@ const MedicalReportView = () => {
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Recapitulatif des montants */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {/* Colonne gauche - Totaux */}
@@ -514,7 +513,7 @@ const MedicalReportView = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Colonne droite - Statut global */}
                   <div className="flex flex-col justify-center items-center bg-muted/50 border border-border rounded-lg p-3 sm:p-4">
                     <span className="text-xs sm:text-sm text-muted-foreground mb-2">Statut</span>
@@ -537,145 +536,153 @@ const MedicalReportView = () => {
         </div>
       </div>
 
-      {/* Styles pour l'impression */}
+      {/* Styles pour l'impression - AmÃ©liorÃ©s */}
       <style>{`
+        /* ========================================
+           RÃˆGLES D'IMPRESSION OPTIMISÃ‰ES POUR A4
+           ======================================== */
         @media print {
+          /* Configuration de la page A4 */
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 8mm;
           }
-          
+
+          /* Forcer les couleurs exactes Ã  l'impression */
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
-          
+
+          /* FOND BLANC OBLIGATOIRE - Override dark mode */
           html, body {
+            background: white !important;
+            color: black !important;
             margin: 0 !important;
             padding: 0 !important;
-            width: 100% !important;
-            overflow: visible !important;
           }
-          
-          /* Supprimer les contraintes de largeur */
-          .max-w-5xl, .max-w-5xl.mx-auto, .mx-auto {
-            max-width: none !important;
+
+          /* Conteneur principal - Pleine largeur A4 */
+          .medical-print-container {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          /* Supprimer TOUTES les contraintes de largeur */
+          .max-w-5xl, .max-w-4xl, .max-w-3xl,
+          .container, .mx-auto, [class*="max-w-"] {
+            max-width: 100% !important;
             width: 100% !important;
             margin: 0 !important;
           }
-          
-          [class*="max-w-"] {
-            max-width: none !important;
+
+          /* Supprimer les paddings excessifs */
+          .p-4, .p-6, .px-4, .px-6, .sm\\:p-6 {
+            padding: 2mm !important;
           }
-          
-          /* Conteneur principal */
-          .min-h-screen {
-            min-height: auto !important;
-            height: auto !important;
-          }
-          
-          /* Bandeau d'en-tête */
-          .bg-emerald-600 {
+
+          /* En-tÃªte - Conserver la couleur */
+          .print-header {
             background-color: #059669 !important;
             color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 8px !important;
           }
-          
-          /* Contenu principal */
-          .border-2.border-emerald-600 {
+
+          /* Contenu - Bordure verte */
+          .print-content {
             border: 2px solid #059669 !important;
             border-top: none !important;
+            background: white !important;
+            border-radius: 0 !important;
           }
-          
-          /* Gestion des sauts de page */
-          .print\\:break-inside-avoid {
+
+          /* Sections - Ã‰viter les coupures */
+          .print-section {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
-          
-          .border-b.border-border + .border-b.border-border {
-            break-before: auto !important;
-            page-break-before: auto !important;
-          }
-          
+
           /* Tableaux */
-          table {
+          .print-table {
             width: 100% !important;
             break-inside: auto !important;
-            page-break-inside: auto !important;
           }
-          
-          tr {
+
+          .print-table thead {
+            display: table-header-group !important;
+          }
+
+          .print-table tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
-          
-          /* Couleurs de fond */
-          .bg-emerald-50 {
-            background-color: #ecfdf5 !important;
-          }
-          
-          .bg-muted\\/50 {
-            background-color: #f5f5f5 !important;
-          }
-          
-          /* Couleurs de texte */
-          .text-emerald-800 {
-            color: #065f46 !important;
-          }
-          
-          .text-emerald-700 {
-            color: #047857 !important;
-          }
-          
-          .text-emerald-600 {
-            color: #059669 !important;
-          }
-          
-          .text-foreground {
+
+          /* Texte noir par dÃ©faut */
+          .text-foreground, .text-muted-foreground,
+          p, span, td, th, div {
             color: #000000 !important;
           }
-          
+
+          /* Labels gris foncÃ© */
           .text-muted-foreground {
-            color: #374151 !important;
+            color: #4b5563 !important;
           }
-          
+
+          /* Couleurs Ã©meraude prÃ©servÃ©es */
+          .text-emerald-700 { color: #047857 !important; }
+          .text-emerald-800 { color: #065f46 !important; }
+          .bg-emerald-50 { background-color: #ecfdf5 !important; }
+          .bg-emerald-100 { background-color: #d1fae5 !important; }
+          .border-emerald-600 { border-color: #059669 !important; }
+
+          /* Fonds clairs */
+          .bg-muted\\/50, .bg-muted\\/30 {
+            background-color: #f9fafb !important;
+          }
+
+          .bg-card, .bg-background {
+            background-color: white !important;
+          }
+
           /* Bordures */
-          .border-emerald-600 {
-            border-color: #059669 !important;
-          }
-          
           .border-border {
             border-color: #e5e7eb !important;
           }
-          
-          /* Police réduite */
-          body {
-            font-size: 10pt !important;
-            line-height: 1.3 !important;
-          }
-          
+
+          /* Badges */
+          .bg-amber-100 { background-color: #fef3c7 !important; }
+          .text-amber-800 { color: #92400e !important; }
+          .bg-red-100 { background-color: #fee2e2 !important; }
+          .text-red-800 { color: #991b1b !important; }
+
+          /* Police rÃ©duite pour optimiser l'espace */
+          body { font-size: 9pt !important; line-height: 1.3 !important; }
           .text-xs { font-size: 8pt !important; }
           .text-sm { font-size: 9pt !important; }
           .text-base { font-size: 10pt !important; }
           .text-lg { font-size: 11pt !important; }
           .text-xl { font-size: 12pt !important; }
           .text-2xl { font-size: 14pt !important; }
-          
-          /* Padding réduit */
-          .p-2 { padding: 3px !important; }
-          .p-3 { padding: 4px !important; }
-          .p-4 { padding: 5px !important; }
-          .px-2, .px-3, .px-4 { padding-left: 4px !important; padding-right: 4px !important; }
-          .py-2 { padding-top: 3px !important; padding-bottom: 3px !important; }
-          
-          /* Gap réduit */
-          .gap-2 { gap: 3px !important; }
-          .gap-3 { gap: 4px !important; }
-          .gap-4 { gap: 5px !important; }
-          
-          /* Space-y réduit */
-          .space-y-2 > * + * { margin-top: 3px !important; }
-          .space-y-3 > * + * { margin-top: 4px !important; }
+
+          /* RÃ©duire les espacements */
+          .gap-2, .gap-3, .gap-4 { gap: 2mm !important; }
+          .space-y-2 > * + * { margin-top: 2mm !important; }
+          .space-y-3 > * + * { margin-top: 2mm !important; }
+          .mb-2, .mb-3, .mb-4 { margin-bottom: 2mm !important; }
+          .mt-2, .mt-3, .mt-4 { margin-top: 2mm !important; }
+
+          /* Supprimer tout overflow */
+          * {
+            overflow: visible !important;
+          }
         }
       `}</style>
     </div>
