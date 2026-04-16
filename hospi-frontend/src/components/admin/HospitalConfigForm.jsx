@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Building2, MapPin, Phone, Mail, Globe, FileText, Palette, Settings, Save, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Globe, FileText, Palette, Settings, Save, Loader2, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const HospitalConfigForm = () => {
   const { config, loading, updateConfig } = useHospitalConfig();
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setFormData(config);
@@ -145,22 +147,70 @@ const HospitalConfigForm = () => {
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="hospitalLogoUrl">URL du Logo</Label>
+                <Label>Logo de l'Hôpital</Label>
+                
+                {/* Prévisualisation du logo */}
+                {logoPreview || formData.hospitalLogoUrl ? (
+                  <div className="relative w-32 h-32 mb-4 rounded-lg border-2 border-dashed border-gray-300 p-2">
+                    <img
+                      src={logoPreview || formData.hospitalLogoUrl}
+                      alt="Logo preview"
+                      className="w-full h-full object-contain rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoPreview(null);
+                        setFormData(prev => ({ ...prev, hospitalLogoUrl: '' }));
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 mb-4 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                  </div>
+                )}
+                
                 <div className="flex gap-2">
-                  <Input
-                    id="hospitalLogoUrl"
-                    name="hospitalLogoUrl"
-                    value={formData.hospitalLogoUrl || ''}
-                    onChange={handleChange}
-                    placeholder="https://..."
-                    className="flex-1"
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        // Vérifier la taille (max 2MB)
+                        if (file.size > 2 * 1024 * 1024) {
+                          toast.error('Image trop grande', { description: 'Taille maximum : 2MB' });
+                          return;
+                        }
+                        // Convertir en base64
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setLogoPreview(reader.result);
+                          setFormData(prev => ({ ...prev, hospitalLogoUrl: reader.result }));
+                          toast.success('Image chargée avec succès');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
                   />
-                  <Button type="button" variant="outline" size="icon">
-                    <ImageIcon className="w-4 h-4" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choisir une image
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Le logo sera affiché sur toutes les fiches et documents
+                  Formats acceptés : JPG, PNG, GIF. Taille max : 2MB. Le logo sera affiché sur toutes les fiches et documents.
                 </p>
               </div>
             </CardContent>

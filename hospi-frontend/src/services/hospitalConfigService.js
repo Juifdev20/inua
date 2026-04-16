@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_URL = `${BACKEND_URL}/api`;
+const STORAGE_KEY = 'inua_afya_hospital_config';
 
 // Helper pour obtenir les headers avec authentification
 const getAuthHeaders = () => {
@@ -15,30 +17,73 @@ const getAuthHeaders = () => {
 
 /**
  * Service pour gérer la configuration hospitalière
+ * Utilise localStorage comme fallback si l'API n'est pas disponible
  */
 export const hospitalConfigService = {
   /**
    * Récupère la configuration de l'hôpital
    */
   getConfig: async () => {
-    const response = await axios.get(`${API_URL}/hospital-config`, getAuthHeaders());
-    return response.data.data;
+    // Essayer d'abord l'API
+    try {
+      const response = await axios.get(`${API_URL}/hospital-config`, getAuthHeaders());
+      // Sauvegarder en local pour fallback
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(response.data.data));
+      return response.data.data;
+    } catch (error) {
+      // Si 404 ou erreur, utiliser localStorage
+      console.log('API non disponible, utilisation du stockage local');
+      const localConfig = localStorage.getItem(STORAGE_KEY);
+      if (localConfig) {
+        return JSON.parse(localConfig);
+      }
+      // Retourner null pour utiliser les valeurs par défaut
+      return null;
+    }
   },
 
   /**
    * Met à jour la configuration (Admin uniquement)
    */
   updateConfig: async (configData) => {
-    const response = await axios.put(`${API_URL}/hospital-config`, configData, getAuthHeaders());
-    return response.data;
+    // Sauvegarder toujours en localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(configData));
+    
+    // Essayer l'API si disponible
+    try {
+      const response = await axios.put(`${API_URL}/hospital-config`, configData, getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      // Si 404, simuler un succès avec les données locales
+      if (error.response?.status === 404) {
+        console.log('API non disponible, sauvegarde locale uniquement');
+        return { success: true, data: configData, message: 'Configuration sauvegardée localement' };
+      }
+      throw error;
+    }
   },
 
   /**
    * Initialise la configuration par défaut (Admin uniquement)
    */
   initializeDefault: async () => {
-    const response = await axios.post(`${API_URL}/hospital-config/initialize`, {}, getAuthHeaders());
-    return response.data;
+    localStorage.removeItem(STORAGE_KEY);
+    try {
+      const response = await axios.post(`${API_URL}/hospital-config/initialize`, {}, getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return { success: true, message: 'Configuration réinitialisée localement' };
+      }
+      throw error;
+    }
+  },
+  
+  /**
+   * Réinitialise la configuration locale
+   */
+  resetLocalConfig: () => {
+    localStorage.removeItem(STORAGE_KEY);
   }
 };
 

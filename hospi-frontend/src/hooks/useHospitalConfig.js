@@ -46,6 +46,10 @@ export const useHospitalConfig = () => {
         toast.error('Session expirée', {
           description: 'Veuillez vous reconnecter',
         });
+      } else if (err.response?.status === 404) {
+        // API pas encore prête - la config est sauvegardée localement
+        toast.success('Configuration enregistrée localement');
+        return true;
       } else {
         toast.error('Erreur lors de la sauvegarde', {
           description: err.response?.data?.message || 'Une erreur est survenue',
