@@ -26,6 +26,7 @@ public class PricingServiceImpl implements PricingService {
     private final ConsultationRepository consultationRepository;
     private final InvoiceRepository invoiceRepository;
     private final PatientRepository patientRepository;
+    private final HospitalConfigRepository hospitalConfigRepository;
 
     // Validité de la fiche patient en mois
     private static final int FICHE_VALIDITY_MONTHS = 12;
@@ -82,12 +83,14 @@ public class PricingServiceImpl implements PricingService {
             return BigDecimal.ZERO; // Fiche déjà payée
         }
 
-        // Récupérer le prix de la fiche depuis la grille tarifaire
-        BigDecimal fichePrice = getCurrentPrice(PriceListType.FICHE);
+        // Récupérer le prix de la fiche depuis la configuration hospitalière
+        BigDecimal fichePrice = hospitalConfigRepository.findFirstByOrderByIdAsc()
+                .map(HospitalConfig::getFichePrice)
+                .orElse(null);
         
         if (fichePrice == null) {
-            // Valeur par défaut si pas5000 CDF de prix défini ( = ~5$)
-            log.warn("⚠️ Prix de la fiche non défini dans la grille tarifaire, utilisation de la valeur par défaut");
+            // Valeur par défaut si non défini (5000 CDF = ~5$)
+            log.warn("⚠️ Prix de la fiche non défini dans la config hospitalière, utilisation de la valeur par défaut 5000");
             return new BigDecimal("5000");
         }
         

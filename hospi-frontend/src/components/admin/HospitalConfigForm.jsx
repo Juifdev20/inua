@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Building2, MapPin, Phone, Mail, Globe, FileText, Palette, Settings, Save, Loader2, Image as ImageIcon, Upload, X } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Globe, FileText, Palette, Settings, Save, Loader2, Image as ImageIcon, Upload, X, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 const HospitalConfigForm = () => {
@@ -79,6 +79,11 @@ const HospitalConfigForm = () => {
             <Settings className="w-4 h-4 shrink-0" />
             <span className="hidden sm:inline">Système</span>
             <span className="sm:hidden">Sys</span>
+          </TabsTrigger>
+          <TabsTrigger value="financial" className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 text-xs sm:text-sm">
+            <Wallet className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Financier</span>
+            <span className="sm:hidden">Finance</span>
           </TabsTrigger>
         </TabsList>
 
@@ -581,6 +586,52 @@ const HospitalConfigForm = () => {
                   onChange={handleChange}
                   placeholder="dd/MM/yyyy"
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* === ONGLET FINANCIER === */}
+        <TabsContent value="financial" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-600" />
+                Configuration Financière
+              </CardTitle>
+              <CardDescription>
+                Paramètres de tarification et frais de dossier
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="fichePrice">Prix de la fiche patient</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="fichePrice"
+                    name="fichePrice"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={formData.fichePrice || 5000}
+                    onChange={handleChange}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    {formData.currencyCode || 'USD'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ce prix sera appliqué automatiquement lors de la première admission d'un nouveau patient. 
+                  Si le patient a déjà payé une fiche dans les 12 derniers mois, ce frais ne sera pas appliqué.
+                </p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:col-span-2">
+                <h4 className="text-sm font-semibold text-amber-800 mb-2">ℹ️ Information</h4>
+                <p className="text-xs text-amber-700">
+                  La fiche patient est valide pendant 12 mois à partir de la date de paiement. 
+                  Pendant cette période, le patient peut consulter sans payer à nouveau les frais de fiche.
+                </p>
               </div>
             </CardContent>
           </Card>

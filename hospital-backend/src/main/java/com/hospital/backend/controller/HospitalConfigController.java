@@ -94,6 +94,7 @@ public class HospitalConfigController {
                 .enableLogoOnDocuments(config.getEnableLogoOnDocuments())
                 .enableWatermark(config.getEnableWatermark())
                 .enableSignature(config.getEnableSignature())
+                .fichePrice(config.getFichePrice())
                 .updatedAt(config.getUpdatedAt())
                 .updatedBy(config.getUpdatedBy())
                 .build();
@@ -133,6 +134,7 @@ public class HospitalConfigController {
                 .enableLogoOnDocuments(dto.getEnableLogoOnDocuments())
                 .enableWatermark(dto.getEnableWatermark())
                 .enableSignature(dto.getEnableSignature())
+                .fichePrice(dto.getFichePrice() != null ? dto.getFichePrice() : new java.math.BigDecimal("5000"))
                 .build();
     }
 

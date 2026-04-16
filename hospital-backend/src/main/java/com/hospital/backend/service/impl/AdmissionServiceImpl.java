@@ -1,6 +1,7 @@
 package com.hospital.backend.service.impl;
 
 import com.hospital.backend.dto.AdmissionDTO;
+import com.hospital.backend.dto.InvoiceDTO;
 import com.hospital.backend.entity.Admission;
 import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.User;
@@ -9,6 +10,8 @@ import com.hospital.backend.repository.AdmissionRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.AdmissionService;
+import com.hospital.backend.service.InvoiceService;
+import com.hospital.backend.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,8 @@ public class AdmissionServiceImpl implements AdmissionService {
     private final AdmissionRepository admissionRepository;
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
+    private final PricingService pricingService;
+    private final InvoiceService invoiceService;
 
     @Override
     @Transactional(readOnly = true)
@@ -76,6 +81,30 @@ public class AdmissionServiceImpl implements AdmissionService {
 
         Admission saved = admissionRepository.save(admission);
         log.info("Admission créée avec succès ID: {}", saved.getId());
+        
+        // Calculer les montants et créer la facture automatiquement
+        Long patientId = saved.getPatient().getId();
+        java.math.BigDecimal ficheAmount = pricingService.getFicheAmount(patientId);
+        boolean isNewFiche = ficheAmount.compareTo(java.math.BigDecimal.ZERO) > 0;
+        
+        if (isNewFiche) {
+            log.info("💰 Nouvelle fiche détectée pour le patient {} - Montant: {}", patientId, ficheAmount);
+        } else {
+            log.info("📝 Fiche déjà payée pour le patient {} - Pas de frais de fiche", patientId);
+        }
+        
+        // Créer la facture d'admission avec frais de fiche (si applicable)
+        InvoiceDTO invoice = invoiceService.createAdmissionInvoice(
+                patientId,
+                null, // Pas de consultation liée à ce stade
+                ficheAmount,
+                java.math.BigDecimal.ZERO, // Montant consultation sera ajouté plus tard
+                dto.getReasonForVisit(),
+                doctor
+        );
+        
+        log.info("✅ Facture d'admission créée - ID: {}, Fiche: {}, Total: {}", 
+                invoice.getId(), isNewFiche ? ficheAmount : "0 (déjà payée)", invoice.getTotalAmount());
         
         return mapToDTO(saved);
     }

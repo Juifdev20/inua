@@ -121,12 +121,24 @@ public class HospitalConfig {
     @Column(name = "enable_signature")
     private Boolean enableSignature;
 
+    // === CONFIGURATION FINANCIÈRE ===
+    @Column(name = "fiche_price", precision = 19, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal fichePrice = new java.math.BigDecimal("5000");
+
     // === MÉTADONNÉES ===
     @Column(name = "updated_by")
     private Long updatedBy;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.fichePrice == null) {
+            this.fichePrice = new java.math.BigDecimal("5000");
+        }
+    }
 
     @PreUpdate
     protected void onUpdate() {

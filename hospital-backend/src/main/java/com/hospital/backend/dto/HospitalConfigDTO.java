@@ -58,6 +58,9 @@ public class HospitalConfigDTO {
     private Boolean enableWatermark;
     private Boolean enableSignature;
     
+    // === CONFIGURATION FINANCIÈRE ===
+    private java.math.BigDecimal fichePrice;
+    
     // === MÉTADONNÉES ===
     private Long updatedBy;
     private LocalDateTime updatedAt;

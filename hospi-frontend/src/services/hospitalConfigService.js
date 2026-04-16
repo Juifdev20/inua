@@ -119,7 +119,8 @@ export const defaultHospitalConfig = {
   dateFormat: 'dd/MM/yyyy',
   enableLogoOnDocuments: true,
   enableWatermark: false,
-  enableSignature: true
+  enableSignature: true,
+  fichePrice: 5000
 };
 
 export default hospitalConfigService;

@@ -45,6 +45,7 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
         if (config.getEnableLogoOnDocuments() == null) config.setEnableLogoOnDocuments(true);
         if (config.getEnableWatermark() == null) config.setEnableWatermark(false);
         if (config.getEnableSignature() == null) config.setEnableSignature(true);
+        if (config.getFichePrice() == null) config.setFichePrice(new java.math.BigDecimal("5000"));
         
         HospitalConfig saved = configRepository.save(config);
         log.info("✅ Configuration hospitalière mise à jour par l'utilisateur {}", userId);
@@ -96,6 +97,7 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
                 .enableLogoOnDocuments(true)
                 .enableWatermark(false)
                 .enableSignature(true)
+                .fichePrice(new java.math.BigDecimal("5000"))
                 .updatedAt(LocalDateTime.now())
                 .build();
         
