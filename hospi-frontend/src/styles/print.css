@@ -7,17 +7,26 @@
    ISOLATION PRINT - Masquer UI
    ========================================== */
 @media print {
-  /* Masquer la navigation et les boutons d'action */
-  nav,
-  .sidebar,
-  .navbar,
-  .app-header,
-  .navigation,
-  .print\:hidden,
-  [class*="sidebar"],
-  [class*="navigation"],
+  /* Masquer TOUTE l'interface de l'application */
+  header, nav, .sidebar, .navbar, .app-header,
+  .top-bar, .inuaafya-header, .header-container,
+  .navigation, .print\:hidden,
+  [class*="sidebar"], [class*="navigation"],
+  [class*="header"], [class*="topbar"],
   button:not(.print-button),
   .no-print {
+    display: none !important;
+  }
+
+  /* Masquer la barre de recherche */
+  input[type="search"],
+  [placeholder*="Rechercher"],
+  [placeholder*="rechercher"],
+  [placeholder*="Search"],
+  [placeholder*="search"],
+  [class*="searchbar"],
+  [class*="search-bar"],
+  [class*="search-input"] {
     display: none !important;
   }
 
@@ -51,10 +60,28 @@
     overflow-y: visible !important;
   }
 
-  /* Contraintes de largeur A4 */
+  /* Contraintes de largeur A4 - marges réduites pour plus d'espace */
   @page {
     size: A4 portrait;
-    margin: 15mm 12mm;
+    margin: 8mm 6mm;
+  }
+
+  /* Utiliser toute la largeur disponible */
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl,
+  .container,
+  .mx-auto {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Supprimer les paddings latéraux excessifs */
+  .px-4, .px-6, .px-8, .p-4, .p-6, .sm\:px-6 {
+    padding-left: 4mm !important;
+    padding-right: 4mm !important;
   }
 
   /* Éviter les coupures dans les sections importantes */
@@ -99,16 +126,25 @@
    CONTENEUR D'IMPRESSION MÉDICALE
    ========================================== */
 .medical-print-container {
-  width: 210mm;
+  width: 100%;
   min-height: 297mm;
-  margin: 0 auto;
-  padding: 15mm 12mm;
+  margin: 0;
+  padding: 8mm 6mm;
   background: white;
   color: black;
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: 10pt;
   line-height: 1.4;
   box-sizing: border-box;
+}
+
+@media print {
+  .medical-print-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 6mm 4mm !important;
+  }
 }
 
 /* ==========================================
@@ -585,12 +621,13 @@
    NUMÉRO DE PAGE
    ========================================== */
 .page-number {
-  text-align: center;
-  font-size: 8pt;
-  color: #9ca3af;
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px solid #e5e7eb;
+  position: fixed;
+  bottom: 5mm;
+  right: 10mm;
+  font-size: 9pt;
+  color: #666;
+  font-family: Arial, sans-serif;
+  font-weight: 500;
 }
 
 /* ==========================================

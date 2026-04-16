@@ -150,7 +150,7 @@ const MedicalReportView = () => {
       </div>
 
       {/* Contenu du rapport */}
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 print:w-full print:max-w-none print:m-0 print:p-0">
+      <div className="w-full mx-auto p-4 sm:p-6 lg:max-w-5xl print:w-full print:max-w-none print:m-0 print:p-2">
         {/* Bandeau d'en-tête dynamique avec config hospitalière */}
         <div 
           className="text-white rounded-t-lg p-3 sm:p-4 print:rounded-none"
@@ -185,6 +185,12 @@ const MedicalReportView = () => {
               </div>
             </div>
             <div className="text-right">
+              <div className="bg-white/20 backdrop-blur-sm rounded px-3 py-1.5 mb-2">
+                <p className="text-xs text-white/70 mb-0.5">N° DE FICHE</p>
+                <p className="text-lg font-bold">
+                  {report.numeroFiche || report.consultationCode || 'N/A'}
+                </p>
+              </div>
               <p className="text-sm font-medium">FICHE MEDICALE INDIVIDUELLE</p>
               <p className="text-xs text-white/80">
                 {config.city && `${config.city}, `}
