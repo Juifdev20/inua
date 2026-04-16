@@ -212,8 +212,12 @@ const MedicalReportView = () => {
                   <span className="text-sm sm:text-base border-b border-border flex-1 pb-1 truncate">{report.patientName}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
-                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">Code:</span>
+                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">Code Patient:</span>
                   <span className="text-sm sm:text-base border-b border-border flex-1 pb-1">{report.patientCode}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">N° Fiche:</span>
+                  <span className="text-sm sm:text-base border-b border-border flex-1 pb-1 font-bold text-emerald-700">{report.consultationCode}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
                   <span className="text-xs sm:text-sm font-semibold text-muted-foreground sm:min-w-[90px]">Age:</span>
@@ -525,102 +529,79 @@ const MedicalReportView = () => {
             margin: 10mm;
           }
           
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            overflow: visible !important;
+          }
+          
           html, body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-            overflow-y: visible !important;
+            height: 100% !important;
+            overflow: visible !important;
+            position: static !important;
           }
           
-          /* Cacher l'URL et le footer du navigateur */
-          @page :first {
-            margin-top: 0;
-          }
-          
-          /* Cacher les liens et URLs */
-          a[href]:after {
-            content: none !important;
-          }
-          
-          /* Cacher uniquement les éléments UI non désirés */
-          .print\\:hidden,
-          nav, aside, .sidebar, header,
-          .fixed, .sticky, [role="banner"] {
+          /* Cacher tous les éléments UI sauf la fiche */
+          body > *:not(.min-h-screen) {
             display: none !important;
           }
           
-          /* Cacher les URLs après les liens */
-          a:after {
-            content: "" !important;
+          .min-h-screen {
+            display: block !important;
+            position: static !important;
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
           }
           
+          /* Cacher le header et les boutons d'action */
+          .min-h-screen > div:first-child {
+            display: none !important;
+          }
+          
+          /* Conteneur principal de la fiche */
+          .min-h-screen > div:nth-child(2) {
+            display: block !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            position: static !important;
+          }
+          
+          /* Bandeau d'en-tête */
           .bg-emerald-600 {
             background-color: #059669 !important;
-            -webkit-print-color-adjust: exact;
+            color: white !important;
+            padding: 10px !important;
           }
           
-          .bg-emerald-50 {
-            background-color: #ecfdf5 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-muted\\/50 {
-            background-color: #f5f5f5 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .border-emerald-600 {
-            border-color: #059669 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .border-border {
-            border-color: #e5e7eb !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .text-emerald-800 {
-            color: #065f46 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .text-emerald-700 {
-            color: #047857 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .text-emerald-600 {
-            color: #059669 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .text-foreground,
-          .text-gray-900,
-          .text-gray-700 {
-            color: #000000 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .text-muted-foreground,
-          .text-gray-500,
-          .text-gray-600 {
-            color: #374151 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-card,
-          .bg-background,
-          .bg-white {
-            background-color: #ffffff !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .hidden.md\\:block {
+          /* Contenu principal */
+          .border-2.border-emerald-600 {
             display: block !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 10px !important;
+            border: 2px solid #059669 !important;
+            border-top: none !important;
+            overflow: visible !important;
+            position: static !important;
+          }
+          
+          /* Supprimer les contraintes de largeur */
+          [class*="max-w-"] {
+            max-width: none !important;
+            width: 100% !important;
+          }
+          
+          /* Supprimer les marges automatiques */
+          .mx-auto {
+            margin: 0 !important;
           }
           
           /* Gestion des sauts de page */
@@ -628,302 +609,118 @@ const MedicalReportView = () => {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
-
+          
           /* Permettre les sauts de page entre les sections */
-          .border-b.border-border {
-            break-after: auto !important;
-            page-break-after: auto !important;
-          }
-
-          /* Éviter de couper les tableaux */
-          .overflow-x-auto {
-            overflow-x: visible !important;
+          .border-b.border-border + .border-b.border-border {
+            break-before: auto !important;
+            page-break-before: auto !important;
           }
           
-          .border-b {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          
-          .grid {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          
-          /* Forcer les sauts de page intelligents */
-          .border-b + .border-b {
-            page-break-before: auto;
-            break-before: auto;
-          }
-          
-          /* Si une section est trop grande, permettre le saut */
-          .print\\:break-inside-avoid {
-            break-inside: avoid-page;
-            page-break-inside: avoid;
-          }
-          
+          /* Tableaux */
           table {
-            break-inside: auto;
-            page-break-inside: auto;
+            width: 100% !important;
+            break-inside: auto !important;
+            page-break-inside: auto !important;
           }
           
           tr {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            break-after: auto;
-            page-break-after: auto;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
           
           td, th {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            overflow-x: hidden !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
           
-          /* Empêcher les coupures dans les blocs importants */
-          .bg-emerald-50, .bg-muted\\/50, .bg-amber-50,
-          .p-3, .p-4, .sm\\:p-4 {
-            break-inside: avoid;
-            page-break-inside: avoid;
+          /* Couleurs de fond */
+          .bg-emerald-50 {
+            background-color: #ecfdf5 !important;
           }
           
-          /* Saut de page pour les sections */
-          div[class*="border-b"] {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-
-          /* Permettre les sauts de page entre les sections principales */
-          .border-b.border-border + .border-b.border-border {
-            break-before: auto;
-            page-break-before: auto;
+          .bg-muted\\/50 {
+            background-color: #f5f5f5 !important;
           }
           
-          /* Permettre les sauts entre les grandes sections si nécessaire */
-          div.print\\:break-inside-avoid + div.print\\:break-inside-avoid {
-            break-before: auto;
-            page-break-before: auto;
+          .bg-white {
+            background-color: #ffffff !important;
           }
           
-          /* Utiliser toute la largeur de la page sans marges */
-          .max-w-5xl,
-          .max-w-5xl.mx-auto,
-          .mx-auto {
-            max-width: none !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow-x: hidden !important;
+          /* Couleurs de texte */
+          .text-emerald-800 {
+            color: #065f46 !important;
           }
           
-          /* Supprimer les contraintes de largeur */
-          [class*="max-w-"] {
-            max-width: none !important;
+          .text-emerald-700 {
+            color: #047857 !important;
           }
           
-          /* Augmenter la taille du conteneur principal */
-          .min-h-screen > div {
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow-x: hidden !important;
+          .text-emerald-600 {
+            color: #059669 !important;
           }
           
-          /* Le conteneur de la fiche en pleine largeur sans bordures */
-          .min-h-screen .border-2.border-emerald-600 {
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            border: none !important;
-            border-top: 2px solid #059669 !important;
-            overflow-x: hidden !important;
+          .text-foreground {
+            color: #000000 !important;
           }
           
-          /* Supprimer toutes les bordures verticales */
-          .border-l-2, .border-r-2,
-          .border-l, .border-r,
-          [class*="border-l"], [class*="border-r"] {
-            border-left: none !important;
-            border-right: none !important;
+          .text-muted-foreground {
+            color: #374151 !important;
           }
           
-          /* Supprimer les bordures internes sauf horizontales */
-          .border-2, .border {
-            border-left: none !important;
-            border-right: none !important;
+          /* Bordures */
+          .border-emerald-600 {
+            border-color: #059669 !important;
           }
           
-          /* Augmenter les tailles de police en impression */
+          .border-border {
+            border-color: #e5e7eb !important;
+          }
+          
+          /* Police */
           body {
-            font-size: 11pt !important;
-            line-height: 1.4 !important;
+            font-size: 10pt !important;
+            line-height: 1.3 !important;
           }
           
           .text-xs {
-            font-size: 9pt !important;
+            font-size: 8pt !important;
           }
           
           .text-sm {
-            font-size: 10pt !important;
+            font-size: 9pt !important;
           }
           
           .text-base {
-            font-size: 11pt !important;
+            font-size: 10pt !important;
           }
           
           .text-lg {
-            font-size: 13pt !important;
+            font-size: 11pt !important;
           }
           
           .text-xl {
-            font-size: 15pt !important;
+            font-size: 12pt !important;
           }
           
           .text-2xl {
-            font-size: 18pt !important;
+            font-size: 14pt !important;
           }
           
-          /* Réduire les paddings en impression */
-          .p-2 {
-            padding: 4px !important;
-          }
+          /* Padding réduit */
+          .p-2 { padding: 3px !important; }
+          .p-3 { padding: 4px !important; }
+          .p-4 { padding: 5px !important; }
+          .px-2, .px-3, .px-4 { padding-left: 4px !important; padding-right: 4px !important; }
+          .py-2 { padding-top: 3px !important; padding-bottom: 3px !important; }
           
-          .p-3, .sm\\:p-3 {
-            padding: 6px !important;
-          }
+          /* Gap réduit */
+          .gap-2 { gap: 3px !important; }
+          .gap-3 { gap: 4px !important; }
+          .gap-4 { gap: 5px !important; }
           
-          .p-4, .sm\\:p-4 {
-            padding: 8px !important;
-          }
-          
-          .px-2 {
-            padding-left: 4px !important;
-            padding-right: 4px !important;
-          }
-          
-          .px-3, .sm\\:px-3 {
-            padding-left: 6px !important;
-            padding-right: 6px !important;
-          }
-          
-          .px-4, .sm\\:px-4 {
-            padding-left: 8px !important;
-            padding-right: 8px !important;
-          }
-          
-          .py-2 {
-            padding-top: 4px !important;
-            padding-bottom: 4px !important;
-          }
-          
-          /* Espacement réduit */
-          .gap-2 {
-            gap: 4px !important;
-          }
-          
-          .gap-3, .sm\\:gap-3 {
-            gap: 6px !important;
-          }
-          
-          .gap-4, .sm\\:gap-4 {
-            gap: 8px !important;
-          }
-          
-          /* Espacement vertical réduit */
-          .space-y-2 > * + * {
-            margin-top: 4px !important;
-          }
-          
-          .space-y-3 > * + * {
-            margin-top: 6px !important;
-          }
-          
-          /* Ajuster la hauteur du header */
-          .bg-emerald-600 {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-          }
-          
-          /* Tables en pleine largeur sans overflow */
-          table {
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-            table-layout: fixed !important;
-          }
-          
-          /* Supprimer toutes les marges automatiques */
-          .mx-auto, .mx-auto > * {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-          }
-          
-          /* Tous les conteneurs en pleine largeur */
-          * {
-            box-sizing: border-box !important;
-            overflow-x: hidden !important;
-          }
-          
-          /* Afficher tout le contenu principal */
-          .min-h-screen,
-          .min-h-screen > div {
-            visibility: visible !important;
-            opacity: 1 !important;
-            overflow-x: hidden !important;
-            overflow-y: visible !important;
-          }
-
-          /* Conteneur principal de la fiche */
-          .border-2.border-emerald-600 {
-            overflow-x: hidden !important;
-            overflow-y: visible !important;
-          }
-          
-          /* S'assurer que le contenu est visible */
-          div.min-h-screen,
-          .bg-card, .bg-background,
-          .border-2.border-emerald-600,
-          .print\\:break-inside-avoid {
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          
-          /* Réafficher les sections */
-          .print\\:w-full,
-          .print\\:max-w-full,
-          .print\\:rounded-none,
-          .print\\:break-inside-avoid {
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          
-          /* Forcer l'affichage des tableaux */
-          table, thead, tbody, tr, td, th {
-            display: table !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          
-          table {
-            width: 100% !important;
-          }
-          
-          thead {
-            display: table-header-group !important;
-          }
-          
-          tbody {
-            display: table-row-group !important;
-          }
-          
-          tr {
-            display: table-row !important;
-          }
-          
-          td, th {
-            display: table-cell !important;
-          }
+          /* Space-y réduit */
+          .space-y-2 > * + * { margin-top: 3px !important; }
+          .space-y-3 > * + * { margin-top: 4px !important; }
         }
       `}</style>
     </div>
