@@ -217,7 +217,7 @@ const Expenses = () => {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground">
-              {t('finance.expenses') || 'Gestion des Dépenses'}
+              Gestion des Dépenses
             </h1>
             <p className="text-muted-foreground text-sm font-medium">
               {format(new Date(), "MMMM yyyy", { locale: fr })} • {expenses.length} opération{expenses.length > 1 ? 's' : ''}
@@ -227,7 +227,7 @@ const Expenses = () => {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs">
             <Download className="w-3.5 h-3.5" />
-            {t('common.export') || 'Export'}
+            Exporter
           </Button>
           <Button
             onClick={handleNew}
@@ -235,20 +235,20 @@ const Expenses = () => {
             className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-rose-500/20"
           >
             <Plus className="w-3.5 h-3.5" />
-            {t('finance.newExpense') || 'Nouvelle dépense'}
+            Nouvelle Dépense
           </Button>
         </div>
       </div>
 
       {/* ══════ BANDEAU RÉSUMÉ ══════ */}
-      <div className="grid grid-cols-3 gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
         <div className="bg-card p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
             <DollarSign className="w-5 h-5 text-rose-500" />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.todayTotal') || "Aujourd'hui"}
+              Aujourd'hui
             </p>
             <p className="text-lg font-black text-rose-500">{formatCurrency(stats.today)}</p>
           </div>
@@ -259,7 +259,7 @@ const Expenses = () => {
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.monthlyTotal') || 'Ce mois'}
+              Ce Mois
             </p>
             <p className="text-lg font-black text-amber-500">{formatCurrency(stats.monthly)}</p>
           </div>
@@ -270,7 +270,7 @@ const Expenses = () => {
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.totalExpenses') || 'Total'}
+              Total
             </p>
             <p className="text-lg font-black text-violet-500">{expenses.length}</p>
           </div>
@@ -286,7 +286,7 @@ const Expenses = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder={t('finance.searchExpenses') || 'Rechercher...'}
+              placeholder='Rechercher...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-xl border-muted bg-muted/30 focus:bg-background transition-all text-sm h-9"
@@ -318,7 +318,7 @@ const Expenses = () => {
                   )}
                 >
                   <Filter className="w-4 h-4" />
-                  {t('common.all') || 'Toutes'}
+                  Toutes
                   <span className="ml-auto text-xs font-black">{expenses.length}</span>
                 </button>
 
@@ -389,7 +389,7 @@ const Expenses = () => {
                 <p className="text-muted-foreground font-medium">
                   {searchQuery
                     ? `Aucun résultat pour "${searchQuery}"`
-                    : (t('finance.noExpenses') || 'Aucune dépense enregistrée')}
+                    : 'Aucune dépense enregistrée'}
                 </p>
                 <Button
                   onClick={handleNew}
@@ -520,14 +520,14 @@ const Expenses = () => {
           <DialogHeader>
             <DialogTitle className="text-lg font-black">
               {editingExpense
-                ? (t('finance.editExpense') || 'Modifier la dépense')
-                : (t('finance.newExpense') || 'Nouvelle dépense')}
+                ? 'Modifier la dépense'
+                : 'Nouvelle Dépense'}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('finance.amount') || 'Montant'} (CDF)
+                Montant (CDF)
               </Label>
               <Input
                 type="number"
@@ -542,7 +542,7 @@ const Expenses = () => {
 
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('finance.category') || 'Catégorie'}
+                Catégorie
               </Label>
               <Select
                 value={formData.category}
@@ -565,7 +565,7 @@ const Expenses = () => {
 
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('finance.description') || 'Description'}
+                Description
               </Label>
               <Input
                 value={formData.description}
@@ -590,8 +590,8 @@ const Expenses = () => {
               >
                 <Save className="w-4 h-4" />
                 {editingExpense
-                  ? (t('finance.update') || 'Enregistrer')
-                  : (t('finance.save') || 'Créer')}
+                  ? 'Enregistrer'
+                  : 'Créer'}
               </Button>
             </DialogFooter>
           </form>
