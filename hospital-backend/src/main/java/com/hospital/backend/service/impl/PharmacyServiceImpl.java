@@ -5,6 +5,10 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.PharmacyService;
+import com.hospital.backend.service.ExpenseService;
+import com.hospital.backend.service.RevenueService;
+import com.hospital.backend.dto.ExpenseDTO;
+import com.hospital.backend.entity.Expense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +39,8 @@ public class PharmacyServiceImpl implements PharmacyService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final ExpenseService expenseService;
+    private final RevenueService revenueService;
 
     // ══════════════════════════════════════════════════════════════════
     // ORDER MANAGEMENT
@@ -206,6 +212,14 @@ public class PharmacyServiceImpl implements PharmacyService {
         }
 
         PharmacyOrder updatedOrder = pharmacyOrderRepository.save(order);
+        
+        // ★ NOTIFIER LA FINANCE DE LA VENTE
+        try {
+            notifyFinanceOfSale(updatedOrder, amountPaid, paymentMethod);
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la notification de vente à la finance: {}", e.getMessage());
+        }
+        
         return mapToDTO(updatedOrder);
     }
 
@@ -1226,6 +1240,193 @@ public class PharmacyServiceImpl implements PharmacyService {
             .unitPrice(unitPrice)
             .totalPrice(unitPrice.multiply(BigDecimal.valueOf(quantity)))
             .stockQuantity(medication != null ? medication.getStockQuantity() : 0)
+            .build();
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // PHARMACY PURCHASE WITH CASH BALANCE CHECK AND EXPENSE AUTO-CREATION
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * Achète des médicaments auprès d'un fournisseur avec vérification du solde de caisse
+     * et création automatique d'une dépense.
+     * 
+     * @param medicationId ID du médicament à acheter
+     * @param quantity Quantité à acheter
+     * @param unitPrice Prix d'achat unitaire
+     * @param supplierId ID du fournisseur
+     * @param pharmacistId ID du pharmacien qui fait l'achat
+     * @return Le médicament mis à jour avec le nouveau stock
+     * @throws RuntimeException si le solde de caisse est insuffisant
+     */
+    @Override
+    @Transactional
+    public MedicationDTO purchaseMedication(Long medicationId, Integer quantity, BigDecimal unitPrice, 
+                                             Long supplierId, Long pharmacistId) {
+        log.info("💊 [PHARMACY PURCHASE] Démarrage achat médicament ID: {}, Qté: {}, Prix unitaire: {}", 
+                medicationId, quantity, unitPrice);
+        
+        // 1. Calculer le coût total
+        BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        log.info("💰 Coût total de l'achat: {}", totalCost);
+        
+        // 2. Vérifier le solde de la caisse (revenus - dépenses)
+        BigDecimal todayRevenue = revenueService.getTodayTotal();
+        BigDecimal todayExpenses = expenseService.getTodayTotal();
+        BigDecimal cashBalance = todayRevenue.subtract(todayExpenses);
+        
+        log.info("💰 Solde caisse actuel: {} (Revenus: {}, Dépenses: {})", 
+                cashBalance, todayRevenue, todayExpenses);
+        
+        // 3. Vérifier si le solde est suffisant
+        if (cashBalance.compareTo(totalCost) < 0) {
+            log.error("❌ Solde insuffisant pour l'achat. Solde: {}, Coût: {}", cashBalance, totalCost);
+            throw new RuntimeException(
+                "Solde de caisse insuffisant pour cet achat. " +
+                "Solde disponible: " + cashBalance + " CDF, " +
+                "Coût de l'achat: " + totalCost + " CDF"
+            );
+        }
+        
+        // 4. Récupérer le médicament et le fournisseur
+        Medication medication = medicationRepository.findById(medicationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Médicament non trouvé"));
+        
+        Supplier supplier = supplierId != null ? 
+            supplierRepository.findById(supplierId).orElse(null) : null;
+        
+        User pharmacist = userRepository.findById(pharmacistId)
+            .orElseThrow(() -> new ResourceNotFoundException("Pharmacien non trouvé"));
+        
+        // 5. Mettre à jour le stock
+        Integer currentStock = medication.getStockQuantity() != null ? medication.getStockQuantity() : 0;
+        Integer newStock = currentStock + quantity;
+        medication.setStockQuantity(newStock);
+        medication.setUnitPrice(unitPrice); // Mettre à jour le prix d'achat
+        medication = medicationRepository.save(medication);
+        
+        log.info("✅ Stock mis à jour: {} → {} unités", currentStock, newStock);
+        
+        // 6. Créer automatiquement la dépense
+        try {
+            String supplierName = supplier != null ? supplier.getName() : "Fournisseur inconnu";
+            String description = String.format(
+                "Achat médicament: %s (Qté: %d) - Fournisseur: %s - Prix unitaire: %s CDF",
+                medication.getName(), quantity, supplierName, unitPrice
+            );
+            
+            ExpenseDTO expenseDTO = ExpenseDTO.builder()
+                .amount(totalCost)
+                .category(Expense.ExpenseCategory.PHARMACIE)
+                .description(description)
+                .date(LocalDateTime.now())
+                .build();
+            
+            ExpenseDTO createdExpense = expenseService.createExpense(expenseDTO, pharmacistId);
+            log.info("✅ Dépense créée automatiquement: ID={}, Montant={}", 
+                    createdExpense.getId(), createdExpense.getAmount());
+            
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la création de la dépense: {}", e.getMessage());
+            // Ne pas bloquer l'achat si la création de dépense échoue, mais logger l'erreur
+        }
+        
+        // 7. Envoyer une notification à la finance
+        try {
+            notifyFinanceOfPurchase(medication, quantity, totalCost, pharmacist);
+        } catch (Exception e) {
+            log.warn("⚠️ Erreur notification finance: {}", e.getMessage());
+        }
+        
+        log.info("✅ Achat de médicament terminé avec succès");
+        return mapMedicationToDTO(medication);
+    }
+    
+    /**
+     * Notifie la finance d'un nouvel achat de médicaments
+     */
+    private void notifyFinanceOfPurchase(Medication medication, Integer quantity, 
+                                        BigDecimal totalCost, User pharmacist) {
+        Notification notification = Notification.builder()
+            .title("Nouvel achat médicament - Pharmacie")
+            .message(String.format(
+                "Achat de %d unités de %s pour %s CDF par %s %s",
+                quantity,
+                medication.getName(),
+                totalCost,
+                pharmacist.getFirstName(),
+                pharmacist.getLastName()
+            ))
+            .type(NotificationType.SYSTEME)
+            .user(pharmacist)
+            .createdAt(LocalDateTime.now())
+            .isRead(false)
+            .build();
+        
+        notificationRepository.save(notification);
+        log.info("📢 Notification envoyée à la finance pour l'achat de {}", medication.getName());
+    }
+    
+    // ══════════════════════════════════════════════════════════════════
+    // FINANCE NOTIFICATION FOR SALES
+    // ══════════════════════════════════════════════════════════════════
+    
+    /**
+     * Notifie la finance d'une nouvelle vente de médicaments
+     * Cette méthode est appelée automatiquement lors d'une vente
+     */
+    @Override
+    public void notifyFinanceOfSale(PharmacyOrder order, BigDecimal amountPaid, String paymentMethod) {
+        try {
+            String customerName = order.getCustomerName() != null ? 
+                order.getCustomerName() : "Client anonyme";
+            
+            Notification notification = Notification.builder()
+                .title("Nouvelle vente médicament - Pharmacie")
+                .message(String.format(
+                    "Vente de %s CDF (%s) - Client: %s - Commande: %s",
+                    amountPaid,
+                    paymentMethod,
+                    customerName,
+                    order.getOrderCode()
+                ))
+                .type(NotificationType.PAIEMENT_RECU)
+                .user(order.getCreatedBy())
+                .createdAt(LocalDateTime.now())
+                .isRead(false)
+                .build();
+            
+            notificationRepository.save(notification);
+            log.info("📢 Notification de vente envoyée à la finance: Commande {}, Montant {}", 
+                    order.getOrderCode(), amountPaid);
+            
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de l'envoi de la notification de vente: {}", e.getMessage());
+        }
+    }
+    
+    private MedicationDTO mapMedicationToDTO(Medication medication) {
+        return MedicationDTO.builder()
+            .id(medication.getId())
+            .medicationCode(medication.getMedicationCode())
+            .name(medication.getName())
+            .genericName(medication.getGenericName())
+            .description(medication.getDescription())
+            .manufacturer(medication.getManufacturer())
+            .supplier(medication.getSupplier())
+            .category(medication.getCategory())
+            .form(medication.getForm())
+            .strength(medication.getStrength())
+            .price(medication.getPrice())
+            .unitPrice(medication.getUnitPrice())
+            .stockQuantity(medication.getStockQuantity())
+            .minimumStock(medication.getMinimumStock())
+            .expiryDate(medication.getExpiryDate())
+            .purchaseDate(medication.getPurchaseDate())
+            .isActive(medication.getIsActive())
+            .requiresPrescription(medication.getRequiresPrescription())
+            .createdAt(medication.getCreatedAt())
+            .updatedAt(medication.getUpdatedAt())
             .build();
     }
 }

@@ -63,14 +63,14 @@ const FinanceSidebar = () => {
     { name: 'Caisse Admissions',   path: '/finance/caisse-admissions',  icon: UserCheck,       color: 'text-primary' },
     { name: 'Caisse Laboratoire',  path: '/finance/caisse-laboratoire', icon: Microscope,      color: 'text-accent' },
     { name: 'Caisse Pharmacie',    path: '/finance/caisse-pharmacie',   icon: Pill,            color: 'text-primary' },
-    { name: 'Gestion des DÃ©penses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
-    { name: 'Gestion des EntrÃ©es', path: '/finance/entrees',           icon: TrendingUp,      color: 'text-emerald-500' },
+    { name: 'Gestion des Dépenses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
+    { name: 'Gestion des Entrées', path: '/finance/entrees',           icon: TrendingUp,      color: 'text-emerald-500' },
     { name: 'Grille Tarifaire',    path: '/finance/tarifs',             icon: Settings,        color: 'text-muted-foreground' },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    toast.success('Ã€ bientÃ´t!', { description: 'DÃ©connexion rÃ©ussie' });
+    toast.success('À bientôt!', { description: 'Déconnexion réussie' });
     navigate('/login');
   };
 

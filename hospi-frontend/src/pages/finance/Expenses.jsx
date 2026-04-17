@@ -38,6 +38,7 @@ const Expenses = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     category: 'ADMINISTRATION',
@@ -161,6 +162,7 @@ const Expenses = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       if (editingExpense?.id) {
         toast.info('Mise à jour en développement');
@@ -173,6 +175,8 @@ const Expenses = () => {
       loadExpenses();
     } catch (error) {
       toast.error(t('finance.expenseError') || 'Erreur lors de la sauvegarde');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -586,12 +590,17 @@ const Expenses = () => {
               </Button>
               <Button
                 type="submit"
-                className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold gap-1.5 shadow-lg shadow-rose-500/20"
+                disabled={isSubmitting}
+                className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold gap-1.5 shadow-lg shadow-rose-500/20 disabled:opacity-70"
               >
-                <Save className="w-4 h-4" />
-                {editingExpense
-                  ? 'Enregistrer'
-                  : 'Créer'}
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSubmitting
+                  ? 'En cours...'
+                  : (editingExpense ? 'Enregistrer' : 'Créer')}
               </Button>
             </DialogFooter>
           </form>

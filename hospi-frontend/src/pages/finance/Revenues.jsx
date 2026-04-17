@@ -49,6 +49,7 @@ const Revenues = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showModal, setShowModal] = useState(false);
   const [editingRevenue, setEditingRevenue] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     source: 'ADMISSION',
@@ -175,6 +176,7 @@ const Revenues = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const payload = {
         ...formData,
@@ -194,6 +196,8 @@ const Revenues = () => {
       loadRevenues();
     } catch (error) {
       toast.error(t('finance.revenueError') || 'Erreur lors de la sauvegarde');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -560,10 +564,17 @@ const Revenues = () => {
               </Button>
               <Button
                 type="submit"
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 shadow-lg shadow-emerald-500/20"
+                disabled={isSubmitting}
+                className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 shadow-lg shadow-emerald-500/20 disabled:opacity-70"
               >
-                <Save className="w-4 h-4" />
-                {editingRevenue ? (t('finance.update') || 'Enregistrer') : (t('finance.save') || 'Creer')}
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSubmitting 
+                  ? 'En cours...' 
+                  : (editingRevenue ? 'Enregistrer' : 'Créer')}
               </Button>
             </DialogFooter>
           </form>

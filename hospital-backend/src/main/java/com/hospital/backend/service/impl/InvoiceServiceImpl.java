@@ -8,6 +8,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.InvoiceService;
+import com.hospital.backend.service.RevenueService;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPTable;
@@ -46,6 +47,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final StockMovementRepository stockMovementRepository;
     // ★ AJOUTÉ : Pour créer la facture/consulter les détails du médecin si nécessaire
     private final UserRepository userRepository;
+    
+    // ★ AJOUTÉ : Pour créer automatiquement les entrées de revenus
+    private final RevenueService revenueService;
 
     // ── LOGIQUE DE RÉSOLUTION D'IDENTITÉ ─────────────────────────────
 
@@ -359,6 +363,20 @@ public class InvoiceServiceImpl implements InvoiceService {
             // notificationService.sendNotification(invoice.getDepartmentSource(), ...);
         }
 
+        // ★ CRÉATION AUTOMATIQUE DU REVENU ENCAISSÉ
+        try {
+            Long userId = invoice.getCreatedBy() != null ? invoice.getCreatedBy().getId() : null;
+            if (userId != null) {
+                revenueService.createRevenueFromInvoice(invoiceId, userId);
+                log.info("💰✅ Revenu auto-créé pour la facture: {}", invoiceId);
+            } else {
+                log.warn("⚠️ Impossible de créer le revenu - Utilisateur inconnu pour la facture: {}", invoiceId);
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la création auto du revenu pour facture {}: {}", invoiceId, e.getMessage());
+            // Ne pas bloquer le paiement si la création de revenu échoue
+        }
+
         log.info("✅ Paiement traité - Facture: {}, Statut: PAYEE", invoiceId);
         return mapToDTO(invoice);
     }
@@ -450,6 +468,19 @@ public class InvoiceServiceImpl implements InvoiceService {
                 consultation.setStatus(ConsultationStatus.PAYEE);
                 consultationRepository.save(consultation);
                 log.info("✅ Consultation liée {} passée au statut PAYEE", consultation.getId());
+            }
+            
+            // ★ CRÉATION AUTOMATIQUE DU REVENU POUR PHARMACIE
+            try {
+                Long userId = invoice.getCreatedBy() != null ? invoice.getCreatedBy().getId() : null;
+                if (userId != null) {
+                    revenueService.createRevenueFromInvoice(invoiceId, userId);
+                    log.info("💰✅ Revenu pharmacie auto-créé pour la facture: {}", invoiceId);
+                } else {
+                    log.warn("⚠️ Impossible de créer le revenu pharmacie - Utilisateur inconnu pour la facture: {}", invoiceId);
+                }
+            } catch (Exception e) {
+                log.error("❌ Erreur lors de la création auto du revenu pharmacie pour facture {}: {}", invoiceId, e.getMessage());
             }
             
             log.info("💰✅ Paiement pharmacie traité avec succès - Facture: {}, Prescription: {} PAYEE, {} mouvements de stock créés", 
@@ -765,6 +796,19 @@ public class InvoiceServiceImpl implements InvoiceService {
         prescription.setStatus(PrescriptionStatus.PAYEE);
         prescriptionRepository.save(prescription);
         log.info("✅ Prescription {} marquée comme PAYEE - prête pour retrait pharmacie", prescription.getPrescriptionCode());
+        
+        // ★ CRÉATION AUTOMATIQUE DU REVENU POUR PRESCRIPTION
+        try {
+            Long userId = invoice.getCreatedBy() != null ? invoice.getCreatedBy().getId() : null;
+            if (userId != null) {
+                revenueService.createRevenueFromInvoice(invoice.getId(), userId);
+                log.info("💰✅ Revenu auto-créé pour la prescription facture: {}", invoice.getId());
+            } else {
+                log.warn("⚠️ Impossible de créer le revenu prescription - Utilisateur inconnu");
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur création auto revenu prescription: {}", e.getMessage());
+        }
         
         log.info("Paiement traité avec succès pour la facture: {}", invoice.getInvoiceCode());
         

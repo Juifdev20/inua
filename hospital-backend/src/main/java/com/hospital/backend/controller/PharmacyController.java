@@ -814,6 +814,75 @@ public class PharmacyController {
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // PHARMACY PURCHASE WITH CASH BALANCE CHECK
+    // ══════════════════════════════════════════════════════════════════
+
+    @PostMapping("/medications/{medicationId}/purchase")
+    @PreAuthorize("hasAnyRole('PHARMACY', 'PHARMACIE', 'ADMIN')")
+    @Operation(summary = "Acheter des médicaments avec vérification du solde de caisse")
+    public ResponseEntity<?> purchaseMedication(
+            @PathVariable Long medicationId,
+            @RequestBody Map<String, Object> purchaseData) {
+        try {
+            Integer quantity = (Integer) purchaseData.get("quantity");
+            Object priceObj = purchaseData.get("unitPrice");
+            BigDecimal unitPrice = priceObj != null ? new BigDecimal(priceObj.toString()) : BigDecimal.ZERO;
+            Long supplierId = purchaseData.get("supplierId") != null ? 
+                Long.valueOf(purchaseData.get("supplierId").toString()) : null;
+            
+            // Récupérer l'utilisateur courant (pharmacien)
+            Long pharmacistId = getCurrentUserId();
+            
+            log.info("💊 [PHARMACY PURCHASE] Achat médicament ID: {}, Qté: {}, Prix: {}, Fournisseur: {}", 
+                    medicationId, quantity, unitPrice, supplierId);
+            
+            MedicationDTO updatedMedication = pharmacyService.purchaseMedication(
+                    medicationId, quantity, unitPrice, supplierId, pharmacistId);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Achat effectué avec succès",
+                "medication", updatedMedication,
+                "purchasedQuantity", quantity,
+                "unitPrice", unitPrice
+            ));
+            
+        } catch (RuntimeException e) {
+            log.error("❌ [PHARMACY PURCHASE] Erreur: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("❌ [PHARMACY PURCHASE] Erreur inattendue: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "error", "Erreur lors de l'achat: " + e.getMessage()
+            ));
+        }
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+                return userDetails.getUser().getId();
+            }
+            // Fallback: chercher dans la base par nom d'utilisateur
+            String username = auth != null ? auth.getName() : null;
+            if (username != null) {
+                return userRepository.findByUsername(username)
+                    .map(User::getId)
+                    .orElse(1L);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Impossible de récupérer l'ID utilisateur: {}", e.getMessage());
+        }
+        return 1L; // Valeur par défaut
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // EXPIRY ALERTS
     // ══════════════════════════════════════════════════════════════════
 

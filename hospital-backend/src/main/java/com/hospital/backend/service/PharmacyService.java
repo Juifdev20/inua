@@ -1,6 +1,7 @@
 package com.hospital.backend.service;
 
 import com.hospital.backend.dto.*;
+import com.hospital.backend.entity.PharmacyOrder;
 import com.hospital.backend.entity.PharmacyOrderStatus;
 import com.hospital.backend.entity.PharmacyOrderType;
 import org.springframework.data.domain.Pageable;
@@ -73,6 +74,35 @@ public interface PharmacyService {
      * @return Rapport complet avec toutes les données
      */
     PharmacyReportDTO generateReport(LocalDateTime startDate, LocalDateTime endDate, String reportType);
+    
+    // ═════════════════════════════════════════════════════════════════
+    // PHARMACY PURCHASE WITH CASH BALANCE CHECK
+    // ═════════════════════════════════════════════════════════════════
+    
+    /**
+     * Achète des médicaments avec vérification du solde de caisse
+     * et création automatique d'une dépense.
+     * 
+     * @param medicationId ID du médicament à acheter
+     * @param quantity Quantité à acheter
+     * @param unitPrice Prix d'achat unitaire
+     * @param supplierId ID du fournisseur (peut être null)
+     * @param pharmacistId ID du pharmacien qui fait l'achat
+     * @return Le médicament mis à jour avec le nouveau stock
+     * @throws RuntimeException si le solde de caisse est insuffisant
+     */
+    MedicationDTO purchaseMedication(Long medicationId, Integer quantity, BigDecimal unitPrice, 
+                                     Long supplierId, Long pharmacistId);
+    
+    /**
+     * Notifie la finance d'une nouvelle vente de médicaments
+     * Cette méthode est appelée automatiquement lors d'une vente
+     * 
+     * @param order La commande vendue
+     * @param amountPaid Montant payé
+     * @param paymentMethod Méthode de paiement
+     */
+    void notifyFinanceOfSale(PharmacyOrder order, BigDecimal amountPaid, String paymentMethod);
     
     /**
      * Récupère l'évolution des ventes pour le graphique
