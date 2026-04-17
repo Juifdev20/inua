@@ -81,21 +81,31 @@ public class PrescriptionInvoiceController {
             @PathVariable Long invoiceId,
             @RequestParam PaymentMethod paymentMethod) {
         try {
-            log.info("Traitement du paiement pour la facture ID: {} avec méthode: {}", invoiceId, paymentMethod);
+            log.info("🔵 [PAYMENT] Début traitement paiement - Facture ID: {}, Méthode: {}", invoiceId, paymentMethod);
             
             InvoiceDTO invoice = invoiceService.processPrescriptionPayment(invoiceId, paymentMethod);
+            
+            log.info("✅ [PAYMENT] Paiement réussi pour facture ID: {}", invoiceId);
             return ResponseEntity.ok(invoice);
+        } catch (ResourceNotFoundException e) {
+            log.error("❌ [PAYMENT] Facture non trouvée - ID: {}", invoiceId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "error", "Facture non trouvée",
+                "message", "La facture avec ID " + invoiceId + " n'existe pas"
+            ));
         } catch (RuntimeException e) {
-            log.error("Erreur lors du paiement de la prescription: {}", e.getMessage());
+            log.error("❌ [PAYMENT] Erreur métier - Facture ID: {}, Erreur: {}", invoiceId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "Erreur lors du paiement",
-                "message", e.getMessage()
+                "message", e.getMessage(),
+                "invoiceId", invoiceId,
+                "paymentMethod", paymentMethod.toString()
             ));
         } catch (Exception e) {
-            log.error("Erreur inattendue lors du paiement: {}", e.getMessage());
+            log.error("❌ [PAYMENT] Erreur inattendue - Facture ID: {}, Erreur: {}", invoiceId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "error", "Erreur serveur",
-                "message", "Une erreur inattendue est survenue"
+                "message", "Une erreur inattendue est survenue: " + e.getMessage()
             ));
         }
     }

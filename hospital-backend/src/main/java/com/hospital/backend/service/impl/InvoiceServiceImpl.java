@@ -745,27 +745,43 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional
     public InvoiceDTO processPrescriptionPayment(Long invoiceId, PaymentMethod paymentMethod) {
-        log.info("Traitement du paiement pour la facture ID: {} avec méthode: {}", invoiceId, paymentMethod);
+        log.info("🔵 [PAYMENT SERVICE] Début traitement paiement - Facture ID: {}, Méthode: {}", invoiceId, paymentMethod);
         
         Invoice invoice = invoiceRepository.findById(invoiceId)
-            .orElseThrow(() -> new ResourceNotFoundException("Facture non trouvée"));
+            .orElseThrow(() -> {
+                log.error("❌ [PAYMENT SERVICE] Facture non trouvée - ID: {}", invoiceId);
+                return new ResourceNotFoundException("Facture non trouvée");
+            });
+        
+        log.info("✅ [PAYMENT SERVICE] Facture trouvée - Statut: {}, Prescription: {}", 
+            invoice.getStatus(), invoice.getPrescription() != null ? invoice.getPrescription().getId() : null);
         
         if (invoice.getStatus() != InvoiceStatus.EN_ATTENTE) {
-            throw new RuntimeException("Cette facture n'est pas en attente de paiement");
+            log.error("❌ [PAYMENT SERVICE] Statut incorrect - Attendu: EN_ATTENTE, Actuel: {}", invoice.getStatus());
+            throw new RuntimeException("Cette facture n'est pas en attente de paiement. Statut actuel: " + invoice.getStatus());
         }
         
         if (invoice.getPrescription() == null) {
+            log.error("❌ [PAYMENT SERVICE] Facture non liée à une prescription");
             throw new RuntimeException("Cette facture n'est pas liée à une prescription");
         }
         
         // Vérification du stock pour chaque médicament
+        log.info("🔵 [PAYMENT SERVICE] Vérification du stock pour prescription ID: {}", invoice.getPrescription().getId());
         List<PrescriptionItem> items = prescriptionItemRepository.findByPrescriptionId(invoice.getPrescription().getId());
+        log.info("✅ [PAYMENT SERVICE] {} médicaments trouvés dans la prescription", items.size());
+        
         for (PrescriptionItem item : items) {
             Medication medication = item.getMedication();
             Integer requiredQuantity = item.getQuantity() != null ? item.getQuantity() : 0;
             Integer availableStock = medication.getStockQuantity() != null ? medication.getStockQuantity() : 0;
             
+            log.info("🔵 [PAYMENT SERVICE] Stock check - Médicament: {}, Requis: {}, Disponible: {}", 
+                medication.getName(), requiredQuantity, availableStock);
+            
             if (requiredQuantity > availableStock) {
+                log.error("❌ [PAYMENT SERVICE] Stock insuffisant - Médicament: {}, Requis: {}, Disponible: {}", 
+                    medication.getName(), requiredQuantity, availableStock);
                 throw new RuntimeException("Stock insuffisant pour le médicament: " + medication.getName() + 
                     " (Requis: " + requiredQuantity + ", Disponible: " + availableStock + ")");
             }

@@ -40,7 +40,7 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
           backendMethod = 'ESPECES';
           break;
         case 'card':
-          backendMethod = 'CARTE';
+          backendMethod = 'CARTE_BANCAIRE';
           break;
         case 'mobile':
           backendMethod = 'MOBILE';
