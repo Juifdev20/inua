@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import {
-  TrendingDown, Plus, Edit, Trash2, Download, Search,
+  TrendingDown, Plus, Edit, Trash2, Printer, Search,
   Loader2, RefreshCw, X, Calendar, Save, Filter,
   Wallet, ShoppingCart, Zap, Building2, Receipt,
   ArrowDownUp, DollarSign
@@ -31,6 +32,7 @@ const CATEGORIES = {
 
 const Expenses = () => {
   const { t } = useTranslation();
+  const { config } = useHospitalConfig();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -303,9 +305,13 @@ const Expenses = () => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none">
-            <Download className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
-            Exporter
+          <Button 
+            variant="outline" 
+            className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none"
+            onClick={() => window.print()}
+          >
+            <Printer className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
+            Imprimer
           </Button>
           <Button
             onClick={handleNew}
@@ -546,7 +552,7 @@ const Expenses = () => {
 
                                 {/* Description */}
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-sm text-foreground truncate">
+                                  <p className="font-bold text-sm text-foreground break-words">
                                     {expense.description || 'Sans description'}
                                   </p>
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">

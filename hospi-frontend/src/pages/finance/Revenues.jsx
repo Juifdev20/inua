@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import {
-  TrendingUp, Plus, Edit, Trash2, Download, Search,
+  TrendingUp, Plus, Edit, Trash2, Printer, Search,
   Loader2, RefreshCw, X, Calendar, Save, Filter,
   Wallet, Stethoscope, Microscope, ShoppingCart, Building2,
   Receipt, ArrowDownUp, DollarSign, Bed, FileText
@@ -42,6 +43,7 @@ const PAYMENT_METHODS = {
 
 const Revenues = () => {
   const { t } = useTranslation();
+  const { config } = useHospitalConfig();
   const [revenues, setRevenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState('all');
@@ -269,9 +271,13 @@ const Revenues = () => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none">
-            <Download className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
-            Exporter
+          <Button 
+            variant="outline" 
+            className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none"
+            onClick={() => window.print()}
+          >
+            <Printer className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
+            Imprimer
           </Button>
           <Button
             onClick={handleNew}
@@ -462,7 +468,7 @@ const Revenues = () => {
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-sm text-foreground truncate">
+                                  <p className="font-bold text-sm text-foreground break-words">
                                     {revenue.description || 'Sans description'}
                                   </p>
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
@@ -642,6 +648,110 @@ const Revenues = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ══════ ZONE D'IMPRESSION (Invisible à l'écran) ══════ */}
+      <div className="hidden print:block print-area">
+        <div className="bg-white text-black p-8 font-serif leading-tight">
+          {/* ENTÊTE OFFICIELLE */}
+          <div className="text-center space-y-1 border-b-2 border-black pb-4 mb-6">
+            <h1 className="text-xl font-bold uppercase">{config?.country || 'République Démocratique du Congo'}</h1>
+            <h2 className="text-lg font-semibold uppercase">{config?.departmentName || 'Ministère de la Santé Publique'}</h2>
+            <div className="flex justify-between text-xs font-medium px-4">
+              <span>PROVINCE : {config?.region || '........................'}</span>
+              <span>VILLE : {config?.city || '........................'}</span>
+            </div>
+            <div className="flex justify-between text-xs font-medium px-4 mt-1">
+              <span>HÔPITAL : {config?.hospitalName || '........................'}</span>
+              <span>DATE : {format(new Date(), 'dd/MM/yyyy')}</span>
+            </div>
+            <div className="mt-4 inline-block border-2 border-black px-6 py-1 font-black text-lg">
+              RAPPORT DES REVENUS
+            </div>
+          </div>
+
+          {/* RÉSUMÉ STATISTIQUE */}
+          <div className="mb-6 p-4 border-2 border-black">
+            <h3 className="font-bold text-sm uppercase mb-2 underline">Résumé Statistique</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="font-bold text-emerald-600">Aujourd'hui</p>
+                <p>CDF: {formatCurrency(stats.today?.CDF || 0, 'CDF')}</p>
+                <p>USD: {formatCurrency(stats.today?.USD || 0, 'USD')}</p>
+              </div>
+              <div>
+                <p className="font-bold text-blue-600">Ce Mois</p>
+                <p>CDF: {formatCurrency(stats.monthly?.CDF || 0, 'CDF')}</p>
+                <p>USD: {formatCurrency(stats.monthly?.USD || 0, 'USD')}</p>
+              </div>
+              <div>
+                <p className="font-bold text-violet-600">Total</p>
+                <p>CDF: {formatCurrency(stats.total?.CDF || 0, 'CDF')}</p>
+                <p>USD: {formatCurrency(stats.total?.USD || 0, 'USD')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* TABLEAU DES REVENUS */}
+          <div className="border-2 border-black">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-100 border-b border-black">
+                  <th className="p-2 text-left border-r border-black">Date</th>
+                  <th className="p-2 text-left border-r border-black">Description</th>
+                  <th className="p-2 text-left border-r border-black">Source</th>
+                  <th className="p-2 text-left border-r border-black">Devise</th>
+                  <th className="p-2 text-right">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                {revenues.map((revenue) => {
+                  const srcConfig = REVENUE_SOURCES[revenue.source] || { label: revenue.source };
+                  return (
+                    <tr key={revenue.id} className="border-b border-black">
+                      <td className="p-2 border-r border-black">
+                        {revenue.date ? format(new Date(revenue.date), 'dd/MM/yyyy HH:mm') : '--'}
+                      </td>
+                      <td className="p-2 border-r border-black">
+                        {revenue.description || 'Sans description'}
+                      </td>
+                      <td className="p-2 border-r border-black">
+                        {srcConfig.label}
+                      </td>
+                      <td className="p-2 border-r border-black">
+                        {revenue.currency || 'CDF'}
+                      </td>
+                      <td className="p-2 text-right font-bold">
+                        {formatCurrency(revenue.amount, revenue.currency || 'CDF')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* SIGNATURE */}
+          <div className="mt-12 text-center text-[10px] uppercase">
+            <p className="italic underline mb-8">Le Caissier</p>
+            <p className="border-t border-black pt-2 font-bold">Validé numériquement</p>
+          </div>
+        </div>
+      </div>
+
+      {/* STYLE CSS POUR L'IMPRESSION */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * { visibility: hidden; background: white !important; color: black !important; }
+          .print-area, .print-area * { visibility: visible; }
+          .print-area { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+          }
+          @page { size: A4; margin: 1cm; }
+        }
+      `}} />
     </div>
   );
 };
