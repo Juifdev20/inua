@@ -11,11 +11,14 @@ import com.hospital.backend.dto.ExamItemDTO;
 import com.hospital.backend.dto.MedicalServiceDTO;
 import com.hospital.backend.dto.PageResponse;
 import com.hospital.backend.dto.PatientJourneyDTO;
+import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.NotificationService;
+import com.hospital.backend.service.RevenueService;
 import jakarta.persistence.EntityGraph;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +62,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final LabTestRepository labTestRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final EntityManager entityManager;
+    private final RevenueService revenueService;
 
     private final Object ficheNumberLock = new Object();
     private final Object numeroFicheLock = new Object();
@@ -1220,6 +1224,17 @@ public class ConsultationServiceImpl implements ConsultationService {
         consultation.setUpdatedAt(LocalDateTime.now());
 
         Consultation savedConsultation = consultationRepository.save(consultation);
+
+        // 💰 Créer un revenu avec la source LABORATOIRE
+        try {
+            Long userId = getCurrentUserId();
+            createLabRevenue(savedConsultation, paidAmount, userId);
+            log.info("💰 [CAISSE] Revenu LABORATOIRE créé pour consultation ID: {}", consultationId);
+        } catch (Exception e) {
+            log.error("❌ [CAISSE] Erreur lors de la création du revenu LABORATOIRE: {}", e.getMessage(), e);
+            // Ne pas bloquer le processus si la création de revenu échoue
+        }
+
         return mapToDTO(savedConsultation);
     }
 
@@ -2053,5 +2068,54 @@ public class ConsultationServiceImpl implements ConsultationService {
                     .paymentStatus("ERREUR")
                     .build();
         }
+    }
+
+    /**
+     * Crée un revenu avec la source LABORATOIRE lors du paiement des examens
+     */
+    private void createLabRevenue(Consultation consultation, BigDecimal amount, Long userId) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("⚠️ Montant invalide pour création revenu labo: {}", amount);
+            return;
+        }
+
+        // Préparer le patient name
+        String patientName = "Patient";
+        if (consultation.getPatient() != null) {
+            patientName = consultation.getPatient().getFirstName() + " " +
+                         consultation.getPatient().getLastName();
+        }
+
+        RevenueDTO revenueDTO = RevenueDTO.builder()
+            .amount(amount)
+            .source(Revenue.RevenueSource.LABORATOIRE)
+            .paymentMethod(PaymentMethod.ESPECES)
+            .currency(Currency.CDF)
+            .description("Paiement examens laboratoire - Patient: " + patientName +
+                        " - Consultation ID: " + consultation.getId())
+            .date(LocalDateTime.now())
+            .build();
+
+        revenueService.createRevenue(revenueDTO, userId != null ? userId : 1L);
+        log.info("💰 Revenu LABORATOIRE créé: {} CDF pour {} - Consultation ID: {}", amount, patientName, consultation.getId());
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+                return userDetails.getUser().getId();
+            }
+            String username = auth != null ? auth.getName() : null;
+            if (username != null) {
+                return userRepository.findByUsername(username)
+                    .map(User::getId)
+                    .orElse(1L);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Impossible de récupérer l'ID utilisateur: {}", e.getMessage());
+        }
+        return 1L;
     }
 }
