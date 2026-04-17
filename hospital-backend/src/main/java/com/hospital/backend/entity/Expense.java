@@ -31,6 +31,10 @@ public class Expense {
     @Column(nullable = false)
     private ExpenseCategory category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency", nullable = false)
+    private Currency currency = Currency.CDF;  // Par défaut en CDF
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

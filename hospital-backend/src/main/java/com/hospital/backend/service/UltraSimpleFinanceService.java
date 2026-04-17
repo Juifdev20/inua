@@ -3,6 +3,7 @@ package com.hospital.backend.service;
 import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.Consultation;
 import com.hospital.backend.entity.ConsultationStatus;
+import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.PaymentMethod;
 import com.hospital.backend.entity.Revenue;
 import com.hospital.backend.entity.User;
@@ -145,19 +146,17 @@ public class UltraSimpleFinanceService {
     /**
      * Crée un revenu automatiquement après un paiement de consultation
      */
-    private void createRevenueFromPayment(Consultation consultation, Double amountPaid, 
+    private void createRevenueFromPayment(Consultation consultation, Double amountPaid,
                                           String paymentMethodStr, Long userId) {
         if (amountPaid == null || amountPaid <= 0) {
             log.warn("⚠️ Montant invalide pour création revenu: {}", amountPaid);
             return;
         }
-        
-        // Déterminer la source selon le statut de la consultation
+
+        // CORRECTION: Les paiements de consultation/admission doivent toujours aller à ADMISSION
+        // La source ne doit pas être déterminée par le statut de consultation
         Revenue.RevenueSource source = Revenue.RevenueSource.ADMISSION;
-        if (consultation.getStatus() == ConsultationStatus.EXAMENS_PAYES) {
-            source = Revenue.RevenueSource.LABORATOIRE;
-        }
-        
+
         // Convertir le paymentMethod string en enum
         PaymentMethod paymentMethod = PaymentMethod.ESPECES;
         try {
@@ -167,24 +166,25 @@ public class UltraSimpleFinanceService {
         } catch (IllegalArgumentException e) {
             log.warn("⚠️ Méthode de paiement non reconnue: {}, utilisation ESPECES", paymentMethodStr);
         }
-        
+
         // Préparer le patient name
         String patientName = "Patient";
         if (consultation.getPatient() != null) {
-            patientName = consultation.getPatient().getFirstName() + " " + 
+            patientName = consultation.getPatient().getFirstName() + " " +
                          consultation.getPatient().getLastName();
         }
-        
+
         RevenueDTO revenueDTO = RevenueDTO.builder()
             .amount(BigDecimal.valueOf(amountPaid))
             .source(source)
             .paymentMethod(paymentMethod)
-            .description("Paiement consultation - Patient: " + patientName + 
+            .currency(Currency.CDF)  // Par défaut en CDF
+            .description("Paiement consultation - Patient: " + patientName +
                         " - Consultation ID: " + consultation.getId())
             .date(LocalDateTime.now())
             .build();
-        
+
         revenueService.createRevenue(revenueDTO, userId != null ? userId : 1L);
-        log.info("💰 Revenu créé: {} CDF pour {}", amountPaid, patientName);
+        log.info("💰 Revenu créé: {} CDF pour {} - Source: {}", amountPaid, patientName, source);
     }
 }

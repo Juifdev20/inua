@@ -1,5 +1,6 @@
 package com.hospital.backend.dto;
 
+import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Expense;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +24,8 @@ public class ExpenseDTO {
     
     private Expense.ExpenseCategory category;
     
+    private Currency currency;
+    
     private String description;
     
     private UserDTO createdBy; // Simplified user info
@@ -45,6 +48,7 @@ public class ExpenseDTO {
                 .date(expense.getDate())
                 .amount(expense.getAmount())
                 .category(expense.getCategory())
+                .currency(expense.getCurrency())
                 .description(expense.getDescription())
                 .createdBy(userDTO)
                 .createdAt(expense.getCreatedAt())
@@ -57,6 +61,7 @@ public class ExpenseDTO {
                 .date(this.date)
                 .amount(this.amount)
                 .category(this.category)
+                .currency(this.currency != null ? this.currency : Currency.CDF)
                 .description(this.description)
                 .createdAt(this.createdAt)
                 .build();

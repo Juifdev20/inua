@@ -54,9 +54,10 @@ const Revenues = () => {
     amount: '',
     source: 'ADMISSION',
     paymentMethod: 'ESPECES',
+    currency: 'CDF',
     description: ''
   });
-  const [stats, setStats] = useState({ today: 0, monthly: 0, total: 0 });
+  const [stats, setStats] = useState({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
 
   // ═══════════════════════════════════════
   // CALCUL DES STATS
@@ -67,18 +68,27 @@ const Revenues = () => {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const todayTotal = revenuesList
+    const todayTotalCDF = revenuesList
       .filter(r => {
-        if (!r.date) return false;
+        if (!r.date || r.currency !== 'CDF') return false;
         try {
           return format(new Date(r.date), 'yyyy-MM-dd') === todayStr;
         } catch { return false; }
       })
       .reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    const monthlyTotal = revenuesList
+    const todayTotalUSD = revenuesList
       .filter(r => {
-        if (!r.date) return false;
+        if (!r.date || r.currency !== 'USD') return false;
+        try {
+          return format(new Date(r.date), 'yyyy-MM-dd') === todayStr;
+        } catch { return false; }
+      })
+      .reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    const monthlyTotalCDF = revenuesList
+      .filter(r => {
+        if (!r.date || r.currency !== 'CDF') return false;
         try {
           const d = new Date(r.date);
           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -86,9 +96,24 @@ const Revenues = () => {
       })
       .reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    const totalAmount = revenuesList.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const monthlyTotalUSD = revenuesList
+      .filter(r => {
+        if (!r.date || r.currency !== 'USD') return false;
+        try {
+          const d = new Date(r.date);
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        } catch { return false; }
+      })
+      .reduce((sum, r) => sum + (r.amount || 0), 0);
 
-    setStats({ today: todayTotal, monthly: monthlyTotal, total: totalAmount });
+    const totalAmountCDF = revenuesList.filter(r => r.currency === 'CDF').reduce((sum, r) => sum + (r.amount || 0), 0);
+    const totalAmountUSD = revenuesList.filter(r => r.currency === 'USD').reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    setStats({ 
+      today: { CDF: todayTotalCDF, USD: todayTotalUSD }, 
+      monthly: { CDF: monthlyTotalCDF, USD: monthlyTotalUSD }, 
+      total: { CDF: totalAmountCDF, USD: totalAmountUSD } 
+    });
   }, []);
 
   // ═══════════════════════════════════════
@@ -109,7 +134,7 @@ const Revenues = () => {
       console.error('Error loading revenues:', error);
       toast.error(t('errors.loadRevenues') || 'Erreur de chargement des entrées');
       setRevenues([]);
-      setStats({ today: 0, monthly: 0, total: 0 });
+      setStats({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
     } finally {
       setLoading(false);
     }
@@ -119,8 +144,8 @@ const Revenues = () => {
     loadRevenues();
   }, [sourceFilter]);
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'CDF', minimumFractionDigits: 0 }).format(amount || 0);
+  const formatCurrency = (amount, currency = 'CDF') =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency, minimumFractionDigits: 0 }).format(amount || 0);
 
   // Filtrage + tri
   const filtered = useMemo(() => {
@@ -159,7 +184,7 @@ const Revenues = () => {
   // Modal handlers
   const handleNew = () => {
     setEditingRevenue(null);
-    setFormData({ amount: '', source: 'ADMISSION', paymentMethod: 'ESPECES', description: '' });
+    setFormData({ amount: '', source: 'ADMISSION', paymentMethod: 'ESPECES', currency: 'CDF', description: '' });
     setShowModal(true);
   };
 
@@ -169,6 +194,7 @@ const Revenues = () => {
       amount: revenue.amount || '',
       source: revenue.source || 'ADMISSION',
       paymentMethod: revenue.paymentMethod || 'ESPECES',
+      currency: revenue.currency || 'CDF',
       description: revenue.description || ''
     });
     setShowModal(true);
@@ -267,7 +293,10 @@ const Revenues = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Aujourd'hui
             </p>
-            <p className="text-sm sm:text-lg font-black text-emerald-500 truncate">{formatCurrency(stats.today)}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-emerald-500 truncate">CDF: {formatCurrency(stats.today?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-emerald-500/70 truncate">USD: {formatCurrency(stats.today?.USD || 0, 'USD')}</p>
+            </div>
           </div>
         </div>
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
@@ -278,7 +307,10 @@ const Revenues = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ce Mois
             </p>
-            <p className="text-sm sm:text-lg font-black text-blue-500 truncate">{formatCurrency(stats.monthly)}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-blue-500 truncate">CDF: {formatCurrency(stats.monthly?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-blue-500/70 truncate">USD: {formatCurrency(stats.monthly?.USD || 0, 'USD')}</p>
+            </div>
           </div>
         </div>
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
@@ -289,7 +321,10 @@ const Revenues = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Total
             </p>
-            <p className="text-sm sm:text-lg font-black text-violet-500 truncate">{formatCurrency(stats.total)}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-violet-500 truncate">CDF: {formatCurrency(stats.total?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-violet-500/70 truncate">USD: {formatCurrency(stats.total?.USD || 0, 'USD')}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -469,7 +504,9 @@ const Revenues = () => {
                                   )}
 
                                   {/* Montant */}
-                                  <p className="text-base font-black text-emerald-500 shrink-0">+{formatCurrency(revenue.amount)}</p>
+                                  <p className="text-base font-black text-emerald-500 shrink-0">
+                                    +{formatCurrency(revenue.amount, revenue.currency || 'CDF')}
+                                  </p>
                                 </div>
 
                                 {/* Actions */}
@@ -511,7 +548,7 @@ const Revenues = () => {
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('finance.amount') || 'Montant'} (CDF)
+                {t('finance.amount') || 'Montant'}
               </Label>
               <Input
                 type="number"
@@ -522,6 +559,19 @@ const Revenues = () => {
                 className="rounded-xl text-lg font-black"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Devise</Label>
+              <Select value={formData.currency} onValueChange={(val) => setFormData({ ...formData, currency: val })}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CDF">CDF - Franc Congolais</SelectItem>
+                  <SelectItem value="USD">USD - Dollar Américain</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

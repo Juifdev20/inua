@@ -42,9 +42,10 @@ const Expenses = () => {
   const [formData, setFormData] = useState({
     amount: '',
     category: 'ADMINISTRATION',
+    currency: 'CDF',
     description: ''
   });
-  const [stats, setStats] = useState({ today: 0, monthly: 0 });
+  const [stats, setStats] = useState({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
   const [balances, setBalances] = useState({});
   const [totalBalance, setTotalBalance] = useState(0);
 
@@ -72,18 +73,27 @@ const Expenses = () => {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const todayTotal = expensesList
+    const todayTotalCDF = expensesList
       .filter(e => {
-        if (!e.createdAt) return false;
+        if (!e.createdAt || e.currency !== 'CDF') return false;
         try {
           return format(new Date(e.createdAt), 'yyyy-MM-dd') === todayStr;
         } catch { return false; }
       })
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-    const monthlyTotal = expensesList
+    const todayTotalUSD = expensesList
       .filter(e => {
-        if (!e.createdAt) return false;
+        if (!e.createdAt || e.currency !== 'USD') return false;
+        try {
+          return format(new Date(e.createdAt), 'yyyy-MM-dd') === todayStr;
+        } catch { return false; }
+      })
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const monthlyTotalCDF = expensesList
+      .filter(e => {
+        if (!e.createdAt || e.currency !== 'CDF') return false;
         try {
           const d = new Date(e.createdAt);
           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -91,7 +101,24 @@ const Expenses = () => {
       })
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-    setStats({ today: todayTotal, monthly: monthlyTotal });
+    const monthlyTotalUSD = expensesList
+      .filter(e => {
+        if (!e.createdAt || e.currency !== 'USD') return false;
+        try {
+          const d = new Date(e.createdAt);
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        } catch { return false; }
+      })
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const totalAmountCDF = expensesList.filter(e => e.currency === 'CDF').reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalAmountUSD = expensesList.filter(e => e.currency === 'USD').reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    setStats({ 
+      today: { CDF: todayTotalCDF, USD: todayTotalUSD }, 
+      monthly: { CDF: monthlyTotalCDF, USD: monthlyTotalUSD }, 
+      total: { CDF: totalAmountCDF, USD: totalAmountUSD } 
+    });
   }, []);
 
   // ═══════════════════════════════════════
@@ -112,7 +139,7 @@ const Expenses = () => {
       console.error('Error loading expenses:', error);
       toast.error(t('errors.loadExpenses') || 'Erreur de chargement');
       setExpenses([]);
-      setStats({ today: 0, monthly: 0 });
+      setStats({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
     } finally {
       setLoading(false);
     }
@@ -126,8 +153,8 @@ const Expenses = () => {
     loadBalances();
   }, [categoryFilter]);
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'CDF', minimumFractionDigits: 0 }).format(amount || 0);
+  const formatCurrency = (amount, currency = 'CDF') =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency, minimumFractionDigits: 0 }).format(amount || 0);
 
   // Mapping expense category to revenue source
   const mapExpenseCategoryToSource = (category) => {
@@ -176,7 +203,7 @@ const Expenses = () => {
   // Modal
   const handleNew = () => {
     setEditingExpense(null);
-    setFormData({ amount: '', category: 'ADMINISTRATION', description: '' });
+    setFormData({ amount: '', category: 'ADMINISTRATION', currency: 'CDF', description: '' });
     setShowModal(true);
   };
 
@@ -185,6 +212,7 @@ const Expenses = () => {
     setFormData({
       amount: expense.amount || '',
       category: expense.category || 'ADMINISTRATION',
+      currency: expense.currency || 'CDF',
       description: expense.description || ''
     });
     setShowModal(true);
@@ -299,7 +327,10 @@ const Expenses = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Aujourd'hui
             </p>
-            <p className="text-sm sm:text-lg font-black text-rose-500 truncate">{formatCurrency(stats.today)}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-rose-500 truncate">CDF: {formatCurrency(stats.today?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-rose-500/70 truncate">USD: {formatCurrency(stats.today?.USD || 0, 'USD')}</p>
+            </div>
           </div>
         </div>
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
@@ -310,7 +341,10 @@ const Expenses = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ce Mois
             </p>
-            <p className="text-sm sm:text-lg font-black text-amber-500 truncate">{formatCurrency(stats.monthly)}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-amber-500 truncate">CDF: {formatCurrency(stats.monthly?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-amber-500/70 truncate">USD: {formatCurrency(stats.monthly?.USD || 0, 'USD')}</p>
+            </div>
           </div>
         </div>
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
@@ -321,7 +355,11 @@ const Expenses = () => {
             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Total
             </p>
-            <p className="text-sm sm:text-lg font-black text-violet-500 truncate">{expenses.length}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-violet-500 truncate">CDF: {formatCurrency(stats.total?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-violet-500/70 truncate">USD: {formatCurrency(stats.total?.USD || 0, 'USD')}</p>
+            </div>
+          </div>
           </div>
         </div>
       </div>
@@ -541,7 +579,7 @@ const Expenses = () => {
 
                                   {/* Montant */}
                                   <p className="text-base font-black text-rose-500 shrink-0">
-                                    -{formatCurrency(expense.amount)}
+                                    -{formatCurrency(expense.amount, expense.currency || 'CDF')}
                                   </p>
                                 </div>
 
@@ -597,7 +635,7 @@ const Expenses = () => {
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Montant (CDF)
+                Montant
               </Label>
               <Input
                 type="number"
@@ -608,6 +646,19 @@ const Expenses = () => {
                 className="rounded-xl text-lg font-black"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Devise</Label>
+              <Select value={formData.currency} onValueChange={(val) => setFormData({ ...formData, currency: val })}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CDF">CDF - Franc Congolais</SelectItem>
+                  <SelectItem value="USD">USD - Dollar Américain</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

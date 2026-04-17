@@ -1,6 +1,7 @@
 package com.hospital.backend.service.impl;
 
 import com.hospital.backend.dto.RevenueDTO;
+import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Invoice;
 import com.hospital.backend.entity.Revenue;
 import com.hospital.backend.entity.User;
@@ -68,6 +69,7 @@ public class RevenueServiceImpl implements RevenueService {
                 .amount(invoice.getPaidAmount() != null ? invoice.getPaidAmount() : invoice.getTotalAmount())
                 .source(source)
                 .paymentMethod(invoice.getPaymentMethod())
+                .currency(Currency.CDF)  // Par défaut en CDF
                 .referenceInvoice(invoice)
                 .description("Paiement facture " + invoice.getInvoiceCode())
                 .createdBy(createdBy)

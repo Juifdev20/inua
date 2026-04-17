@@ -34,6 +34,10 @@ public class Revenue {
     @Column(name = "payment_method")
     private PaymentMethod paymentMethod;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency", nullable = false)
+    private Currency currency = Currency.CDF;  // Par défaut en CDF
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_invoice_id")
     private Invoice referenceInvoice;

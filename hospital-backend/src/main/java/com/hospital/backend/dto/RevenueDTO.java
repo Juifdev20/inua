@@ -1,5 +1,6 @@
 package com.hospital.backend.dto;
 
+import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.PaymentMethod;
 import com.hospital.backend.entity.Revenue;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ public class RevenueDTO {
     private BigDecimal amount;
     private Revenue.RevenueSource source;
     private PaymentMethod paymentMethod;
+    private Currency currency;
     private Long referenceInvoiceId;
     private String receiptNumber;
     private String description;
@@ -72,6 +74,7 @@ public class RevenueDTO {
                 .amount(revenue.getAmount())
                 .source(revenue.getSource())
                 .paymentMethod(revenue.getPaymentMethod())
+                .currency(revenue.getCurrency())
                 .referenceInvoiceId(refInvoiceId)
                 .receiptNumber(revenue.getReceiptNumber())
                 .description(revenue.getDescription())
@@ -91,6 +94,7 @@ public class RevenueDTO {
                 .amount(this.amount)
                 .source(this.source)
                 .paymentMethod(this.paymentMethod)
+                .currency(this.currency != null ? this.currency : Currency.CDF)
                 .description(this.description)
                 .createdAt(this.createdAt)
                 .updatedAt(this.updatedAt)
