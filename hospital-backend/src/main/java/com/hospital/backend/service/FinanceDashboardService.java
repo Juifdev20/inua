@@ -3,6 +3,7 @@ package com.hospital.backend.service;
 import com.hospital.backend.dto.FinanceDashboardDTO;
 import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Expense;
+import com.hospital.backend.entity.InvoiceStatus;
 import com.hospital.backend.entity.Revenue;
 import com.hospital.backend.repository.ExpenseRepository;
 import com.hospital.backend.repository.InvoiceRepository;
@@ -96,7 +97,7 @@ public class FinanceDashboardService {
         // 4. STATISTIQUES COMPLÉMENTAIRES
         // ═══════════════════════════════════════════════════════════════
 
-        dto.setPendingInvoicesCount(invoiceRepository.countByStatus("PENDING"));
+        dto.setPendingInvoicesCount(invoiceRepository.countByStatus(InvoiceStatus.EN_ATTENTE));
         dto.setTotalInvoicesGenerated(invoiceRepository.count());
         dto.setTotalRevenuesCount(revenueRepository.count());
         dto.setTotalExpensesCount(expenseRepository.count());
