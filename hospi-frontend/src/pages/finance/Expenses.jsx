@@ -360,7 +360,6 @@ const Expenses = () => {
               <p className="text-[10px] sm:text-xs font-semibold text-violet-500/70 truncate">USD: {formatCurrency(stats.total?.USD || 0, 'USD')}</p>
             </div>
           </div>
-          </div>
         </div>
       </div>
 
