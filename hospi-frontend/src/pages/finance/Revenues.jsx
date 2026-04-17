@@ -106,7 +106,7 @@ const Revenues = () => {
       calculateStats(revenuesList);
     } catch (error) {
       console.error('Error loading revenues:', error);
-      toast.error(t('errors.loadRevenues') || 'Erreur de chargement des entrees');
+      toast.error(t('errors.loadRevenues') || 'Erreur de chargement des entrées');
       setRevenues([]);
       setStats({ today: 0, monthly: 0, total: 0 });
     } finally {
@@ -184,10 +184,10 @@ const Revenues = () => {
 
       if (editingRevenue?.id) {
         await financeApi.updateRevenue(editingRevenue.id, payload);
-        toast.success(t('finance.revenueUpdated') || 'Entree mise a jour');
+        toast.success(t('finance.revenueUpdated') || 'Entrée mise à jour');
       } else {
         await financeApi.createRevenue(payload);
-        toast.success(t('finance.revenueCreated') || 'Entree de caisse enregistree');
+        toast.success(t('finance.revenueCreated') || 'Entrée de caisse enregistrée');
       }
       setShowModal(false);
       setFormData({ amount: '', source: 'ADMISSION', paymentMethod: 'ESPECES', description: '' });
@@ -198,10 +198,10 @@ const Revenues = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('finance.confirmDeleteRevenue') || 'Supprimer cette entree ?')) return;
+    if (!window.confirm(t('finance.confirmDeleteRevenue') || 'Supprimer cette entrée ?')) return;
     try {
       await financeApi.deleteRevenue(id);
-      toast.success(t('finance.revenueDeleted') || 'Entree supprimee');
+      toast.success(t('finance.revenueDeleted') || 'Entrée supprimée');
       loadRevenues();
     } catch (error) {
       toast.error(t('finance.deleteError') || 'Erreur de suppression');
@@ -215,7 +215,7 @@ const Revenues = () => {
           <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
         </div>
         <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-          Chargement des entrees de caisse...
+          Chargement des entrées de caisse...
         </p>
       </div>
     );
@@ -231,17 +231,17 @@ const Revenues = () => {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground">
-              {t('finance.revenues') || 'Gestion des Entrees'}
+              Gestion des Revenus
             </h1>
             <p className="text-muted-foreground text-sm font-medium">
-              {format(new Date(), "MMMM yyyy", { locale: fr })} • {revenues.length} operation{revenues.length > 1 ? 's' : ''}
+              {format(new Date(), "MMMM yyyy", { locale: fr })} • {revenues.length} opération{revenues.length > 1 ? 's' : ''}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs">
             <Download className="w-3.5 h-3.5" />
-            {t('common.export') || 'Export'}
+            Exporter
           </Button>
           <Button
             onClick={handleNew}
@@ -249,20 +249,20 @@ const Revenues = () => {
             className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-emerald-500/20"
           >
             <Plus className="w-3.5 h-3.5" />
-            {t('finance.newRevenue') || 'Nouvelle entree'}
+            Nouveau Revenu
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
         <div className="bg-card p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
             <DollarSign className="w-5 h-5 text-emerald-500" />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.todayRevenue') || "Aujourd'hui"}
+              Aujourd'hui
             </p>
             <p className="text-lg font-black text-emerald-500">{formatCurrency(stats.today)}</p>
           </div>
@@ -273,7 +273,7 @@ const Revenues = () => {
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.monthlyRevenue') || 'Ce mois'}
+              Ce Mois
             </p>
             <p className="text-lg font-black text-blue-500">{formatCurrency(stats.monthly)}</p>
           </div>
@@ -284,7 +284,7 @@ const Revenues = () => {
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('finance.totalRevenues') || 'Total'}
+              Total
             </p>
             <p className="text-lg font-black text-violet-500">{formatCurrency(stats.total)}</p>
           </div>
@@ -298,7 +298,7 @@ const Revenues = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder={t('finance.searchRevenues') || 'Rechercher...'}
+              placeholder='Rechercher...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-xl border-muted bg-muted/30 focus:bg-background transition-all text-sm h-9"
@@ -322,7 +322,7 @@ const Revenues = () => {
                   )}
                 >
                   <Filter className="w-4 h-4" />
-                  {t('common.all') || 'Toutes'}
+                  Toutes
                   <span className="ml-auto text-xs font-black">{revenues.length}</span>
                 </button>
 
@@ -381,7 +381,7 @@ const Revenues = () => {
                   <TrendingUp className="w-10 h-10 text-emerald-300" />
                 </div>
                 <p className="text-muted-foreground font-medium">
-                  {searchQuery ? `Aucun resultat pour "${searchQuery}"` : (t('finance.noRevenues') || 'Aucune entree enregistree')}
+                  {searchQuery ? `Aucun résultat pour "${searchQuery}"` : 'Aucun revenu enregistré'}
                 </p>
                 <Button onClick={handleNew} variant="outline" size="sm" className="mt-4 rounded-xl font-bold border-2 gap-1.5">
                   <Plus className="w-3.5 h-3.5" /> Ajouter
@@ -478,7 +478,7 @@ const Revenues = () => {
           )}
 
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mt-4">
-            <p className="font-medium">{filtered.length} entree{filtered.length > 1 ? 's' : ''}</p>
+            <p className="font-medium">{filtered.length} entrée{filtered.length > 1 ? 's' : ''}</p>
             <p>Synchro : {format(new Date(), 'HH:mm:ss')}</p>
           </div>
         </div>
@@ -489,7 +489,7 @@ const Revenues = () => {
         <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-black">
-              {editingRevenue ? (t('finance.editRevenue') || "Modifier l'entree") : (t('finance.newRevenue') || 'Nouvelle entree de caisse')}
+              {editingRevenue ? (t('finance.editRevenue') || "Modifier l'entrée") : (t('finance.newRevenue') || 'Nouvelle entrée de caisse')}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
