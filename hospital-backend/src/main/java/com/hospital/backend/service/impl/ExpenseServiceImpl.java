@@ -3,8 +3,10 @@ package com.hospital.backend.service.impl;
 import com.hospital.backend.dto.ExpenseDTO;
 import com.hospital.backend.entity.Expense;
 import com.hospital.backend.entity.Expense.ExpenseCategory;
+import com.hospital.backend.entity.Revenue;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.ExpenseRepository;
+import com.hospital.backend.service.CashBalanceService;
 import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,12 +31,31 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final UserService userService;
+    private final CashBalanceService cashBalanceService;
 
     @Override
     public ExpenseDTO createExpense(ExpenseDTO dto, Long userId) {
-        log.info("Creating expense for userId: {}, category: {}", userId, dto.getCategory());
+        log.info("Creating expense for userId: {}, category: {}, amount: {}", userId, dto.getCategory(), dto.getAmount());
         
-User createdBy = userService.findById(userId);
+        // Map expense category to revenue source and validate balance
+        Revenue.RevenueSource source = mapExpenseCategoryToSource(dto.getCategory());
+        
+        if (source != null) {
+            BigDecimal availableBalance = cashBalanceService.getBalanceBySource(source);
+            BigDecimal expenseAmount = dto.getAmount();
+            
+            log.info("Available balance for source {}: {}", source, availableBalance);
+            
+            if (expenseAmount.compareTo(availableBalance) > 0) {
+                log.error("Insufficient balance. Available: {}, Required: {}", availableBalance, expenseAmount);
+                throw new RuntimeException(String.format(
+                    "Solde insuffisant pour la catégorie %s. Disponible: %s CDF, Requis: %s CDF",
+                    source, availableBalance, expenseAmount
+                ));
+            }
+        }
+        
+        User createdBy = userService.findById(userId);
         Expense expense = dto.toEntity();
         expense.setCreatedBy(createdBy);
         
@@ -42,6 +63,16 @@ User createdBy = userService.findById(userId);
         log.info("Expense created with ID: {}", saved.getId());
         
         return ExpenseDTO.fromEntity(saved);
+    }
+
+    private Revenue.RevenueSource mapExpenseCategoryToSource(Expense.ExpenseCategory category) {
+        return switch (category) {
+            case ADMISSION -> Revenue.RevenueSource.ADMISSION;
+            case LABORATOIRE -> Revenue.RevenueSource.LABORATOIRE;
+            case PHARMACIE -> Revenue.RevenueSource.PHARMACIE;
+            case ADMINISTRATION -> Revenue.RevenueSource.AUTRE;
+            case AUTRE -> Revenue.RevenueSource.AUTRE;
+        };
     }
 
     @Override

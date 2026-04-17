@@ -45,6 +45,23 @@ const Expenses = () => {
     description: ''
   });
   const [stats, setStats] = useState({ today: 0, monthly: 0 });
+  const [balances, setBalances] = useState({});
+  const [totalBalance, setTotalBalance] = useState(0);
+
+  // ═══════════════════════════════════════
+  // ★ CHARGEMENT DES SOLDES DE CAISSE
+  // ═══════════════════════════════════════
+  const loadBalances = async () => {
+    try {
+      const balanceData = await financeApi.getBalancesBySource();
+      setBalances(balanceData || {});
+      
+      const totalData = await financeApi.getTotalCashBalance();
+      setTotalBalance(totalData?.totalBalance || 0);
+    } catch (error) {
+      console.error('Error loading balances:', error);
+    }
+  };
 
   // ═══════════════════════════════════════
   // ★ CALCUL DES STATS CÔTÉ CLIENT
@@ -106,10 +123,23 @@ const Expenses = () => {
 
   useEffect(() => {
     loadExpenses();
+    loadBalances();
   }, [categoryFilter]);
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'CDF', minimumFractionDigits: 0 }).format(amount || 0);
+
+  // Mapping expense category to revenue source
+  const mapExpenseCategoryToSource = (category) => {
+    const mapping = {
+      'ADMISSION': 'ADMISSION',
+      'LABORATOIRE': 'LABORATOIRE',
+      'PHARMACIE': 'PHARMACIE',
+      'ADMINISTRATION': 'AUTRE',
+      'AUTRE': 'AUTRE'
+    };
+    return mapping[category] || 'AUTRE';
+  };
 
   // Filtrage + tri
   const filtered = useMemo(() => {
@@ -164,6 +194,19 @@ const Expenses = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const amount = parseFloat(formData.amount);
+      const revenueSource = mapExpenseCategoryToSource(formData.category);
+      const availableBalance = balances[revenueSource] || 0;
+
+      // Validate balance before creating expense
+      if (amount > availableBalance) {
+        toast.error(
+          `Solde insuffisant pour ${formData.category}. Disponible: ${formatCurrency(availableBalance)}, Requis: ${formatCurrency(amount)}`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       if (editingExpense?.id) {
         toast.info('Mise à jour en développement');
       } else {
@@ -173,8 +216,10 @@ const Expenses = () => {
       setShowModal(false);
       setFormData({ amount: '', category: 'ADMINISTRATION', description: '' });
       loadExpenses();
+      loadBalances(); // Reload balances after expense creation
     } catch (error) {
-      toast.error(t('finance.expenseError') || 'Erreur lors de la sauvegarde');
+      const errorMsg = error.response?.data?.message || error.message || t('finance.expenseError') || 'Erreur lors de la sauvegarde';
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +231,7 @@ const Expenses = () => {
       await financeApi.deleteExpense(id);
       toast.success(t('finance.expenseDeleted') || 'Dépense supprimée');
       loadExpenses();
+      loadBalances(); // Reload balances after expense deletion
     } catch (error) {
       toast.error(t('finance.deleteError') || 'Erreur de suppression');
     }
@@ -228,17 +274,16 @@ const Expenses = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs flex-1 sm:flex-none">
-            <Download className="w-3.5 h-3.5" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none">
+            <Download className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
             Exporter
           </Button>
           <Button
             onClick={handleNew}
-            size="sm"
-            className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-rose-500/20 flex-1 sm:flex-none"
+            className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold gap-2 text-sm h-12 sm:h-9 sm:text-xs shadow-lg shadow-rose-500/20 flex-1 sm:flex-none"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
             Nouvelle Dépense
           </Button>
         </div>
@@ -329,12 +374,15 @@ const Expenses = () => {
                 {Object.entries(CATEGORIES).map(([key, cat]) => {
                   const Icon = cat.icon;
                   const count = expenses.filter(e => e.category === key).length;
+                  const balance = balances[key] || 0;
+                  const revenueSource = mapExpenseCategoryToSource(key);
+                  const sourceBalance = balances[revenueSource] || 0;
                   return (
                     <button
                       key={key}
                       onClick={() => setCategoryFilter(categoryFilter === key ? 'all' : key)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left",
+                        "w-full flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left",
                         categoryFilter === key
                           ? "text-white shadow-sm"
                           : "text-muted-foreground hover:bg-muted"
@@ -345,14 +393,23 @@ const Expenses = () => {
                           : {}
                       }
                     >
-                      <Icon className="w-4 h-4" />
-                      {cat.label}
-                      <span className={cn(
-                        "ml-auto text-xs font-black",
-                        categoryFilter === key ? "text-white/80" : ""
+                      <div className="flex items-center gap-3 w-full">
+                        <Icon className="w-4 h-4" />
+                        <span className="flex-1">{cat.label}</span>
+                        <span className={cn(
+                          "text-xs font-black",
+                          categoryFilter === key ? "text-white/80" : ""
+                        )}>
+                          {count}
+                        </span>
+                      </div>
+                      <div className={cn(
+                        "text-[10px] font-medium w-full flex justify-between",
+                        categoryFilter === key ? "text-white/70" : "text-muted-foreground"
                       )}>
-                        {count}
-                      </span>
+                        <span>Solde disponible:</span>
+                        <span>{formatCurrency(sourceBalance)}</span>
+                      </div>
                     </button>
                   );
                 })}

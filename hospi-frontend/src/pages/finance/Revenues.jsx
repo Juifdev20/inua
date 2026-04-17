@@ -242,17 +242,16 @@ const Revenues = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs flex-1 sm:flex-none">
-            <Download className="w-3.5 h-3.5" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" className="rounded-xl font-bold border-2 gap-2 text-sm h-12 sm:h-9 sm:text-xs flex-1 sm:flex-none">
+            <Download className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
             Exporter
           </Button>
           <Button
             onClick={handleNew}
-            size="sm"
-            className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-emerald-500/20 flex-1 sm:flex-none"
+            className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-2 text-sm h-12 sm:h-9 sm:text-xs shadow-lg shadow-emerald-500/20 flex-1 sm:flex-none"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-5 h-5 sm:w-3.5 sm:h-3.5" />
             Nouveau Revenu
           </Button>
         </div>

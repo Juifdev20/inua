@@ -340,6 +340,36 @@ const financeApi = {
   getCashBalance: async () => {
     const response = await api.get('/cashflow/balance');
     return response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // CASH BALANCE - Soldes par catégorie
+  // ═══════════════════════════════════════
+  getBalancesBySource: async () => {
+    const response = await api.get('/cash-balance/by-source');
+    return response.data?.balances || response.data;
+  },
+
+  getBalanceBySource: async (source) => {
+    const response = await api.get(`/cash-balance/source/${source}`);
+    return response.data;
+  },
+
+  getTotalCashBalance: async () => {
+    const response = await api.get('/cash-balance/total');
+    return response.data;
+  },
+
+  getCashFlowSummary: async () => {
+    const response = await api.get('/cash-balance/summary');
+    return response.data;
+  },
+
+  checkBalance: async (source, amount) => {
+    const response = await api.get('/cash-balance/check-balance', {
+      params: { source, amount }
+    });
+    return response.data;
   }
 };
 

@@ -60,4 +60,16 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
     // Recent revenues (limit)
     @Query("SELECT r FROM Revenue r ORDER BY r.date DESC")
     List<Revenue> findRecentRevenues(Pageable pageable);
+
+    // Sum by source
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.source = :source")
+    BigDecimal sumAmountBySource(@Param("source") RevenueSource source);
+
+    // Sum all amounts
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r")
+    BigDecimal sumTotalAmount();
+
+    // Sum by date
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = :date")
+    BigDecimal sumAmountByDate(@Param("date") java.time.LocalDate date);
 }

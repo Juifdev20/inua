@@ -42,5 +42,17 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     // Dashboard stats: total pending by category
     @Query("SELECT e.category, COALESCE(COUNT(e), 0) FROM Expense e GROUP BY e.category")
     List<Object[]> countByCategory();
+
+    // Sum by category
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.category = :category")
+    BigDecimal sumAmountByCategory(@Param("category") ExpenseCategory category);
+
+    // Sum all amounts
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e")
+    BigDecimal sumTotalAmount();
+
+    // Sum by date range
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.date BETWEEN :start AND :end")
+    BigDecimal sumAmountByDate(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
 
