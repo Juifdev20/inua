@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -50,9 +51,11 @@ public class FinanceDashboardService {
         // 1. REVENUS PAR DEVISE
         // ═══════════════════════════════════════════════════════════════
 
+        LocalDate today = LocalDate.now();
+
         dto.setDailyRevenue(FinanceDashboardDTO.CurrencyStats.of(
-            revenueRepository.getTodayTotalByCurrency(Currency.CDF),
-            revenueRepository.getTodayTotalByCurrency(Currency.USD)
+            revenueRepository.getTodayTotalByCurrency(today, Currency.CDF),
+            revenueRepository.getTodayTotalByCurrency(today, Currency.USD)
         ));
 
         dto.setMonthlyRevenue(FinanceDashboardDTO.CurrencyStats.of(
@@ -70,8 +73,8 @@ public class FinanceDashboardService {
         // ═══════════════════════════════════════════════════════════════
 
         dto.setDailyExpenses(FinanceDashboardDTO.CurrencyStats.of(
-            expenseRepository.getTodayTotalByCurrency(Currency.CDF),
-            expenseRepository.getTodayTotalByCurrency(Currency.USD)
+            expenseRepository.getTodayTotalByCurrency(today, Currency.CDF),
+            expenseRepository.getTodayTotalByCurrency(today, Currency.USD)
         ));
 
         dto.setMonthlyExpenses(FinanceDashboardDTO.CurrencyStats.of(
@@ -260,6 +263,11 @@ public class FinanceDashboardService {
         );
 
         for (Revenue r : recentRevenues) {
+            Long invoiceId = r.getReferenceInvoice() != null ? r.getReferenceInvoice().getId() : null;
+            String patientName = r.getReferenceInvoice() != null && r.getReferenceInvoice().getPatient() != null
+                ? r.getReferenceInvoice().getPatient().getFirstName() + " " + r.getReferenceInvoice().getPatient().getLastName()
+                : null;
+
             transactions.add(FinanceDashboardDTO.RecentTransaction.builder()
                 .id(r.getId())
                 .type("REVENUE")
@@ -267,10 +275,10 @@ public class FinanceDashboardService {
                 .amount(r.getAmount())
                 .currency(r.getCurrency().name())
                 .date(r.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
-                .status("COMPLETED")
-                .patientName(r.getReferenceInvoice() != null && r.getReferenceInvoice().getPatient() != null
-                    ? r.getReferenceInvoice().getPatient().getFirstName() + " " + r.getReferenceInvoice().getPatient().getLastName()
-                    : null)
+                .createdAt(r.getDate().toString())  // ISO format for frontend
+                .status(r.getReferenceInvoice() != null ? r.getReferenceInvoice().getStatus().name() : "COMPLETED")
+                .patientName(patientName)
+                .invoiceId(invoiceId)
                 .build());
         }
 

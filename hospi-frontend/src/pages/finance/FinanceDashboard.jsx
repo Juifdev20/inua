@@ -246,6 +246,20 @@ const FinanceDashboard = () => {
 
       // 2️⃣ Si le nouvel endpoint fonctionne, utiliser ces données
       if (dashboardData && dashboardData.dailyRevenue) {
+        // Combine CDF and USD evolution for chart
+        const evolutionCDF = dashboardData.revenueEvolutionCDF || [];
+        const evolutionUSD = dashboardData.revenueEvolutionUSD || [];
+        const combinedEvolution = evolutionCDF.map((item, idx) => ({
+          month: item.month,
+          revenue: (item.amount || 0) + (evolutionUSD[idx]?.amount || 0)
+        }));
+
+        // Map revenueBySource to revenueByCategory for pie chart
+        const revenueByCategory = (dashboardData.revenueBySource || []).map(src => ({
+          name: src.source,
+          value: (src.amount?.cdf || 0) + (src.amount?.usd || 0) * 2500 // Approximate conversion
+        })).filter(cat => cat.value > 0);
+
         setStats({
           dailyRevenue: dashboardData.dailyRevenue,
           monthlyRevenue: dashboardData.monthlyRevenue,
@@ -258,8 +272,10 @@ const FinanceDashboard = () => {
           totalInvoicesGenerated: dashboardData.totalInvoicesGenerated,
           revenueBySource: dashboardData.revenueBySource,
           expensesByCategory: dashboardData.expensesByCategory,
-          revenueEvolutionCDF: dashboardData.revenueEvolutionCDF,
-          revenueEvolutionUSD: dashboardData.revenueEvolutionUSD,
+          revenueEvolution: combinedEvolution,
+          revenueEvolutionCDF: evolutionCDF,
+          revenueEvolutionUSD: evolutionUSD,
+          revenueByCategory,
           recentTransactions: dashboardData.recentTransactions,
         });
         setRecentInvoices(dashboardData.recentTransactions || []);
@@ -328,16 +344,40 @@ const FinanceDashboard = () => {
       return db - da;
     });
 
-  const isPaid = (status) => status === 'PAID' || status === 'PAYEE';
+  const isPaid = (status) => {
+    if (!status) return false;
+    const paidStatuses = ['PAID', 'PAYEE', 'REMBOURSEE'];
+    return paidStatuses.includes(status.toUpperCase());
+  };
+
+  const isPending = (status) => {
+    if (!status) return true;
+    const pendingStatuses = ['PENDING', 'EN_ATTENTE', 'PARTIELLEMENT_PAYEE'];
+    return pendingStatuses.includes(status.toUpperCase());
+  };
 
   const getStatusBadge = (status) => {
-    if (isPaid(status)) {
+    if (!status) {
+      return <Badge className="border-none font-bold bg-gray-500/10 text-gray-600">Inconnu</Badge>;
+    }
+    const s = status.toUpperCase();
+
+    if (s === 'PAYEE' || s === 'PAID') {
       return <Badge className="border-none font-bold bg-emerald-500/10 text-emerald-600">Payé</Badge>;
     }
-    if (status === 'CANCELLED' || status === 'ANNULEE') {
+    if (s === 'REMBOURSEE') {
+      return <Badge className="border-none font-bold bg-blue-500/10 text-blue-600">Remboursé</Badge>;
+    }
+    if (s === 'ANNULEE' || s === 'CANCELLED') {
       return <Badge className="border-none font-bold bg-red-500/10 text-red-600">Annulé</Badge>;
     }
-    return <Badge className="border-none font-bold bg-amber-500/10 text-amber-600">En attente</Badge>;
+    if (s === 'PARTIELLEMENT_PAYEE') {
+      return <Badge className="border-none font-bold bg-blue-500/10 text-blue-600">Partiellement payé</Badge>;
+    }
+    if (s === 'EN_ATTENTE' || s === 'PENDING') {
+      return <Badge className="border-none font-bold bg-amber-500/10 text-amber-600">En attente</Badge>;
+    }
+    return <Badge className="border-none font-bold bg-gray-500/10 text-gray-600">{status}</Badge>;
   };
 
   const getTypeBadge = (type) => {
@@ -683,7 +723,9 @@ const FinanceDashboard = () => {
                         )}>
                           {inv.createdAt
                             ? format(new Date(inv.createdAt), 'HH:mm • dd MMM', { locale: fr })
-                            : '--:--'}
+                            : inv.date
+                              ? inv.date.substring(11, 16) + ' • ' + inv.date.substring(0, 5)
+                              : '--:--'}
                         </time>
                         <p className="text-sm font-bold text-foreground leading-none mt-1">
                           {inv.type || inv.category || 'Facture'} — {formatCurrency(inv.totalAmount || inv.amount)}
@@ -797,14 +839,22 @@ const FinanceDashboard = () => {
                       <p className="text-sm font-black">
                         {inv.createdAt
                           ? format(new Date(inv.createdAt), 'dd/MM HH:mm', { locale: fr })
-                          : '--'}
+                          : inv.date
+                            ? inv.date.substring(0, 16)
+                            : '--'}
                       </p>
                     </div>
                     {getStatusBadge(inv.status)}
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => navigate(`/finance/factures/${inv.id}`)}
+                      onClick={() => {
+                        if (inv.invoiceId) {
+                          navigate(`/finance/factures/${inv.invoiceId}`);
+                        } else {
+                          toast.error('Aucune facture associée');
+                        }
+                      }}
                       className="rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
                     >
                       <Eye className="w-5 h-5" />

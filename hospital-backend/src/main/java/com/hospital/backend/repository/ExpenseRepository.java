@@ -60,8 +60,8 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     // ═══════════════════════════════════════════════════════════════
 
     // Daily total by currency
-    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = CURRENT_DATE AND e.currency = :currency")
-    BigDecimal getTodayTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = :today AND e.currency = :currency")
+    BigDecimal getTodayTotalByCurrency(@Param("today") java.time.LocalDate today, @Param("currency") com.hospital.backend.entity.Currency currency);
 
     // Monthly total by currency
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE YEAR(e.date) = YEAR(CURRENT_DATE) AND MONTH(e.date) = MONTH(CURRENT_DATE) AND e.currency = :currency")

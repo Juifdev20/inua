@@ -78,8 +78,8 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
     // ═══════════════════════════════════════════════════════════════
 
     // Daily total by currency
-    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = CURRENT_DATE AND r.currency = :currency")
-    BigDecimal getTodayTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = :today AND r.currency = :currency")
+    BigDecimal getTodayTotalByCurrency(@Param("today") java.time.LocalDate today, @Param("currency") com.hospital.backend.entity.Currency currency);
 
     // Monthly total by currency
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE YEAR(r.date) = YEAR(CURRENT_DATE) AND MONTH(r.date) = MONTH(CURRENT_DATE) AND r.currency = :currency")

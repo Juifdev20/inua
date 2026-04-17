@@ -139,8 +139,10 @@ public class FinanceDashboardDTO {
         private String description;
         private BigDecimal amount;
         private String currency;
-        private String date;
+        private String date;        // Formatted: dd/MM/yyyy HH:mm
+        private String createdAt;   // ISO format for frontend parsing
         private String status;
         private String patientName;
+        private Long invoiceId;     // ID of linked invoice for navigation
     }
 }
