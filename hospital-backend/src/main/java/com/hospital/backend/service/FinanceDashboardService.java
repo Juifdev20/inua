@@ -276,7 +276,7 @@ public class FinanceDashboardService {
                 .currency(r.getCurrency().name())
                 .date(r.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
                 .createdAt(r.getDate().toString())  // ISO format for frontend
-                .status(r.getReferenceInvoice() != null ? r.getReferenceInvoice().getStatus().name() : "COMPLETED")
+                .status(r.getReferenceInvoice() != null ? r.getReferenceInvoice().getStatus().name() : "PAYEE")
                 .patientName(patientName)
                 .invoiceId(invoiceId)
                 .build());

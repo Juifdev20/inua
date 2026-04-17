@@ -246,13 +246,84 @@ const FinanceDashboard = () => {
 
       // 2️⃣ Si le nouvel endpoint fonctionne, utiliser ces données
       if (dashboardData && dashboardData.dailyRevenue) {
-        // Combine CDF and USD evolution for chart
+        // Combine CDF and USD evolution for chart (merge by month)
         const evolutionCDF = dashboardData.revenueEvolutionCDF || [];
         const evolutionUSD = dashboardData.revenueEvolutionUSD || [];
-        const combinedEvolution = evolutionCDF.map((item, idx) => ({
+
+        // Create a map of all months
+        const monthsMap = new Map();
+
+        // Add CDF data
+        evolutionCDF.forEach(item => {
+          monthsMap.set(item.month, { month: item.month, cdf: item.amount || 0, usd: 0 });
+        });
+
+        // Add/merge USD data
+        evolutionUSD.forEach(item => {
+          if (monthsMap.has(item.month)) {
+            monthsMap.get(item.month).usd = item.amount || 0;
+          } else {
+            monthsMap.set(item.month, { month: item.month, cdf: 0, usd: item.amount || 0 });
+          }
+        });
+
+        // Convert to array and sort by date
+        let combinedEvolution = Array.from(monthsMap.values()).map(item => ({
           month: item.month,
-          revenue: (item.amount || 0) + (evolutionUSD[idx]?.amount || 0)
+          revenue: item.cdf + item.usd,
+          cdf: item.cdf,
+          usd: item.usd
         }));
+
+        // Sort chronologically (parse month like "avr. 2026")
+        combinedEvolution.sort((a, b) => {
+          const parseMonth = (str) => {
+            const [monthName, year] = str.split(' ');
+            const monthMap = {
+              'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3,
+              'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7,
+              'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11
+            };
+            return new Date(parseInt(year), monthMap[monthName.toLowerCase()] || 0, 1);
+          };
+          return parseMonth(a.month) - parseMonth(b.month);
+        });
+
+        // Ensure we have last 6 months even if empty
+        const generateLast6Months = () => {
+          const months = [];
+          const today = new Date();
+          for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const monthLabel = format(d, 'MMM yyyy', { locale: fr });
+            months.push(monthLabel);
+          }
+          return months;
+        };
+
+        const last6Months = generateLast6Months();
+        const existingMonths = new Set(combinedEvolution.map(e => e.month));
+
+        // Add missing months with 0 values
+        last6Months.forEach(month => {
+          if (!existingMonths.has(month)) {
+            combinedEvolution.push({ month, cdf: 0, usd: 0, revenue: 0 });
+          }
+        });
+
+        // Re-sort after adding missing months
+        combinedEvolution.sort((a, b) => {
+          const parseMonth = (str) => {
+            const [monthName, year] = str.split(' ');
+            const monthMap = {
+              'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3,
+              'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7,
+              'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11
+            };
+            return new Date(parseInt(year), monthMap[monthName.toLowerCase()] || 0, 1);
+          };
+          return parseMonth(a.month) - parseMonth(b.month);
+        });
 
         // Map revenueBySource to revenueByCategory for pie chart
         const revenueByCategory = (dashboardData.revenueBySource || []).map(src => ({
@@ -544,8 +615,7 @@ const FinanceDashboard = () => {
             </div>
             <CardContent className="p-6">
               <div className="h-[320px] w-full">
-                {stats?.revenueEvolution?.length > 0 &&
-                 stats.revenueEvolution.some(d => d.revenue > 0) ? (
+                {stats?.revenueEvolution?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={stats.revenueEvolution}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -554,24 +624,57 @@ const FinanceDashboard = () => {
                         stroke="hsl(var(--muted-foreground))" fontSize={12} fontWeight="bold"
                       />
                       <YAxis
+                        yAxisId="left"
                         axisLine={false} tickLine={false}
-                        stroke="hsl(var(--muted-foreground))" fontSize={12} fontWeight="bold"
+                        stroke="#10B981" fontSize={11} fontWeight="bold"
+                        tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        axisLine={false} tickLine={false}
+                        stroke="#3B82F6" fontSize={11} fontWeight="bold"
                         tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
                       />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
-                          borderRadius: '16px',
+                          borderRadius: '12px',
                           border: '1px solid hsl(var(--border))',
-                          boxShadow: '0 10px 40px rgba(0,0,0,.1)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,.2)',
                         }}
-                        formatter={(v) => [formatUSD(v), 'Revenus']}
+                        formatter={(value, name) => {
+                          if (name === 'cdf') return [formatCDF(value), 'CDF'];
+                          if (name === 'usd') return [formatUSD(value), 'USD'];
+                          return [value, name];
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
+                      />
+                      <Legend
+                        verticalAlign="top"
+                        height={30}
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                       />
                       <Line
-                        type="monotone" dataKey="revenue"
-                        stroke="#10B981" strokeWidth={3}
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="cdf"
+                        name="CDF"
+                        stroke="#10B981"
+                        strokeWidth={3}
                         dot={{ fill: '#10B981', r: 4 }}
-                        activeDot={{ r: 8, fill: '#10B981' }}
+                        activeDot={{ r: 6, fill: '#10B981' }}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="usd"
+                        name="USD"
+                        stroke="#3B82F6"
+                        strokeWidth={3}
+                        dot={{ fill: '#3B82F6', r: 4 }}
+                        activeDot={{ r: 6, fill: '#3B82F6' }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
