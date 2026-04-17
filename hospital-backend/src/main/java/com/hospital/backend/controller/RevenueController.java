@@ -3,6 +3,9 @@ package com.hospital.backend.controller;
 import com.hospital.backend.dto.ApiResponse;
 import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.Revenue.RevenueSource;
+import com.hospital.backend.entity.User;
+import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.RevenueService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -29,6 +33,7 @@ import java.util.Map;
 public class RevenueController {
 
     private final RevenueService revenueService;
+    private final UserRepository userRepository;
 
     @PostMapping
     @PreAuthorize("hasRole('FINANCE') or hasRole('ADMIN')")
@@ -37,7 +42,7 @@ public class RevenueController {
             @RequestBody RevenueDTO revenueDTO,
             Authentication authentication) {
 
-        Long userId = getUserIdFromAuthentication(authentication);
+        Long userId = getCurrentUserId();
         RevenueDTO savedRevenue = revenueService.createRevenue(revenueDTO, userId);
 
         return ResponseEntity.ok(ApiResponse.success("Entrée de caisse créée", savedRevenue));
@@ -50,7 +55,7 @@ public class RevenueController {
             @PathVariable Long invoiceId,
             Authentication authentication) {
 
-        Long userId = getUserIdFromAuthentication(authentication);
+        Long userId = getCurrentUserId();
         RevenueDTO savedRevenue = revenueService.createRevenueFromInvoice(invoiceId, userId);
 
         return ResponseEntity.ok(ApiResponse.success("Entrée créée depuis la facture", savedRevenue));
@@ -161,14 +166,22 @@ public class RevenueController {
         return ResponseEntity.ok(ApiResponse.success("Entrées récentes", revenues));
     }
 
-    private Long getUserIdFromAuthentication(Authentication authentication) {
-        if (authentication == null) {
-            throw new RuntimeException("Authentication required");
-        }
+    private Long getCurrentUserId() {
         try {
-            return Long.valueOf(authentication.getName());
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("Invalid user ID in authentication");
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+                return userDetails.getUser().getId();
+            }
+            String username = auth != null ? auth.getName() : null;
+            if (username != null) {
+                return userRepository.findByUsername(username)
+                    .map(User::getId)
+                    .orElse(1L);
+            }
+        } catch (Exception e) {
+            // Log error
         }
+        return 1L;
     }
 }

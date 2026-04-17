@@ -3,6 +3,9 @@ package com.hospital.backend.controller;
 import com.hospital.backend.dto.ApiResponse;
 import com.hospital.backend.dto.ExpenseDTO;
 import com.hospital.backend.entity.Expense.ExpenseCategory;
+import com.hospital.backend.entity.User;
+import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.ExpenseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -31,6 +35,7 @@ import java.util.Map;
 public class ExpenseController {
 
     private final ExpenseService expenseService;
+    private final UserRepository userRepository;
 
     @PostMapping
     @PreAuthorize("hasRole('FINANCE')")
@@ -39,7 +44,7 @@ public class ExpenseController {
             @RequestBody ExpenseDTO expenseDTO,
             Authentication authentication) {
         
-        Long userId = Long.valueOf(authentication.getName()); // Username as ID or adjust
+        Long userId = getCurrentUserId();
         ExpenseDTO savedExpense = expenseService.createExpense(expenseDTO, userId);
         
         return ResponseEntity.ok(ApiResponse.success("Dépense créée", savedExpense));
@@ -120,6 +125,25 @@ public class ExpenseController {
             "success", true,
             "message", "Dépense supprimée"
         ));
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+                return userDetails.getUser().getId();
+            }
+            String username = auth != null ? auth.getName() : null;
+            if (username != null) {
+                return userRepository.findByUsername(username)
+                    .map(User::getId)
+                    .orElse(1L);
+            }
+        } catch (Exception e) {
+            // Log error
+        }
+        return 1L;
     }
 }
 

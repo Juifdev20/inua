@@ -6,7 +6,10 @@ import com.hospital.backend.entity.Consultation;
 import com.hospital.backend.entity.ConsultationStatus;
 import com.hospital.backend.entity.PrescribedExam;
 import com.hospital.backend.entity.PrescribedExamStatus;
+import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.ConsultationRepository;
+import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.UltraSimpleFinanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,6 +38,7 @@ public class FinanceController {
 
     private final UltraSimpleFinanceService financeService;
     private final ConsultationRepository consultationRepository;
+    private final UserRepository userRepository;
 
     @GetMapping("/reports")
     @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
@@ -66,7 +72,7 @@ public class FinanceController {
             Object amountObj = paymentData != null ? paymentData.get("amountPaid") : null;
             Double amountPaid = amountObj != null ? Double.valueOf(amountObj.toString()) : 0.0;
             
-            Map<String, Object> result = financeService.payConsultation(consultationId, paymentMethod, amountPaid);
+            Map<String, Object> result = financeService.payConsultation(consultationId, paymentMethod, amountPaid, getCurrentUserId());
             
             boolean success = Boolean.TRUE.equals(result.get("success"));
             if (success) {
@@ -294,5 +300,24 @@ public class FinanceController {
                 "message", "Erreur lors de l'envoi au docteur: " + e.getMessage()
             ));
         }
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+                return userDetails.getUser().getId();
+            }
+            String username = auth != null ? auth.getName() : null;
+            if (username != null) {
+                return userRepository.findByUsername(username)
+                    .map(User::getId)
+                    .orElse(1L);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Impossible de récupérer l'ID utilisateur: {}", e.getMessage());
+        }
+        return 1L;
     }
 }

@@ -44,7 +44,7 @@ const FinanceSidebar = () => {
   const markAllAsRead = notificationCtx?.markAllAsRead || (() => {});
 
   const getTimeAgo = (date) => {
-    if (!date) return 'RÃ©cemment';
+    if (!date) return 'Recemment';
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     if (seconds < 60) return "Ã€ l'instant";
     const minutes = Math.floor(seconds / 60);
@@ -216,10 +216,10 @@ const FinanceSidebar = () => {
         }
       >
         <SlidersHorizontal className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span>ParamÃ¨tres</span>}
+        {(!sidebarCollapsed || isMobile) && <span>Paramètres</span>}
       </NavLink>
 
-      {/* DÃ©connexion */}
+      {/* Déconnexion */}
       <Button
         variant="ghost"
         onClick={() => setShowLogoutDialog(true)}
@@ -229,7 +229,7 @@ const FinanceSidebar = () => {
         )}
       >
         <LogOut className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span className="ml-3">DÃ©connexion</span>}
+        {(!sidebarCollapsed || isMobile) && <span className="ml-3">Déconnexion</span>}
       </Button>
     </div>
   );
@@ -362,7 +362,7 @@ const FinanceSidebar = () => {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la dÃ©connexion</AlertDialogTitle>
+            <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
             <AlertDialogDescription>
               ÃŠtes-vous sÃ»r de vouloir vous dÃ©connecter ?
             </AlertDialogDescription>
@@ -370,7 +370,7 @@ const FinanceSidebar = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">
-              Se dÃ©connecter
+              Se déconnecter
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

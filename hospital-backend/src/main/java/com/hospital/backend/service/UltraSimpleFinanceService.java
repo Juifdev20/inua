@@ -1,13 +1,20 @@
 package com.hospital.backend.service;
 
+import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.Consultation;
 import com.hospital.backend.entity.ConsultationStatus;
+import com.hospital.backend.entity.PaymentMethod;
+import com.hospital.backend.entity.Revenue;
+import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.ConsultationRepository;
+import com.hospital.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,9 +29,11 @@ import java.util.Optional;
 public class UltraSimpleFinanceService {
 
     private final ConsultationRepository consultationRepository;
+    private final RevenueService revenueService;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = false)
-    public Map<String, Object> payConsultation(Long consultationId, String paymentMethod, Double amountPaid) {
+    public Map<String, Object> payConsultation(Long consultationId, String paymentMethod, Double amountPaid, Long userId) {
         log.info("==========================================");
         log.info("💰 [ULTRA-SIMPLE] Démarrage");
         log.info("💰 [ULTRA-SIMPLE] ID: {}, Méthode: {}, Montant: {}", consultationId, paymentMethod, amountPaid);
@@ -67,6 +76,15 @@ public class UltraSimpleFinanceService {
             log.info("💾 [ULTRA-SIMPLE] Sauvegarde en cours...");
             Consultation saved = consultationRepository.save(c);
             log.info("✅ [ULTRA-SIMPLE] SAUVEGARDÉ! ID: {}, Nouveau statut: {}", saved.getId(), saved.getStatus());
+            
+            // 5. CRÉER LE REVENU AUTOMATIQUEMENT
+            try {
+                createRevenueFromPayment(saved, amountPaid, paymentMethod, userId);
+                log.info("💰 [ULTRA-SIMPLE] Revenu créé pour le paiement");
+            } catch (Exception e) {
+                log.error("❌ [ULTRA-SIMPLE] Erreur création revenu: {}", e.getMessage());
+                // Ne pas bloquer le paiement si la création de revenu échoue
+            }
             
             log.info("==========================================");
             log.info("✅ [ULTRA-SIMPLE] SUCCÈS TOTAL");
@@ -122,5 +140,51 @@ public class UltraSimpleFinanceService {
                 "message", "Erreur envoi docteur: " + e.getMessage()
             );
         }
+    }
+    
+    /**
+     * Crée un revenu automatiquement après un paiement de consultation
+     */
+    private void createRevenueFromPayment(Consultation consultation, Double amountPaid, 
+                                          String paymentMethodStr, Long userId) {
+        if (amountPaid == null || amountPaid <= 0) {
+            log.warn("⚠️ Montant invalide pour création revenu: {}", amountPaid);
+            return;
+        }
+        
+        // Déterminer la source selon le statut de la consultation
+        Revenue.RevenueSource source = Revenue.RevenueSource.ADMISSION;
+        if (consultation.getStatus() == ConsultationStatus.EXAMENS_PAYES) {
+            source = Revenue.RevenueSource.LABORATOIRE;
+        }
+        
+        // Convertir le paymentMethod string en enum
+        PaymentMethod paymentMethod = PaymentMethod.ESPECES;
+        try {
+            if (paymentMethodStr != null) {
+                paymentMethod = PaymentMethod.valueOf(paymentMethodStr.toUpperCase());
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ Méthode de paiement non reconnue: {}, utilisation ESPECES", paymentMethodStr);
+        }
+        
+        // Préparer le patient name
+        String patientName = "Patient";
+        if (consultation.getPatient() != null) {
+            patientName = consultation.getPatient().getFirstName() + " " + 
+                         consultation.getPatient().getLastName();
+        }
+        
+        RevenueDTO revenueDTO = RevenueDTO.builder()
+            .amount(BigDecimal.valueOf(amountPaid))
+            .source(source)
+            .paymentMethod(paymentMethod)
+            .description("Paiement consultation - Patient: " + patientName + 
+                        " - Consultation ID: " + consultation.getId())
+            .date(LocalDateTime.now())
+            .build();
+        
+        revenueService.createRevenue(revenueDTO, userId != null ? userId : 1L);
+        log.info("💰 Revenu créé: {} CDF pour {}", amountPaid, patientName);
     }
 }

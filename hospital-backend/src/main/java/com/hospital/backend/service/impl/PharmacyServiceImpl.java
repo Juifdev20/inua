@@ -1347,6 +1347,7 @@ public class PharmacyServiceImpl implements PharmacyService {
      */
     private void notifyFinanceOfPurchase(Medication medication, Integer quantity, 
                                         BigDecimal totalCost, User pharmacist) {
+        // 1. Créer la notification
         Notification notification = Notification.builder()
             .title("Nouvel achat médicament - Pharmacie")
             .message(String.format(
@@ -1365,6 +1366,28 @@ public class PharmacyServiceImpl implements PharmacyService {
         
         notificationRepository.save(notification);
         log.info("📢 Notification envoyée à la finance pour l'achat de {}", medication.getName());
+        
+        // 2. Créer la dépense automatiquement
+        try {
+            Long userId = pharmacist != null ? pharmacist.getId() : 1L;
+            
+            ExpenseDTO expenseDTO = ExpenseDTO.builder()
+                .amount(totalCost)
+                .category(Expense.ExpenseCategory.PHARMACIE)
+                .description(String.format(
+                    "Achat stock médicament - %s (%d unités)",
+                    medication.getName(),
+                    quantity
+                ))
+                .date(LocalDateTime.now())
+                .build();
+            
+            expenseService.createExpense(expenseDTO, userId);
+            log.info("💰 Dépense créée pour l'achat de médicament: {} CDF", totalCost);
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la création de la dépense pour l'achat: {}", e.getMessage());
+            // Ne pas bloquer si la création de dépense échoue
+        }
     }
     
     // ══════════════════════════════════════════════════════════════════
@@ -1381,6 +1404,7 @@ public class PharmacyServiceImpl implements PharmacyService {
             String customerName = order.getCustomerName() != null ? 
                 order.getCustomerName() : "Client anonyme";
             
+            // 1. Créer la notification
             Notification notification = Notification.builder()
                 .title("Nouvelle vente médicament - Pharmacie")
                 .message(String.format(
@@ -1399,6 +1423,37 @@ public class PharmacyServiceImpl implements PharmacyService {
             notificationRepository.save(notification);
             log.info("📢 Notification de vente envoyée à la finance: Commande {}, Montant {}", 
                     order.getOrderCode(), amountPaid);
+            
+            // 2. Créer le revenu automatiquement
+            try {
+                Long userId = order.getCreatedBy() != null ? order.getCreatedBy().getId() : 1L;
+                PaymentMethod paymentMethodEnum = PaymentMethod.ESPECES;
+                try {
+                    if (paymentMethod != null) {
+                        paymentMethodEnum = PaymentMethod.valueOf(paymentMethod.toUpperCase());
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("⚠️ Méthode de paiement non reconnue: {}, utilisation ESPECES", paymentMethod);
+                }
+                
+                RevenueDTO revenueDTO = RevenueDTO.builder()
+                    .amount(amountPaid)
+                    .source(Revenue.RevenueSource.PHARMACIE)
+                    .paymentMethod(paymentMethodEnum)
+                    .description(String.format(
+                        "Vente pharmacie - Client: %s - Commande: %s",
+                        customerName,
+                        order.getOrderCode()
+                    ))
+                    .date(LocalDateTime.now())
+                    .build();
+                
+                revenueService.createRevenue(revenueDTO, userId);
+                log.info("💰 Revenu créé pour la vente pharmacie: {} CDF", amountPaid);
+            } catch (Exception e) {
+                log.error("❌ Erreur lors de la création du revenu pour la vente: {}", e.getMessage());
+                // Ne pas bloquer si la création de revenu échoue
+            }
             
         } catch (Exception e) {
             log.error("❌ Erreur lors de l'envoi de la notification de vente: {}", e.getMessage());
