@@ -227,13 +227,20 @@ const financeApi = {
   // DÉPENSES
   // ═══════════════════════════════════════
   getExpenses: async (filters = {}) => {
-    const response = await api.get('/expenses', { params: filters });
-    return response.data;
+    const params = {
+      page: 0,
+      size: 100, // Get more expenses to avoid pagination issues
+      ...filters
+    };
+    const response = await api.get('/expenses', { params });
+    // Handle ApiResponse wrapper - the actual data is in response.data.data
+    return response.data?.data || response.data;
   },
 
   createExpense: async (expenseData) => {
     const response = await api.post('/expenses', expenseData);
-    return response.data;
+    // Handle ApiResponse wrapper
+    return response.data?.data || response.data;
   },
 
   updateExpense: async (id, expenseData) => {

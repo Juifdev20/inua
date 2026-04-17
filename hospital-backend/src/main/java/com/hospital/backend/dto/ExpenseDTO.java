@@ -36,8 +36,8 @@ public class ExpenseDTO {
         if (expense.getCreatedBy() != null) {
             userDTO = UserDTO.builder()
                 .id(expense.getCreatedBy().getId())
-                .firstName(expense.getCreatedBy().getFirstName())
-                .lastName(expense.getCreatedBy().getLastName())
+                .prenom(expense.getCreatedBy().getFirstName())
+                .nom(expense.getCreatedBy().getLastName())
                 .build();
         }
         return ExpenseDTO.builder()
@@ -66,8 +66,8 @@ public class ExpenseDTO {
     @Builder
     public static class UserDTO {
         private Long id;
-        private String firstName;
-        private String lastName;
+        private String prenom;
+        private String nom;
     }
 }
 

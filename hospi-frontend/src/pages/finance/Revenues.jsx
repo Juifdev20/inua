@@ -228,29 +228,29 @@ const Revenues = () => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-            <TrendingUp className="w-7 h-7 text-white" strokeWidth={2.5} />
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-white" strokeWidth={2.5} />
           </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
               Gestion des Revenus
             </h1>
-            <p className="text-muted-foreground text-sm font-medium">
+            <p className="text-muted-foreground text-xs sm:text-sm font-medium">
               {format(new Date(), "MMMM yyyy", { locale: fr })} • {revenues.length} opération{revenues.length > 1 ? 's' : ''}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 gap-1.5 text-xs flex-1 sm:flex-none">
             <Download className="w-3.5 h-3.5" />
             Exporter
           </Button>
           <Button
             onClick={handleNew}
             size="sm"
-            className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-emerald-500/20"
+            className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold gap-1.5 text-xs shadow-lg shadow-emerald-500/20 flex-1 sm:flex-none"
           >
             <Plus className="w-3.5 h-3.5" />
             Nouveau Revenu
@@ -260,45 +260,45 @@ const Revenues = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
-        <div className="bg-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 text-emerald-500" />
+        <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
           </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Aujourd'hui
             </p>
-            <p className="text-lg font-black text-emerald-500">{formatCurrency(stats.today)}</p>
+            <p className="text-sm sm:text-lg font-black text-emerald-500 truncate">{formatCurrency(stats.today)}</p>
           </div>
         </div>
-        <div className="bg-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-blue-500" />
+        <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
           </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Ce Mois
             </p>
-            <p className="text-lg font-black text-blue-500">{formatCurrency(stats.monthly)}</p>
+            <p className="text-sm sm:text-lg font-black text-blue-500 truncate">{formatCurrency(stats.monthly)}</p>
           </div>
         </div>
-        <div className="bg-card p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-            <Receipt className="w-5 h-5 text-violet-500" />
+        <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
           </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Total
             </p>
-            <p className="text-lg font-black text-violet-500">{formatCurrency(stats.total)}</p>
+            <p className="text-sm sm:text-lg font-black text-violet-500 truncate">{formatCurrency(stats.total)}</p>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
         {/* Sidebar Filters */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-3 lg:space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -417,58 +417,71 @@ const Revenues = () => {
                           const SrcIcon = srcConfig.icon;
 
                           return (
-                            <div key={revenue.id} className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group">
-                              <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: `${srcConfig.color}15`, color: srcConfig.color }}
-                              >
-                                <SrcIcon className="w-5 h-5" />
-                              </div>
+                            <div key={revenue.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 hover:bg-muted/30 transition-colors group">
+                              {/* Header row for mobile */}
+                              <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <div
+                                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                                  style={{ backgroundColor: `${srcConfig.color}15`, color: srcConfig.color }}
+                                >
+                                  <SrcIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
 
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm text-foreground truncate">
-                                  {revenue.description || 'Sans description'}
-                                </p>
-                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold"
-                                    style={{ backgroundColor: `${srcConfig.color}10`, color: srcConfig.color }}
-                                  >
-                                    {srcConfig.label}
-                                  </span>
-                                  {revenue.receiptNumber && (
-                                    <span className="text-[10px] text-muted-foreground font-mono">{revenue.receiptNumber}</span>
-                                  )}
-                                  {revenue.patientName && (
-                                    <span className="text-[11px] text-muted-foreground">• {revenue.patientName}</span>
-                                  )}
-                                  {revenue.createdBy && (
-                                    <span className="text-[11px] text-muted-foreground">
-                                      par {revenue.createdBy.firstName} {revenue.createdBy.lastName}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-sm text-foreground truncate">
+                                    {revenue.description || 'Sans description'}
+                                  </p>
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
+                                    <span
+                                      className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold"
+                                      style={{ backgroundColor: `${srcConfig.color}10`, color: srcConfig.color }}
+                                    >
+                                      {srcConfig.label}
                                     </span>
-                                  )}
+                                    {revenue.receiptNumber && (
+                                      <span className="text-[10px] text-muted-foreground font-mono">{revenue.receiptNumber}</span>
+                                    )}
+                                    {revenue.patientName && (
+                                      <span className="text-[11px] text-muted-foreground">• {revenue.patientName}</span>
+                                    )}
+                                    {revenue.createdBy && (
+                                      <span className="text-[11px] text-muted-foreground">
+                                        par {revenue.createdBy.firstName} {revenue.createdBy.lastName}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
-                              <p className="text-xs text-muted-foreground font-medium shrink-0 hidden sm:block">
-                                {revenue.date ? format(new Date(revenue.date), 'HH:mm', { locale: fr }) : '--'}
-                              </p>
+                              {/* Bottom row for mobile - right side for desktop */}
+                              <div className="flex items-center justify-between w-full sm:w-auto sm:flex-col sm:items-end gap-2">
+                                {/* Time, payment method and amount for mobile */}
+                                <div className="flex items-center gap-2 sm:gap-4">
+                                  {/* Heure */}
+                                  <p className="text-xs text-muted-foreground font-medium shrink-0">
+                                    {revenue.date ? format(new Date(revenue.date), 'HH:mm', { locale: fr }) : '--'}
+                                  </p>
 
-                              {revenue.paymentMethod && (
-                                <Badge variant="outline" className="text-[10px] font-bold shrink-0">
-                                  {PAYMENT_METHODS[revenue.paymentMethod]?.label || revenue.paymentMethod}
-                                </Badge>
-                              )}
+                                  {/* Payment method */}
+                                  {revenue.paymentMethod && (
+                                    <Badge variant="outline" className="text-[10px] font-bold shrink-0">
+                                      {PAYMENT_METHODS[revenue.paymentMethod]?.label || revenue.paymentMethod}
+                                    </Badge>
+                                  )}
 
-                              <p className="text-base font-black text-emerald-500 shrink-0">+{formatCurrency(revenue.amount)}</p>
+                                  {/* Montant */}
+                                  <p className="text-base font-black text-emerald-500 shrink-0">+{formatCurrency(revenue.amount)}</p>
+                                </div>
 
-                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                <Button variant="ghost" size="icon" onClick={() => handleEdit(revenue)} className="rounded-lg w-8 h-8 hover:bg-muted">
-                                  <Edit className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDelete(revenue.id)} className="rounded-lg w-8 h-8 hover:bg-red-500/10 text-red-500">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                {/* Actions */}
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(revenue)} className="rounded-lg w-7 h-7 sm:w-8 sm:h-8 hover:bg-muted">
+                                    <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(revenue.id)} className="rounded-lg w-7 h-7 sm:w-8 sm:h-8 hover:bg-red-500/10 text-red-500">
+                                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           );
