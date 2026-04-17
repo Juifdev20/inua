@@ -72,4 +72,28 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
     // Sum by date
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = :date")
     BigDecimal sumAmountByDate(@Param("date") java.time.LocalDate date);
+
+    // ═══════════════════════════════════════════════════════════════
+    // TOTAUX PAR DEVISE (CDF / USD)
+    // ═══════════════════════════════════════════════════════════════
+
+    // Daily total by currency
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = CURRENT_DATE AND r.currency = :currency")
+    BigDecimal getTodayTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // Monthly total by currency
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE YEAR(r.date) = YEAR(CURRENT_DATE) AND MONTH(r.date) = MONTH(CURRENT_DATE) AND r.currency = :currency")
+    BigDecimal getCurrentMonthTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // Stats by source AND currency
+    @Query("SELECT r.source, r.currency, COALESCE(SUM(r.amount), 0), COALESCE(COUNT(r), 0) FROM Revenue r GROUP BY r.source, r.currency")
+    List<Object[]> getStatsBySourceAndCurrency();
+
+    // Total all time by currency
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.currency = :currency")
+    BigDecimal getTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // Evolution over last 6 months by currency
+    @Query("SELECT YEAR(r.date), MONTH(r.date), COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.date >= :startDate AND r.currency = :currency GROUP BY YEAR(r.date), MONTH(r.date) ORDER BY YEAR(r.date), MONTH(r.date)")
+    List<Object[]> getMonthlyEvolutionByCurrency(@Param("startDate") LocalDateTime startDate, @Param("currency") com.hospital.backend.entity.Currency currency);
 }

@@ -35,17 +35,30 @@ import { cn } from '@/lib/utils';
 import financeApi from '../../services/financeApi/financeApi.js';
 
 /* ═══════════════════════════════════════════
-   COMPOSANT STAT CARD
+   COMPOSANT STAT CARD — DUAL CURRENCY
    ═══════════════════════════════════════════ */
-const StatCard = ({ label, value, icon: Icon, color, trend, trendUp }) => (
+const StatCard = ({ label, value, icon: Icon, color, trend, trendUp, dualCurrency }) => (
   <Card className="border-none shadow-sm bg-card overflow-hidden">
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             {label}
           </p>
-          <h3 className="text-3xl font-black text-foreground">{value}</h3>
+          {dualCurrency ? (
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs text-emerald-600 font-bold">CDF</span>
+                <h3 className="text-xl font-black text-foreground">{dualCurrency.cdf}</h3>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs text-blue-600 font-bold">USD</span>
+                <h3 className="text-xl font-black text-foreground">{dualCurrency.usd}</h3>
+              </div>
+            </div>
+          ) : (
+            <h3 className="text-3xl font-black text-foreground">{value}</h3>
+          )}
           {trend !== undefined && trend !== null && (
             <div className="flex items-center gap-1 pt-1">
               {trendUp
@@ -84,12 +97,29 @@ const FinanceDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // ═══════════════════════════════════════
-  // FORMATAGE MONÉTAIRE — USD ($)
+  // FORMATAGE MONÉTAIRE — DUAL CURRENCY
   // ═══════════════════════════════════════
-  const formatCurrency = useCallback((amount) =>
+  const formatUSD = useCallback((amount) =>
     new Intl.NumberFormat('fr-FR', {
       style: 'currency', currency: 'USD', minimumFractionDigits: 0,
     }).format(amount || 0), []);
+
+  const formatCDF = useCallback((amount) =>
+    new Intl.NumberFormat('fr-FR', {
+      style: 'currency', currency: 'CDF', minimumFractionDigits: 0,
+    }).format(amount || 0), []);
+
+  const formatDualCurrency = (currencyStats) => {
+    if (!currencyStats) return { cdf: '0 CDF', usd: '$0' };
+    const cdf = currencyStats.cdf ?? currencyStats.CDF ?? 0;
+    const usd = currencyStats.usd ?? currencyStats.USD ?? 0;
+    return {
+      cdf: formatCDF(cdf),
+      usd: formatUSD(usd)
+    };
+  };
+
+  const formatCurrency = formatUSD; // backward compatibility
 
   // ═══════════════════════════════════════
   // CALCUL DES STATS LOCALES
@@ -198,59 +228,80 @@ const FinanceDashboard = () => {
   }, []);
 
   // ═══════════════════════════════════════
-  // CHARGEMENT DES DONNÉES RÉELLES
+  // CHARGEMENT DES DONNÉES RÉELLES — DUAL CURRENCY
   // ═══════════════════════════════════════
   const loadDashboard = async () => {
     try {
       setLoading(true);
 
-      // 1️⃣ Tenter le endpoint dashboard du backend
-      let dashboardStats = null;
+      // 1️⃣ Essayer le nouveau endpoint complet avec stats par devise
+      let dashboardData = null;
       try {
-        dashboardStats = await financeApi.getDashboardStats();
-      } catch {
-        console.warn('Dashboard stats endpoint not available, computing locally');
-      }
-
-      // 2️⃣ Charger les factures récentes
-      let invoicesData = [];
-      try {
-        const invoicesResponse = await financeApi.getInvoices();
-        const arr = invoicesResponse?.content || invoicesResponse || [];
-        invoicesData = Array.isArray(arr) ? arr : [];
+        const response = await financeApi.getFullDashboard();
+        dashboardData = response?.data || response;
+        console.log('📊 Dashboard data loaded:', dashboardData);
       } catch (err) {
-        console.warn('Could not load invoices:', err);
+        console.warn('⚠️ Nouveau endpoint non disponible, fallback sur ancien:', err.message);
       }
 
-      // 3️⃣ Charger les dépenses
-      let expensesData = [];
-      try {
-        const expensesResponse = await financeApi.getExpenses();
-        const arr = expensesResponse?.content || expensesResponse || [];
-        expensesData = Array.isArray(arr) ? arr : [];
-      } catch (err) {
-        console.warn('Could not load expenses:', err);
-      }
+      // 2️⃣ Si le nouvel endpoint fonctionne, utiliser ces données
+      if (dashboardData && dashboardData.dailyRevenue) {
+        setStats({
+          dailyRevenue: dashboardData.dailyRevenue,
+          monthlyRevenue: dashboardData.monthlyRevenue,
+          totalRevenue: dashboardData.totalRevenue,
+          dailyExpenses: dashboardData.dailyExpenses,
+          monthlyExpenses: dashboardData.monthlyExpenses,
+          totalExpenses: dashboardData.totalExpenses,
+          netBalance: dashboardData.netBalance,
+          pendingInvoicesCount: dashboardData.pendingInvoicesCount,
+          totalInvoicesGenerated: dashboardData.totalInvoicesGenerated,
+          revenueBySource: dashboardData.revenueBySource,
+          expensesByCategory: dashboardData.expensesByCategory,
+          revenueEvolutionCDF: dashboardData.revenueEvolutionCDF,
+          revenueEvolutionUSD: dashboardData.revenueEvolutionUSD,
+          recentTransactions: dashboardData.recentTransactions,
+        });
+        setRecentInvoices(dashboardData.recentTransactions || []);
+        setExpenses([]);
+      } else {
+        // 3️⃣ Fallback: Charger les données individuellement
+        let invoicesData = [];
+        let expensesData = [];
+        let dashboardStats = null;
 
-      // 4️⃣ Calculer les stats (backend OU local)
-      if (dashboardStats && dashboardStats.dailyRevenue !== undefined) {
+        try {
+          const invoicesResponse = await financeApi.getInvoices();
+          invoicesData = invoicesResponse?.content || invoicesResponse || [];
+        } catch (err) {
+          console.warn('Could not load invoices:', err);
+        }
+
+        try {
+          const expensesResponse = await financeApi.getExpenses();
+          expensesData = expensesResponse?.content || expensesResponse || [];
+        } catch (err) {
+          console.warn('Could not load expenses:', err);
+        }
+
+        try {
+          dashboardStats = await financeApi.getDashboardStats();
+        } catch (err) {
+          console.warn('Could not load dashboard stats:', err);
+        }
+
+        // Calculer les stats localement
         const localComputed = computeLocalStats(invoicesData, expensesData);
         setStats({
           ...localComputed,
           ...dashboardStats,
-          revenueEvolution: dashboardStats.revenueEvolution || localComputed.revenueEvolution,
-          revenueByCategory: dashboardStats.revenueByCategory || localComputed.revenueByCategory,
         });
-      } else {
-        setStats(computeLocalStats(invoicesData, expensesData));
+        setRecentInvoices(invoicesData);
+        setExpenses(expensesData);
       }
 
-      // 5️⃣ Stocker les données pour le tableau
-      setRecentInvoices(invoicesData);
-      setExpenses(expensesData);
-
     } catch (err) {
-      console.error('Error loading dashboard:', err);
+      console.error('❌ Error loading dashboard:', err);
       toast.error('Erreur lors du chargement du tableau de bord');
     } finally {
       setLoading(false);
@@ -312,16 +363,22 @@ const FinanceDashboard = () => {
   const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4'];
 
   // ═══════════════════════════════════════
-  // STAT CARDS — Données réelles
+  // STAT CARDS — Données réelles avec DUAL CURRENCY
   // ═══════════════════════════════════════
   const revenueTrendLabel = stats.revenueTrend !== null && stats.revenueTrend !== undefined
     ? `${stats.revenueTrend > 0 ? '+' : ''}${stats.revenueTrend}%`
     : null;
 
+  // Formater les stats avec dual currency
+  const dailyRevenueDual = formatDualCurrency(stats.dailyRevenue);
+  const monthlyRevenueDual = formatDualCurrency(stats.monthlyRevenue);
+  const totalRevenueDual = formatDualCurrency(stats.totalRevenue || stats.totalCollected);
+  const monthlyExpensesDual = formatDualCurrency(stats.monthlyExpenses || stats.totalExpenses);
+
   const statCards = [
     {
       label: "Revenus du jour",
-      value: formatCurrency(stats.dailyRevenue),
+      dualCurrency: dailyRevenueDual,
       icon: DollarSign,
       color: '#10B981',
       trend: null,
@@ -329,7 +386,7 @@ const FinanceDashboard = () => {
     },
     {
       label: 'Revenus mensuels',
-      value: formatCurrency(stats.monthlyRevenue),
+      dualCurrency: monthlyRevenueDual,
       icon: TrendingUp,
       color: '#3B82F6',
       trend: revenueTrendLabel,
@@ -337,7 +394,7 @@ const FinanceDashboard = () => {
     },
     {
       label: 'Factures en attente',
-      value: stats.pendingInvoices || 0,
+      value: stats.pendingInvoices || stats.pendingInvoicesCount || 0,
       icon: FileText,
       color: '#F59E0B',
       trend: null,
@@ -345,7 +402,7 @@ const FinanceDashboard = () => {
     },
     {
       label: 'Total collecté',
-      value: formatCurrency(stats.totalCollected),
+      dualCurrency: totalRevenueDual,
       icon: Wallet,
       color: '#8B5CF6',
       trend: null,
@@ -353,7 +410,7 @@ const FinanceDashboard = () => {
     },
     {
       label: 'Factures générées',
-      value: stats.invoicesGenerated || 0,
+      value: stats.invoicesGenerated || stats.totalInvoicesGenerated || 0,
       icon: CreditCard,
       color: '#06B6D4',
       trend: null,
@@ -361,7 +418,7 @@ const FinanceDashboard = () => {
     },
     {
       label: 'Dépenses du mois',
-      value: formatCurrency(stats.totalExpenses),
+      dualCurrency: monthlyExpensesDual,
       icon: TrendingDown,
       color: '#EF4444',
       trend: null,
@@ -468,7 +525,7 @@ const FinanceDashboard = () => {
                           border: '1px solid hsl(var(--border))',
                           boxShadow: '0 10px 40px rgba(0,0,0,.1)',
                         }}
-                        formatter={(v) => [formatCurrency(v), 'Revenus']}
+                        formatter={(v) => [formatUSD(v), 'Revenus']}
                       />
                       <Line
                         type="monotone" dataKey="revenue"
@@ -520,7 +577,7 @@ const FinanceDashboard = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => formatUSD(value)} />
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>

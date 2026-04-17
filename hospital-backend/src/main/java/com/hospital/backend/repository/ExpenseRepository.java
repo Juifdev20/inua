@@ -54,5 +54,25 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     // Sum by date range
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.date BETWEEN :start AND :end")
     BigDecimal sumAmountByDate(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // ═══════════════════════════════════════════════════════════════
+    // TOTAUX PAR DEVISE (CDF / USD)
+    // ═══════════════════════════════════════════════════════════════
+
+    // Daily total by currency
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = CURRENT_DATE AND e.currency = :currency")
+    BigDecimal getTodayTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // Monthly total by currency
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE YEAR(e.date) = YEAR(CURRENT_DATE) AND MONTH(e.date) = MONTH(CURRENT_DATE) AND e.currency = :currency")
+    BigDecimal getCurrentMonthTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // Stats by category AND currency
+    @Query("SELECT e.category, e.currency, COALESCE(SUM(e.amount), 0), COALESCE(COUNT(e), 0) FROM Expense e GROUP BY e.category, e.currency")
+    List<Object[]> getStatsByCategoryAndCurrency();
+
+    // Total all time by currency
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.currency = :currency")
+    BigDecimal getTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
 }
 

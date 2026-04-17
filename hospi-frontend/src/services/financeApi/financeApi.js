@@ -36,6 +36,12 @@ const financeApi = {
     return response.data;
   },
 
+  // ★ NOUVEAU : Dashboard complet avec stats par devise (CDF/USD)
+  getFullDashboard: async () => {
+    const response = await api.get('/dashboard');
+    return response.data;
+  },
+
   // ═══════════════════════════════════════
   // ADMISSIONS — CAISSE
   // ═══════════════════════════════════════
