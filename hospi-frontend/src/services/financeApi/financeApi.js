@@ -262,6 +262,77 @@ const financeApi = {
   getDailyRevenue: async (date) => {
     const response = await api.get('/daily-revenue', { params: { date } });
     return response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // ENTRÉES / REVENUES
+  // ═══════════════════════════════════════
+  getRevenues: async (filters = {}) => {
+    const response = await api.get('/revenues', { params: filters });
+    return response.data;
+  },
+
+  getRevenueById: async (id) => {
+    const response = await api.get(`/revenues/${id}`);
+    return response.data;
+  },
+
+  createRevenue: async (revenueData) => {
+    const response = await api.post('/revenues', revenueData);
+    return response.data;
+  },
+
+  createRevenueFromInvoice: async (invoiceId) => {
+    const response = await api.post(`/revenues/from-invoice/${invoiceId}`);
+    return response.data;
+  },
+
+  updateRevenue: async (id, revenueData) => {
+    const response = await api.put(`/revenues/${id}`, revenueData);
+    return response.data;
+  },
+
+  deleteRevenue: async (id) => {
+    const response = await api.delete(`/revenues/${id}`);
+    return response.data;
+  },
+
+  getRevenueStats: async () => {
+    const response = await api.get('/revenues/stats');
+    return response.data;
+  },
+
+  getRevenueDashboard: async () => {
+    const response = await api.get('/revenues/dashboard-summary');
+    return response.data;
+  },
+
+  getRecentRevenues: async (limit = 10) => {
+    const response = await api.get('/revenues/recent', { params: { limit } });
+    return response.data;
+  },
+
+  getTodayRevenueTotal: async () => {
+    const response = await api.get('/revenues/today-total');
+    return response.data;
+  },
+
+  getMonthlyRevenueTotal: async () => {
+    const response = await api.get('/revenues/monthly-total');
+    return response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // CASHFLOW - Vue consolidée
+  // ═══════════════════════════════════════
+  getCashFlowSummary: async (params = {}) => {
+    const response = await api.get('/cashflow/summary', { params });
+    return response.data;
+  },
+
+  getCashBalance: async () => {
+    const response = await api.get('/cashflow/balance');
+    return response.data;
   }
 };
 

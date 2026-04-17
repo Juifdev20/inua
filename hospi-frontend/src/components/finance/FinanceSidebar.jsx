@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,7 +14,8 @@ import {
   Bell,
   CheckCircle2,
   HeartPulse,
-  SlidersHorizontal
+  SlidersHorizontal,
+  TrendingUp
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -43,9 +44,9 @@ const FinanceSidebar = () => {
   const markAllAsRead = notificationCtx?.markAllAsRead || (() => {});
 
   const getTimeAgo = (date) => {
-    if (!date) return 'Récemment';
+    if (!date) return 'RÃ©cemment';
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    if (seconds < 60) return "À l'instant";
+    if (seconds < 60) return "Ã€ l'instant";
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `Il y a ${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -62,13 +63,14 @@ const FinanceSidebar = () => {
     { name: 'Caisse Admissions',   path: '/finance/caisse-admissions',  icon: UserCheck,       color: 'text-primary' },
     { name: 'Caisse Laboratoire',  path: '/finance/caisse-laboratoire', icon: Microscope,      color: 'text-accent' },
     { name: 'Caisse Pharmacie',    path: '/finance/caisse-pharmacie',   icon: Pill,            color: 'text-primary' },
-    { name: 'Gestion des Dépenses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
+    { name: 'Gestion des DÃ©penses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
+    { name: 'Gestion des EntrÃ©es', path: '/finance/entrees',           icon: TrendingUp,      color: 'text-emerald-500' },
     { name: 'Grille Tarifaire',    path: '/finance/tarifs',             icon: Settings,        color: 'text-muted-foreground' },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    toast.success('À bientôt!', { description: 'Déconnexion réussie' });
+    toast.success('Ã€ bientÃ´t!', { description: 'DÃ©connexion rÃ©ussie' });
     navigate('/login');
   };
 
@@ -91,7 +93,7 @@ const FinanceSidebar = () => {
     return <HeartPulse className={cn('text-white w-6 h-6', className)} strokeWidth={2.5} />;
   };
 
-  /* ── Lien bottom (Notifications, Paramètres, Déconnexion) ── */
+  /* â”€â”€ Lien bottom (Notifications, ParamÃ¨tres, DÃ©connexion) â”€â”€ */
   const BottomNav = ({ isMobile = false }) => (
     <div className={cn('p-3 border-t border-border', isMobile && 'pb-6')}>
       <Separator className="mb-3" />
@@ -199,7 +201,7 @@ const FinanceSidebar = () => {
         </PopoverContent>
       </Popover>
 
-      {/* ★ PARAMÈTRES — remplace "Mon Profil" ★ */}
+      {/* â˜… PARAMÃˆTRES â€” remplace "Mon Profil" â˜… */}
       <NavLink
         to="/finance/settings"
         onClick={isMobile ? toggleMobileSidebar : undefined}
@@ -214,10 +216,10 @@ const FinanceSidebar = () => {
         }
       >
         <SlidersHorizontal className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span>Paramètres</span>}
+        {(!sidebarCollapsed || isMobile) && <span>ParamÃ¨tres</span>}
       </NavLink>
 
-      {/* Déconnexion */}
+      {/* DÃ©connexion */}
       <Button
         variant="ghost"
         onClick={() => setShowLogoutDialog(true)}
@@ -227,14 +229,14 @@ const FinanceSidebar = () => {
         )}
       >
         <LogOut className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span className="ml-3">Déconnexion</span>}
+        {(!sidebarCollapsed || isMobile) && <span className="ml-3">DÃ©connexion</span>}
       </Button>
     </div>
   );
 
   return (
     <>
-      {/* ═══ DESKTOP SIDEBAR ═══ */}
+      {/* â•â•â• DESKTOP SIDEBAR â•â•â• */}
       <aside className={cn(
         'hidden lg:flex flex-col bg-card border-r border-border transition-all duration-300 relative z-30 shrink-0 shadow-lg',
         sidebarCollapsed ? 'w-20' : 'w-72'
@@ -306,7 +308,7 @@ const FinanceSidebar = () => {
         <BottomNav />
       </aside>
 
-      {/* ═══ MOBILE SIDEBAR ═══ */}
+      {/* â•â•â• MOBILE SIDEBAR â•â•â• */}
       {mobileSidebarOpen && (
         <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border lg:hidden shadow-2xl flex flex-col">
           <div className="h-16 flex items-center justify-between px-4 border-b border-border">
@@ -360,15 +362,15 @@ const FinanceSidebar = () => {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
+            <AlertDialogTitle>Confirmer la dÃ©connexion</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir vous déconnecter ?
+              ÃŠtes-vous sÃ»r de vouloir vous dÃ©connecter ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">
-              Se déconnecter
+              Se dÃ©connecter
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

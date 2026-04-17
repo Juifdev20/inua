@@ -111,6 +111,7 @@ import PharmacyStockAlerts from "./pages/pharmacy/PharmacyStockAlerts";
 import PharmacySettings from "./pages/pharmacy/PharmacySettings";
 
 const Expenses = React.lazy(() => import("./pages/finance/Expenses"));
+const Revenues = React.lazy(() => import("./pages/finance/Revenues"));
 const Tarifs = React.lazy(() => import("./pages/finance/Tarifs"));
 const ServiceManager = React.lazy(() => import("./pages/finance/ServiceManager"));
 const InvoicesManagement = React.lazy(() => import("./pages/finance/InvoicesManagement"));
@@ -262,6 +263,14 @@ function App() {
                     element={
                       <Suspense fallback={<FinanceLoading />}>
                         <Expenses />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="entrees"
+                    element={
+                      <Suspense fallback={<FinanceLoading />}>
+                        <Revenues />
                       </Suspense>
                     }
                   />
