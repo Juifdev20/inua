@@ -1,10 +1,8 @@
 package com.hospital.backend.controller;
 
 import com.hospital.backend.dto.*;
-import com.hospital.backend.entity.PharmacyOrderStatus;
-import com.hospital.backend.entity.PrescriptionStatus;
-import com.hospital.backend.entity.StockMovement;
-import com.hospital.backend.entity.User;
+import com.hospital.backend.entity.*;
+import com.hospital.backend.service.PharmacieFinanceIntegrationService;
 import com.hospital.backend.repository.StockMovementRepository;
 import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.PrescriptionService;
@@ -27,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +46,7 @@ public class PharmacyController {
     private final UserRepository userRepository;
     private final StockMovementRepository stockMovementRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PharmacieFinanceIntegrationService pharmacieFinanceIntegrationService;
 
     // ══════════════════════════════════════════════════════════════════
     // SALES HISTORY
@@ -839,12 +839,53 @@ public class PharmacyController {
             MedicationDTO updatedMedication = pharmacyService.purchaseMedication(
                     medicationId, quantity, unitPrice, supplierId, pharmacistId);
             
+            // ═══════════════════════════════════════════════════════════════════
+            // 🔗 FLUX PHARMACIE-FINANCE: Créer transaction automatiquement
+            // ═══════════════════════════════════════════════════════════════════
+            FinanceTransaction transactionFinance = null;
+            if (supplierId != null) {
+                try {
+                    // Calculer le montant total
+                    BigDecimal totalAmount = unitPrice.multiply(new BigDecimal(quantity));
+                    
+                    // Récupérer le nom du fournisseur
+                    String supplierName = pharmacyService.getSupplierById(supplierId).getName();
+                    
+                    // Créer le DTO de réception
+                    ReceptionCommandeDTO receptionDTO = ReceptionCommandeDTO.builder()
+                        .commandeId(null) // Achat direct sans commande
+                        .numeroFactureFournisseur("ACHAT-" + System.currentTimeMillis())
+                        .dateFactureFournisseur(LocalDate.now())
+                        .total(totalAmount)
+                        .devise(Currency.CDF) // Par défaut, peut être paramétré
+                        .paiementMode(PaiementMode.CREDIT) // Sécurité: crédit par défaut
+                        .fournisseurId(supplierId)
+                        .fournisseurNom(supplierName)
+                        .numeroLivraison("DIRECT-" + medicationId)
+                        .build();
+                    
+                    // Récupérer l'utilisateur pour createdBy
+                    User pharmacist = userRepository.findById(pharmacistId).orElse(null);
+                    
+                    // Créer la transaction finance
+                    transactionFinance = pharmacieFinanceIntegrationService.onReceptionCommandeValidee(receptionDTO, pharmacist);
+                    
+                    log.info("✅ [PHARMACY-FINANCE] Transaction créée ID: {} pour achat médicament {}",
+                        transactionFinance.getId(), medicationId);
+                        
+                } catch (Exception e) {
+                    // Log l'erreur mais ne pas bloquer l'achat
+                    log.error("❌ [PHARMACY-FINANCE] Erreur création transaction: {}", e.getMessage());
+                }
+            }
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Achat effectué avec succès",
+                "message", "Achat effectué avec succès" + (transactionFinance != null ? ", transaction finance créée (ID: " + transactionFinance.getId() + ")" : ""),
                 "medication", updatedMedication,
                 "purchasedQuantity", quantity,
-                "unitPrice", unitPrice
+                "unitPrice", unitPrice,
+                "financeTransactionId", transactionFinance != null ? transactionFinance.getId() : null
             ));
             
         } catch (RuntimeException e) {

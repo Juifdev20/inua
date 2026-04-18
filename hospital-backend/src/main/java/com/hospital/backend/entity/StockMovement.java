@@ -54,11 +54,12 @@ public class StockMovement {
     private LocalDateTime createdAt;
 
     public enum MovementType {
-        SORTIE_PRESCRIPTION,    // Vente via prescription
-        SORTIE_MANUELLE,      // Sortie manuelle
-        ENTREE_ACHAT,         // Achat fournisseur
-        ENTREE_RETOUR,        // Retour patient
-        AJUSTEMENT_INVENTAIRE, // Correction inventaire
-        ANNULATION            // Annulation/rollback
+        SORTIE_PRESCRIPTION,     // Vente via prescription
+        SORTIE_MANUELLE,         // Sortie manuelle
+        ENTREE_ACHAT,            // Achat fournisseur
+        ENTREE_RETOUR,           // Retour patient
+        AJUSTEMENT_INVENTAIRE,   // Correction inventaire
+        ANNULATION,              // Annulation/rollback
+        SORTIE_RETOUR_FOURNISSEUR // Retour médicaments au fournisseur (flux inverse)
     }
 }

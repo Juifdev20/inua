@@ -144,11 +144,19 @@ export const removePrescriptionItem = (itemId, reasonData) =>
 export const updatePrescriptionItem = (itemId, itemData) => 
   pharmacyApi.put(`/prescriptions/items/${itemId}`, itemData);
 
+// Medications API (Stock/Inventory)
+export const getAllMedications = (page = 0, size = 100) => 
+  pharmacyApi.get('/medications', { params: { page, size } });
+export const getMedicationById = (id) => pharmacyApi.get(`/medications/${id}`);
+export const purchaseMedication = (medicationId, data) => 
+  pharmacyApi.post(`/medications/${medicationId}/purchase`, data);
+
 // Suppliers API
 export const createSupplier = (supplierData) => pharmacyApi.post('/suppliers', supplierData);
 export const getSupplierById = (id) => pharmacyApi.get(`/suppliers/${id}`);
 export const updateSupplier = (id, supplierData) => pharmacyApi.put(`/suppliers/${id}`, supplierData);
 export const getActiveSuppliers = () => pharmacyApi.get('/suppliers');
+export const getSuppliers = () => pharmacyApi.get('/suppliers'); // Alias pour compatibilité
 export const searchSuppliers = (query, page = 0, size = 20) => 
   pharmacyApi.get('/suppliers/search', { params: { query, page, size } });
 

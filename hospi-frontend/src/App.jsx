@@ -116,6 +116,8 @@ const Tarifs = React.lazy(() => import("./pages/finance/Tarifs"));
 const ServiceManager = React.lazy(() => import("./pages/finance/ServiceManager"));
 const InvoicesManagement = React.lazy(() => import("./pages/finance/InvoicesManagement"));
 const LivreCaisse = React.lazy(() => import("./pages/finance/LivreCaisse"));
+const DepensesEnAttente = React.lazy(() => import("./pages/finance/DepensesEnAttente"));
+const AchatMedicament = React.lazy(() => import("./pages/pharmacy/AchatMedicament"));
 
 const FinanceLoading = () => (
   <div className="flex items-center justify-center min-h-screen p-8 bg-surface">
@@ -307,6 +309,14 @@ function App() {
                       </Suspense>
                     }
                   />
+                  <Route
+                    path="depenses-en-attente"
+                    element={
+                      <Suspense fallback={<FinanceLoading />}>
+                        <DepensesEnAttente />
+                      </Suspense>
+                    }
+                  />
                   <Route path="settings" element={<FinanceSettings />} />
                   <Route path="notifications" element={<FinanceNotifications />} />
                 </Route>
@@ -359,6 +369,7 @@ function App() {
                   <Route path="suppliers" element={<div className="p-6"><h1 className="text-2xl font-bold">Fournisseurs - À implémenter</h1></div>} />
                   <Route path="sales" element={<PharmacySales />} />
                   <Route path="sales/history" element={<PharmacySalesHistory />} />
+                  <Route path="achat-medicament" element={<AchatMedicament />} />
                   <Route path="reports" element={<PharmacyReports />} />
                   <Route path="alerts" element={<PharmacyStockAlerts />} />
                   <Route path="settings" element={<PharmacySettings />} />

@@ -16,7 +16,8 @@ import {
   HeartPulse,
   SlidersHorizontal,
   TrendingUp,
-  BookOpen
+  BookOpen,
+  ClockAlert
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -64,6 +65,7 @@ const FinanceSidebar = () => {
     { name: 'Caisse Admissions',   path: '/finance/caisse-admissions',  icon: UserCheck,       color: 'text-primary' },
     { name: 'Caisse Laboratoire',  path: '/finance/caisse-laboratoire', icon: Microscope,      color: 'text-accent' },
     { name: 'Caisse Pharmacie',    path: '/finance/caisse-pharmacie',   icon: Pill,            color: 'text-primary' },
+    { name: 'Dépenses à Valider',  path: '/finance/depenses-en-attente', icon: ClockAlert,   color: 'text-yellow-600' },
     { name: 'Gestion des Dépenses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
     { name: 'Gestion des Entrées', path: '/finance/entrees',           icon: TrendingUp,      color: 'text-emerald-500' },
     { name: 'Livre de Caisse',     path: '/finance/livre-caisse',       icon: BookOpen,        color: 'text-blue-600' },

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -138,5 +139,31 @@ public class NotificationService {
     public void notifyDoctorPatientReady(String patientName, Long consultationId) {
         log.info("👨‍⚕️ Notification Médecin: Patient {} prêt pour consultation {}", 
                 patientName, consultationId);
+    }
+
+    // ========================================
+    // ✅ Notifications pour le Flux Pharmacie-Finance
+    // ========================================
+
+    /**
+     * Notifie les caissiers qu'une nouvelle dépense est en attente de validation
+     * Déclenché automatiquement lors de la réception d'une commande fournisseur
+     * @param transaction La transaction créée
+     */
+    @Transactional
+    public void notifierNouvelleDepense(com.hospital.backend.entity.FinanceTransaction transaction) {
+        log.info("📢 Notification Finance: Nouvelle dépense en attente - Transaction ID: {}, Montant: {} {}",
+                transaction.getId(), transaction.getMontant(), transaction.getDevise());
+
+        // Envoyer via WebSocket au topic général Finance
+        String destination = "/topic/finance/depenses-en-attente";
+        messagingTemplate.convertAndSend(destination, Map.of(
+            "transactionId", transaction.getId(),
+            "montant", transaction.getMontant(),
+            "devise", transaction.getDevise(),
+            "fournisseur", transaction.getFournisseurNom(),
+            "reference", transaction.getReferenceFournisseur(),
+            "message", "Nouvelle dépense à valider"
+        ));
     }
 }
