@@ -54,30 +54,32 @@ const showErrorToast = (error, status) => {
   const icon = isBusinessError ? '⚠️' : '❌';
   const color = isBusinessError ? '#F59E0B' : '#EF4444';
 
-  toast.error(
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-      <span style={{ fontSize: '20px' }}>{icon}</span>
+  // Créer le contenu HTML sans JSX
+  const content = `
+    <div style="display: flex; align-items: flex-start; gap: 12px;">
+      <span style="font-size: 20px;">${icon}</span>
       <div>
-        <div style={{ fontWeight: '700', fontSize: '14px', color: color, marginBottom: '4px' }}>
-          {title}
+        <div style="font-weight: 700; font-size: 14px; color: ${color}; margin-bottom: 4px;">
+          ${title}
         </div>
-        <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.4' }}>
-          {message}
+        <div style="font-size: 13px; color: #374151; line-height: 1.4;">
+          ${message}
         </div>
       </div>
-    </div>,
-    {
-      duration: isBusinessError ? 4000 : 6000,
-      style: {
-        background: '#ffffff',
-        border: `2px solid ${color}`,
-        borderRadius: '12px',
-        padding: '16px',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-        maxWidth: '400px',
-      },
-    }
-  );
+    </div>
+  `;
+
+  toast.error(content, {
+    duration: isBusinessError ? 4000 : 6000,
+    style: {
+      background: '#ffffff',
+      border: `2px solid ${color}`,
+      borderRadius: '12px',
+      padding: '16px',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+      maxWidth: '400px',
+    },
+  });
 };
 
 // 🔄 Intercepteur de réponse pour gérer les erreurs globalement
