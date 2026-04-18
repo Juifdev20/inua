@@ -95,62 +95,6 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.error("Ressource non trouvee"));
     }
 
-    // ============================================================================
-    // ✅ HANDLERS FLUX PHARMACIE-FINANCE
-    // ============================================================================
-
-    @ExceptionHandler(SoldeInsuffisantException.class)
-    public ResponseEntity<ApiResponse<Void>> handleSoldeInsuffisantException(SoldeInsuffisantException ex) {
-        log.error("Solde insuffisant: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    @ExceptionHandler(TransactionImmutableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleTransactionImmutableException(TransactionImmutableException ex) {
-        log.error("Transaction immutable: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    @ExceptionHandler(ScanFactureRequisException.class)
-    public ResponseEntity<ApiResponse<Void>> handleScanFactureRequisException(ScanFactureRequisException ex) {
-        log.error("Scan facture manquant: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    @ExceptionHandler(TransactionExistanteException.class)
-    public ResponseEntity<ApiResponse<Void>> handleTransactionExistanteException(TransactionExistanteException ex) {
-        log.error("Transaction existante: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
-        log.error("État invalide: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        log.error("Argument invalide: {}", ex.getMessage());
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error(ex.getMessage()));
-    }
-
-    // ============================================================================
-    // ✅ HANDLER GÉNÉRIQUE (toujours en dernier)
-    // ============================================================================
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Erreur inattendue: ", ex);
