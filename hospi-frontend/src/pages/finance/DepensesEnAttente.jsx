@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   FileText, Upload, DollarSign, Clock, CheckCircle, XCircle,
   Search, Loader2, RefreshCw, AlertCircle, Receipt,
-  Calendar, CreditCard, Building2, X, Eye
+  Calendar, CreditCard, Building2, X, Eye, Shield, Wallet
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { pharmacieFinanceApi } from '../../services/pharmacieFinanceApi';
+import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { toast } from 'sonner';
 
 const DepensesEnAttente = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [caisses, setCaisses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -506,20 +508,59 @@ const DepensesEnAttente = () => {
                           paddingRight: '40px'
                         }}
                       >
-                        <option value="" className="text-muted-foreground">Sélectionnez une caisse...</option>
+                        <option value="" className="text-muted-foreground">
+                          {user?.role === 'ADMIN' || user?.role === 'FINANCE' 
+                            ? "Sélectionnez une caisse (Trésorerie ou Réception)..." 
+                            : "Sélectionnez la Caisse Réception..."}
+                        </option>
                         {caisses
                           .filter(c => c.devise === selectedTransaction.devise)
-                          .map((c) => (
-                            <option key={c.id} value={c.id} className="py-2">
-                              {c.nom} (Solde: {formatCurrency(c.solde, c.devise)})
-                            </option>
-                          ))}
+                          .filter(c => {
+                            // Si Admin/Finance: voir TOUTES les caisses
+                            if (user?.role === 'ADMIN' || user?.role === 'FINANCE') return true;
+                            // Sinon: voir uniquement les caisses physiques (ID > 0)
+                            return c.id > 0;
+                          })
+                          .map((c) => {
+                            // Renommer pour clarifier
+                            const displayName = c.nom.includes('Principale') 
+                              ? c.nom.replace('Principale', 'Réception (Opérationnelle)')
+                              : c.nom;
+                            const isTresorerie = c.id < 0;
+                            
+                            return (
+                              <option key={c.id} value={c.id} className="py-2">
+                                {isTresorerie ? '💰 ' : '🏦 '}{displayName} — {formatCurrency(c.solde, c.devise)}
+                                {isTresorerie ? ' [Admin/Finance]' : ' [Caissier]'}
+                              </option>
+                            );
+                          })}
                       </select>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                      <span className="inline-block w-2 h-2 rounded-full bg-rose-500"></span>
-                      Devise requise: <span className="font-bold text-foreground">{selectedTransaction.devise}</span>
-                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="inline-block w-2 h-2 rounded-full bg-rose-500"></span>
+                        Devise requise: <span className="font-bold text-foreground">{selectedTransaction.devise}</span>
+                      </p>
+                      
+                      {/* Explication selon le rôle */}
+                      {user?.role === 'ADMIN' || user?.role === 'FINANCE' ? (
+                        <div className="flex items-start gap-1.5 text-[10px] text-amber-600/80 bg-amber-500/5 p-1.5 rounded">
+                          <Shield className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            <strong>Mode Admin:</strong> Vous pouvez choisir 💰 Trésorerie Globale (fournisseurs/salaires) 
+                            ou 🏦 Caisse Réception (patients). Les deux ont le même solde.
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-1.5 text-[10px] text-blue-600/80 bg-blue-500/5 p-1.5 rounded">
+                          <Wallet className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            <strong>Mode Caissier:</strong> Utilisez la Caisse Réception pour les paiements patients.
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

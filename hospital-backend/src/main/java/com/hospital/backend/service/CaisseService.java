@@ -30,38 +30,53 @@ public class CaisseService {
 
     /**
      * Liste toutes les caisses actives avec caisse centrale virtuelle
+     * ET synchronise les soldes des caisses physiques
      */
     public List<Caisse> getCaissesActives() {
         List<Caisse> caisses = new ArrayList<>(caisseRepository.findByActiveTrue());
         
-        // Ajouter la caisse centrale virtuelle pour CDF
+        // Calculer les soldes globaux
         BigDecimal soldeCentralCDF = calculerSoldeGlobal(Currency.CDF);
+        BigDecimal soldeCentralUSD = calculerSoldeGlobal(Currency.USD);
+        
+        // Synchroniser les soldes des caisses physiques avec le solde calculé
+        for (Caisse caisse : caisses) {
+            if (caisse.getDevise() == Currency.CDF && soldeCentralCDF.compareTo(BigDecimal.ZERO) > 0) {
+                caisse.setSolde(soldeCentralCDF);
+                log.info("🔄 Solde Caisse CDF '{}' synchronisé: {} CDF", caisse.getNom(), soldeCentralCDF);
+            }
+            if (caisse.getDevise() == Currency.USD && soldeCentralUSD.compareTo(BigDecimal.ZERO) > 0) {
+                caisse.setSolde(soldeCentralUSD);
+                log.info("🔄 Solde Caisse USD '{}' synchronisé: {} USD", caisse.getNom(), soldeCentralUSD);
+            }
+        }
+        
+        // Ajouter la Trésorerie Globale virtuelle pour CDF (Admin/Finance uniquement)
         if (soldeCentralCDF.compareTo(BigDecimal.ZERO) != 0) {
             Caisse caisseCentralCDF = Caisse.builder()
-                .id(-1L) // ID négatif pour identifier la caisse virtuelle
-                .nom("Caisse Centrale CDF")
-                .description("Solde global calculé (Revenus - Dépenses)")
+                .id(-1L)
+                .nom("Trésorerie Globale CDF")
+                .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
                 .devise(Currency.CDF)
                 .solde(soldeCentralCDF)
                 .soldeInitial(BigDecimal.ZERO)
                 .active(true)
                 .build();
-            caisses.add(0, caisseCentralCDF); // Ajouter en premier
+            caisses.add(0, caisseCentralCDF);
         }
         
-        // Ajouter la caisse centrale virtuelle pour USD
-        BigDecimal soldeCentralUSD = calculerSoldeGlobal(Currency.USD);
+        // Ajouter la Trésorerie Globale virtuelle pour USD
         if (soldeCentralUSD.compareTo(BigDecimal.ZERO) != 0) {
             Caisse caisseCentralUSD = Caisse.builder()
-                .id(-2L) // ID négatif pour identifier la caisse virtuelle
-                .nom("Caisse Centrale USD")
-                .description("Solde global calculé (Revenus - Dépenses)")
+                .id(-2L)
+                .nom("Trésorerie Globale USD")
+                .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
                 .devise(Currency.USD)
                 .solde(soldeCentralUSD)
                 .soldeInitial(BigDecimal.ZERO)
                 .active(true)
                 .build();
-            caisses.add(1, caisseCentralUSD); // Ajouter en deuxième
+            caisses.add(1, caisseCentralUSD);
         }
         
         return caisses;
@@ -83,24 +98,34 @@ public class CaisseService {
 
     /**
      * Liste les caisses par devise avec caisse centrale virtuelle
+     * ET synchronise les soldes des caisses physiques
      */
     public List<Caisse> getCaissesParDevise(Currency devise) {
         List<Caisse> caisses = new ArrayList<>(caisseRepository.findByDeviseAndActiveTrue(devise));
         
-        // Ajouter la caisse centrale virtuelle pour cette devise
+        // Calculer et synchroniser le solde
         BigDecimal soldeGlobal = calculerSoldeGlobal(devise);
+        
+        // Mettre à jour les soldes des caisses physiques
+        for (Caisse caisse : caisses) {
+            if (soldeGlobal.compareTo(BigDecimal.ZERO) > 0) {
+                caisse.setSolde(soldeGlobal);
+                log.info("🔄 Solde Caisse {} '{}' synchronisé: {}", devise, caisse.getNom(), soldeGlobal);
+            }
+        }
+        
         Long idVirtuel = devise == Currency.CDF ? -1L : -2L;
         
         Caisse caisseCentral = Caisse.builder()
             .id(idVirtuel)
-            .nom("Caisse Centrale " + devise)
-            .description("Solde global calculé (Revenus - Dépenses)")
+            .nom("Trésorerie Globale " + devise)
+            .description("Trésorerie centralisée - Réservée Admin/Finance")
             .devise(devise)
             .solde(soldeGlobal)
             .soldeInitial(BigDecimal.ZERO)
             .active(true)
             .build();
-        caisses.add(0, caisseCentral); // Ajouter en premier
+        caisses.add(0, caisseCentral);
         
         return caisses;
     }
