@@ -27,14 +27,23 @@ export default function DepensesEnAttente() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log('🔍 Chargement des données...');
+      
       const [txResponse, caissesResponse] = await Promise.all([
         pharmacieFinanceApi.getDepensesEnAttente(),
         pharmacieFinanceApi.getCaisses(),
       ]);
+      
+      console.log('✅ Transactions:', txResponse.data);
+      console.log('✅ Caisses:', caissesResponse.data);
+      
       setTransactions(txResponse.data || []);
       setCaisses(caissesResponse.data || []);
     } catch (err) {
-      setError('Erreur chargement: ' + err.message);
+      console.error('❌ Erreur chargement:', err);
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+      setError('Erreur chargement: ' + errorMsg);
     } finally {
       setLoading(false);
     }

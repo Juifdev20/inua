@@ -49,9 +49,10 @@ public class FinanceTransactionController {
     @Operation(summary = "Liste des dépenses en attente de validation",
             description = "Transactions créées par la pharmacie, en attente de scan et validation")
     public ResponseEntity<List<FinanceTransaction>> getDepensesEnAttente() {
-        return ResponseEntity.ok(
-            transactionRepository.findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN)
-        );
+        List<FinanceTransaction> transactions = transactionRepository
+            .findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN);
+        log.info("✅ {} transaction(s) en attente chargée(s)", transactions.size());
+        return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/dettes-fournisseurs")
@@ -176,7 +177,9 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
     @Operation(summary = "Liste des caisses actives")
     public ResponseEntity<List<Caisse>> getCaisses() {
-        return ResponseEntity.ok(caisseRepository.findByActiveTrue());
+        List<Caisse> caisses = caisseRepository.findByActiveTrue();
+        log.info("✅ {} caisse(s) active(s) chargée(s)", caisses.size());
+        return ResponseEntity.ok(caisses);
     }
 
     // ========================================

@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -57,6 +58,7 @@ public class Caisse {
 
     @OneToMany(mappedBy = "caisse", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"caisse"})
+    @JsonIgnore // ★ Empêche la sérialisation JSON pour éviter LazyLoadingException
     private List<FinanceTransaction> transactions;
 
     @CreationTimestamp

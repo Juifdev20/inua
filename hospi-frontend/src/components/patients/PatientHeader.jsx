@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Globe, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -7,13 +7,63 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
+import { useTranslation } from 'react-i18next';
+
+/* ── Drapeaux SVG inline ── */
+const FlagFR = ({ className }) => (
+  <svg viewBox="0 0 640 480" className={className}>
+    <rect width="213.3" height="480" fill="#002654" />
+    <rect x="213.3" width="213.4" height="480" fill="#fff" />
+    <rect x="426.7" width="213.3" height="480" fill="#CE1126" />
+  </svg>
+);
+
+const FlagGB = ({ className }) => (
+  <svg viewBox="0 0 640 480" className={className}>
+    <path fill="#012169" d="M0 0h640v480H0z" />
+    <path fill="#FFF" d="m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0h75z" />
+    <path fill="#C8102E" d="m424 281 216 159v40L369 281h55zm-184 20 6 35L54 480H0l240-179zM640 0v3L391 191l2-44L590 0h50zM0 0l239 176h-60L0 42V0z" />
+    <path fill="#FFF" d="M241 0v480h160V0H241zM0 160v160h640V160H0z" />
+    <path fill="#C8102E" d="M0 193v96h640v-96H0zM273 0v480h96V0h-96z" />
+  </svg>
+);
+
+const LANGUAGES = [
+  { code: 'fr', label: 'Français', shortLabel: 'FR', Flag: FlagFR },
+  { code: 'en', label: 'English',  shortLabel: 'EN', Flag: FlagGB },
+];
 
 const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const [notifications, setNotifications] = useState([]); 
   const [unreadCount, setUnreadCount] = useState(0);      
   const navigate = useNavigate();
+  const langRef = useRef(null);
+
+  // --- LANGUE ---
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const activeLang = LANGUAGES.find((l) => l.code === currentLang) || LANGUAGES[0];
+  const ActiveFlag = activeLang.Flag;
+
+  const handleLanguageChange = (langCode) => {
+    i18n.changeLanguage(langCode);
+    localStorage.setItem('preferredLanguage', langCode);
+    setShowLangMenu(false);
+  };
+
+  // Fermer menu langue au clic extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langRef.current && !langRef.current.contains(event.target)) {
+        setShowLangMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const { user, logout } = useAuth();
   const { theme, toggleTheme, toggleMobileSidebar } = useAdmin();
@@ -148,8 +198,65 @@ const Header = () => {
           </div>
         </div>
 
-        {/* DROITE : Actions & Profil */}
+        {/* DROITE : Langue + Actions & Profil */}
         <div className="flex items-center gap-2 md:gap-4 shrink-0">
+
+          {/* ★ SÉLECTEUR DE LANGUE ★ */}
+          <div className="relative" ref={langRef}>
+            <button
+              onClick={() => {
+                setShowLangMenu(!showLangMenu);
+                setShowNotifications(false);
+                setShowProfile(false);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-muted/50 hover:bg-muted border border-transparent hover:border-border transition-all group"
+              title={activeLang.label}
+            >
+              <div className="w-5 h-3.5 rounded-[3px] overflow-hidden shadow-sm ring-1 ring-black/10">
+                <ActiveFlag className="w-full h-full" />
+              </div>
+              <span className="text-[11px] font-bold text-muted-foreground group-hover:text-foreground hidden md:block">
+                {activeLang.shortLabel}
+              </span>
+              <ChevronDown className={`w-3 h-3 text-muted-foreground/60 transition-transform hidden md:block ${showLangMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showLangMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-xl shadow-xl border border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                <div className="px-3 py-2.5 border-b border-border bg-muted/30">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                    <Globe className="w-3 h-3" />
+                    {t('settings.language') || 'Langue'}
+                  </p>
+                </div>
+                {LANGUAGES.map((lang) => {
+                  const LangFlag = lang.Flag;
+                  const isActive = currentLang === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleLanguageChange(lang.code)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
+                        isActive
+                          ? 'bg-emerald-500/5 text-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <div className="w-6 h-4 rounded-[3px] overflow-hidden shadow-sm ring-1 ring-black/10 shrink-0">
+                        <LangFlag className="w-full h-full" />
+                      </div>
+                      <span className="font-bold text-xs flex-1 text-left">{lang.label}</span>
+                      {isActive && (
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           
           <button onClick={toggleTheme} className="p-2.5 rounded-xl bg-muted/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-muted-foreground transition-all">
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
@@ -161,6 +268,7 @@ const Header = () => {
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 setShowProfile(false);
+                setShowLangMenu(false);
               }}
               className="relative p-2.5 bg-muted/50 rounded-xl text-muted-foreground hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
             >
@@ -220,7 +328,7 @@ const Header = () => {
           {/* PROFIL SECTION */}
           <div className="relative flex items-center pl-2 md:pl-4 border-l border-border">
             <button
-              onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }}
+              onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); setShowLangMenu(false); }}
               className="flex items-center gap-3 p-1 rounded-xl hover:bg-muted transition-all"
             >
               <div className="w-10 h-10 rounded-xl overflow-hidden border border-border bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-sm">

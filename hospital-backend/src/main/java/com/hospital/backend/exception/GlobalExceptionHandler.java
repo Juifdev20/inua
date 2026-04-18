@@ -132,10 +132,25 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleGenericException(Exception ex) {
         log.error("Erreur inattendue: ", ex);
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error("Une erreur interne est survenue"));
+        
+        // ★ Retourner les détails de l'erreur pour faciliter le debug
+        Map<String, String> errorDetails = new HashMap<>();
+        errorDetails.put("message", ex.getMessage());
+        errorDetails.put("type", ex.getClass().getSimpleName());
+        
+        // Stack trace (première ligne seulement)
+        if (ex.getStackTrace() != null && ex.getStackTrace().length > 0) {
+            errorDetails.put("location", ex.getStackTrace()[0].toString());
+        }
+        
+        ApiResponse<Map<String, String>> response = ApiResponse.<Map<String, String>>builder()
+            .success(false)
+            .message("Une erreur interne est survenue")
+            .data(errorDetails)
+            .build();
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
