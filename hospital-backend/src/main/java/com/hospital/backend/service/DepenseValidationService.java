@@ -37,7 +37,8 @@ public class DepenseValidationService {
                                               ValidationDepenseDTO validationDTO,
                                               User validatedBy) {
         
-        log.info("Validation dépense ID: {} par {}", transactionId, validatedBy.getUsername());
+        String validatorName = validatedBy != null ? validatedBy.getUsername() : "SYSTEM";
+        log.info("Validation dépense ID: {} par {}", transactionId, validatorName);
 
         FinanceTransaction transaction = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction non trouvée: " + transactionId));
@@ -125,6 +126,9 @@ public class DepenseValidationService {
      */
     @Transactional
     public FinanceTransaction payerDette(Long transactionId, Long caisseId, User payeur) {
+        String payeurName = payeur != null ? payeur.getUsername() : "SYSTEM";
+        log.info("Paiement différé demandé pour transaction: {} par {}", transactionId, payeurName);
+        
         FinanceTransaction transaction = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction non trouvée"));
 

@@ -3,9 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
-  UserCheck,
-  Microscope,
-  Pill,
+  Wallet,
   DollarSign,
   Settings,
   FileText,
@@ -64,14 +62,12 @@ const FinanceSidebar = () => {
 
   const navigationItems = [
     { nameKey: 'finance.dashboard',        path: '/finance/dashboard',          icon: LayoutDashboard, color: 'text-secondary' },
-    { nameKey: 'finance.admissions',       path: '/finance/caisse-admissions',  icon: UserCheck,       color: 'text-primary' },
-    { nameKey: 'finance.laboratory',       path: '/finance/caisse-laboratoire', icon: Microscope,      color: 'text-accent' },
-    { nameKey: 'finance.pharmacy',         path: '/finance/caisse-pharmacie',   icon: Pill,            color: 'text-primary' },
-    { nameKey: 'finance.expensesToValidate', path: '/finance/depenses-en-attente', icon: ClockAlert, color: 'text-yellow-600' },
-    { nameKey: 'finance.expenseManagement', path: '/finance/depenses',         icon: DollarSign,      color: 'text-warning' },
-    { nameKey: 'finance.entryManagement',  path: '/finance/entrees',            icon: TrendingUp,      color: 'text-emerald-500' },
-    { nameKey: 'finance.cashbook',         path: '/finance/livre-caisse',       icon: BookOpen,        color: 'text-blue-600' },
-    { nameKey: 'finance.priceGrid',        path: '/finance/tarifs',             icon: Settings,        color: 'text-muted-foreground' },
+    { nameKey: 'finance.caisses',            path: '/finance/caisses',            icon: Wallet,           color: 'text-primary' },
+    { nameKey: 'finance.expensesToValidate', path: '/finance/depenses-en-attente', icon: ClockAlert,     color: 'text-yellow-600' },
+    { nameKey: 'finance.expenseManagement', path: '/finance/depenses',           icon: DollarSign,       color: 'text-warning' },
+    { nameKey: 'finance.entryManagement',  path: '/finance/entrees',            icon: TrendingUp,       color: 'text-emerald-500' },
+    { nameKey: 'finance.cashbook',         path: '/finance/livre-caisse',       icon: BookOpen,         color: 'text-blue-600' },
+    { nameKey: 'finance.priceGrid',        path: '/finance/tarifs',             icon: Settings,         color: 'text-muted-foreground' },
   ];
 
   const handleLogout = () => {

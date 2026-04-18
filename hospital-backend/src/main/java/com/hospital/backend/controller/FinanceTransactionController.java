@@ -109,8 +109,15 @@ public class FinanceTransactionController {
             @RequestParam(value = "dateEcheance", required = false) String dateEcheance,
             @AuthenticationPrincipal User currentUser) {
         try {
-            log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}", id, modePaiement, 
-                    scanFacture != null ? scanFacture.getOriginalFilename() : "null");
+            // Vérifier que l'utilisateur est authentifié
+            if (currentUser == null) {
+                log.error("❌ Utilisateur non authentifié lors de la validation dépense ID: {}", id);
+                return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
+            }
+            
+            log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}, user: {}", id, modePaiement, 
+                    scanFacture != null ? scanFacture.getOriginalFilename() : "null",
+                    currentUser.getUsername());
 
             ValidationDepenseDTO dto = ValidationDepenseDTO.builder()
                 .transactionId(id)
@@ -149,6 +156,12 @@ public class FinanceTransactionController {
             @RequestParam("caisseId") Long caisseId,
             @AuthenticationPrincipal User currentUser) {
         try {
+            // Vérifier que l'utilisateur est authentifié
+            if (currentUser == null) {
+                log.error("❌ Utilisateur non authentifié lors du paiement dette ID: {}", id);
+                return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
+            }
+            
             FinanceTransaction payee = validationService.payerDette(id, caisseId, currentUser);
             return ResponseEntity.ok(ApiResponse.success("Dette payée avec succès", 
                 Map.of("id", payee.getId(), 
