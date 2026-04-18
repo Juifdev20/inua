@@ -488,23 +488,37 @@ const DepensesEnAttente = () => {
                     <label className="block text-sm font-bold mb-2 text-foreground">
                       Caisse <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      value={caisseId}
-                      onChange={(e) => setCaisseId(e.target.value)}
-                      className="w-full border-2 border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      required
-                    >
-                      <option value="">Sélectionnez...</option>
-                      {caisses
-                        .filter(c => c.devise === selectedTransaction.devise)
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nom} (Solde: {formatCurrency(c.solde, c.devise)})
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1.5">
-                      Devise requise: {selectedTransaction.devise}
+                    <div className="relative">
+                      <select
+                        value={caisseId}
+                        onChange={(e) => setCaisseId(e.target.value)}
+                        className="w-full bg-card border-2 border-border rounded-xl px-4 py-3 text-foreground font-medium
+                          focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all
+                          appearance-none cursor-pointer
+                          [&>option]:bg-card [&>option]:text-foreground [&>option]:py-2
+                          [&>option:checked]:bg-rose-500 [&>option:checked]:text-white"
+                        required
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f43f5e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 12px center',
+                          backgroundSize: '20px',
+                          paddingRight: '40px'
+                        }}
+                      >
+                        <option value="" className="text-muted-foreground">Sélectionnez une caisse...</option>
+                        {caisses
+                          .filter(c => c.devise === selectedTransaction.devise)
+                          .map((c) => (
+                            <option key={c.id} value={c.id} className="py-2">
+                              {c.nom} (Solde: {formatCurrency(c.solde, c.devise)})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                      <span className="inline-block w-2 h-2 rounded-full bg-rose-500"></span>
+                      Devise requise: <span className="font-bold text-foreground">{selectedTransaction.devise}</span>
                     </p>
                   </div>
                 )}
