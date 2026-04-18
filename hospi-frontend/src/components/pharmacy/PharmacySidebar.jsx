@@ -18,8 +18,8 @@ import {
   TrendingUp,
   AlertTriangle,
   Menu,
-  History,
-  ShoppingCart
+  History
+  // ShoppingCart - ℹ️ Plus utilisé (fusionné avec Stock & Inventaire)
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -74,7 +74,7 @@ const PharmacySidebar = () => {
     { name: 'Prescriptions',       path: '/pharmacy/prescriptions',      icon: FileText,        color: 'text-primary' },
     { name: 'Ventes / POS',        path: '/pharmacy/sales',              icon: DollarSign,      color: 'text-accent' },
     { name: 'Historique Ventes',   path: '/pharmacy/sales/history',      icon: History,         color: 'text-primary' },
-    { name: 'Achat Médicaments',   path: '/pharmacy/achat-medicament',   icon: ShoppingCart,    color: 'text-emerald-600' },
+    // { name: 'Achat Médicaments',   path: '/pharmacy/achat-medicament',   icon: ShoppingCart,    color: 'text-emerald-600' }, // ℹ️ Fusionné avec "Stock & Inventaire"
     { name: 'Stock & Inventaire',  path: '/pharmacy/inventory',          icon: Package,         color: 'text-primary' },
     { name: 'Alertes Stock',       path: '/pharmacy/alerts',             icon: AlertTriangle,   color: 'text-warning' },
     { name: 'Rapports',            path: '/pharmacy/reports',            icon: TrendingUp,      color: 'text-primary' },
