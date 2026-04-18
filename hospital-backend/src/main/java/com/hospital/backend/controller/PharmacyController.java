@@ -829,6 +829,9 @@ public class PharmacyController {
             BigDecimal unitPrice = priceObj != null ? new BigDecimal(priceObj.toString()) : BigDecimal.ZERO;
             Long supplierId = purchaseData.get("supplierId") != null ? 
                 Long.valueOf(purchaseData.get("supplierId").toString()) : null;
+            String currencyStr = purchaseData.get("currency") != null ? 
+                purchaseData.get("currency").toString() : "CDF";
+            Currency currency = Currency.valueOf(currencyStr);
             
             // Récupérer l'utilisateur courant (pharmacien)
             Long pharmacistId = getCurrentUserId();
@@ -857,7 +860,7 @@ public class PharmacyController {
                         .numeroFactureFournisseur("ACHAT-" + System.currentTimeMillis())
                         .dateFactureFournisseur(LocalDate.now())
                         .total(totalAmount)
-                        .devise(Currency.CDF) // Par défaut, peut être paramétré
+                        .devise(currency)
                         .paiementMode(PaiementMode.CREDIT) // Sécurité: crédit par défaut
                         .fournisseurId(supplierId)
                         .fournisseurNom(supplierName)

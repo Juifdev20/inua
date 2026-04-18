@@ -62,7 +62,7 @@ public class MedicationController {
                         .numeroFactureFournisseur("ACHAT-" + System.currentTimeMillis())
                         .dateFactureFournisseur(medicationDTO.getPurchaseDate() != null ? medicationDTO.getPurchaseDate() : LocalDate.now())
                         .total(totalAmount)
-                        .devise(Currency.CDF) // Par défaut CDF
+                        .devise(medicationDTO.getDevise() != null ? medicationDTO.getDevise() : Currency.CDF)
                         .paiementMode(PaiementMode.CREDIT) // Sécurité: crédit par défaut
                         .fournisseurId(null) // Fournisseur saisi en texte libre
                         .fournisseurNom(medicationDTO.getSupplier())

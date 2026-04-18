@@ -1,5 +1,6 @@
 package com.hospital.backend.dto;
 
+import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.MedicationForm;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -49,6 +50,7 @@ public class MedicationDTO {
     private Integer minimumStock;
     private LocalDateTime expiryDate;
     private LocalDate purchaseDate;
+    private Currency devise;
     private Boolean isActive;
     private Boolean requiresPrescription;
     private LocalDateTime createdAt;

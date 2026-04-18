@@ -92,7 +92,7 @@ public class FinanceTransactionController {
     // ========================================
 
     @PostMapping(value = "/{id}/valider", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('CAISSIER')")
+    @PreAuthorize("hasAnyRole('CAISSIER', 'FINANCE', 'ADMIN')")
     @Operation(summary = "Valider une dépense avec scan de facture",
             description = "Upload du scan obligatoire. Mode: IMMEDIAT (décaissement) ou CREDIT (dette)")
     public ResponseEntity<FinanceTransaction> validerDepense(
@@ -122,7 +122,7 @@ public class FinanceTransactionController {
     // ========================================
 
     @PostMapping("/{id}/payer")
-    @PreAuthorize("hasRole('CAISSIER')")
+    @PreAuthorize("hasAnyRole('CAISSIER', 'FINANCE', 'ADMIN')")
     @Operation(summary = "Payer une dette fournisseur",
             description = "Transition A_PAYER -> PAYE avec décaissement de la caisse")
     public ResponseEntity<FinanceTransaction> payerDette(
@@ -139,7 +139,7 @@ public class FinanceTransactionController {
     // ========================================
 
     @PostMapping("/{id}/corriger")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CAISSIER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
     @Operation(summary = "Créer un avoir pour corriger une transaction",
             description = "La transaction originale sera marquée CONTRE_PASSEE. Jamais de suppression!")
     public ResponseEntity<FinanceTransaction> corrigerTransaction(
