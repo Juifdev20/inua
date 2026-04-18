@@ -115,6 +115,7 @@ const Revenues = React.lazy(() => import("./pages/finance/Revenues"));
 const Tarifs = React.lazy(() => import("./pages/finance/Tarifs"));
 const ServiceManager = React.lazy(() => import("./pages/finance/ServiceManager"));
 const InvoicesManagement = React.lazy(() => import("./pages/finance/InvoicesManagement"));
+const LivreCaisse = React.lazy(() => import("./pages/finance/LivreCaisse"));
 
 const FinanceLoading = () => (
   <div className="flex items-center justify-center min-h-screen p-8 bg-surface">
@@ -295,6 +296,14 @@ function App() {
                     element={
                       <Suspense fallback={<FinanceLoading />}>
                         <InvoicesManagement />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="livre-caisse"
+                    element={
+                      <Suspense fallback={<FinanceLoading />}>
+                        <LivreCaisse />
                       </Suspense>
                     }
                   />

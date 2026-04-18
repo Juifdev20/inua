@@ -376,6 +376,69 @@ const financeApi = {
       params: { source, amount }
     });
     return response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // LIVRE DE CAISSE
+  // ═══════════════════════════════════════
+  /**
+   * Vue Synthétique - Totaux journaliers
+   * Retourne les entrées/sorties et solde par jour
+   */
+  getLivreCaisseSynthese: async (dateDebut, dateFin) => {
+    const response = await api.get('/livre-caisse/synthese', {
+      params: { dateDebut, dateFin }
+    });
+    return response.data;
+  },
+
+  /**
+   * Vue Détaillée - Transaction par transaction
+   * Avec pagination et calcul du solde cumulatif
+   */
+  getLivreCaisseDetails: async (dateDebut, dateFin, page = 0, size = 50) => {
+    const response = await api.get('/livre-caisse/details', {
+      params: { dateDebut, dateFin, page, size }
+    });
+    return response.data;
+  },
+
+  /**
+   * Transactions par caissier (pour clôture individuelle)
+   */
+  getLivreCaisseByCaissier: async (caissierId, dateDebut, dateFin) => {
+    const response = await api.get(`/livre-caisse/details/caissier/${caissierId}`, {
+      params: { dateDebut, dateFin }
+    });
+    return response.data;
+  },
+
+  /**
+   * Export Excel du livre de caisse (2 onglets: Synthèse + Détails)
+   */
+  exportLivreCaisseExcel: async (dateDebut, dateFin, caissierId = null) => {
+    const params = { dateDebut, dateFin };
+    if (caissierId) params.caissierId = caissierId;
+    
+    const response = await api.get('/livre-caisse/export/excel', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  /**
+   * Export PDF du livre de caisse
+   */
+  exportLivreCaissePDF: async (dateDebut, dateFin, caissierId = null) => {
+    const params = { dateDebut, dateFin };
+    if (caissierId) params.caissierId = caissierId;
+    
+    const response = await api.get('/livre-caisse/export/pdf', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
   }
 };
 

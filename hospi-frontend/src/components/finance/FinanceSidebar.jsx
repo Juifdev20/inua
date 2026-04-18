@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   HeartPulse,
   SlidersHorizontal,
-  TrendingUp
+  TrendingUp,
+  BookOpen
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -65,6 +66,7 @@ const FinanceSidebar = () => {
     { name: 'Caisse Pharmacie',    path: '/finance/caisse-pharmacie',   icon: Pill,            color: 'text-primary' },
     { name: 'Gestion des Dépenses', path: '/finance/depenses',          icon: DollarSign,      color: 'text-warning' },
     { name: 'Gestion des Entrées', path: '/finance/entrees',           icon: TrendingUp,      color: 'text-emerald-500' },
+    { name: 'Livre de Caisse',     path: '/finance/livre-caisse',       icon: BookOpen,        color: 'text-blue-600' },
     { name: 'Grille Tarifaire',    path: '/finance/tarifs',             icon: Settings,        color: 'text-muted-foreground' },
   ];
 
