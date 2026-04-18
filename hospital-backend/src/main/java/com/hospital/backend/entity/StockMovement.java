@@ -59,6 +59,7 @@ public class StockMovement {
         ENTREE_ACHAT,         // Achat fournisseur
         ENTREE_RETOUR,        // Retour patient
         AJUSTEMENT_INVENTAIRE, // Correction inventaire
-        ANNULATION            // Annulation/rollback
+        ANNULATION,            // Annulation/rollback
+        SORTIE_RETOUR_FOURNISSEUR // Retour médicaments au fournisseur (flux inverse)
     }
 }
