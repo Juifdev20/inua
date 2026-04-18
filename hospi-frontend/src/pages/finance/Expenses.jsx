@@ -50,6 +50,8 @@ const Expenses = () => {
   const [stats, setStats] = useState({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
   const [balances, setBalances] = useState({});
   const [totalBalance, setTotalBalance] = useState(0);
+  const [pharmacyTransactions, setPharmacyTransactions] = useState([]);
+  const [pharmacyTodayTotal, setPharmacyTodayTotal] = useState({ CDF: 0, USD: 0 });
 
   // ═══════════════════════════════════════
   // ★ CHARGEMENT DES SOLDES DE CAISSE
@@ -150,9 +152,34 @@ const Expenses = () => {
   // ★ SUPPRIMÉ : l'ancien loadStats() qui appelait financeApi.api.get(...)
   // Les stats sont maintenant calculées dans loadExpenses()
 
+  // ═══════════════════════════════════════
+  // ★ CHARGEMENT DES TRANSACTIONS PHARMACIE (ACHATS MÉDICAMENTS)
+  // ═══════════════════════════════════════
+  const loadPharmacyTransactions = async () => {
+    try {
+      // Charger les transactions en attente
+      const pendingData = await financeApi.getPendingTransactions();
+      const transactions = Array.isArray(pendingData) ? pendingData : [];
+      setPharmacyTransactions(transactions);
+      
+      // Charger le total du jour (depuis FinanceTransaction)
+      const todayData = await financeApi.getTodayTotalFromTransactions();
+      if (todayData?.success) {
+        setPharmacyTodayTotal({
+          CDF: todayData.currency === 'CDF' ? (todayData.total || 0) : 0,
+          USD: todayData.currency === 'USD' ? (todayData.total || 0) : 0
+        });
+      }
+    } catch (error) {
+      console.error('Erreur chargement transactions pharmacie:', error);
+      // Ne pas bloquer l'affichage si cette API échoue
+    }
+  };
+
   useEffect(() => {
     loadExpenses();
     loadBalances();
+    loadPharmacyTransactions();
   }, [categoryFilter]);
 
   const formatCurrency = (amount, currency = 'CDF') =>
@@ -324,7 +351,7 @@ const Expenses = () => {
       </div>
 
       {/* ══════ BANDEAU RÉSUMÉ ══════ */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-px rounded-2xl overflow-hidden bg-border shadow-sm">
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" />
@@ -334,9 +361,29 @@ const Expenses = () => {
               Aujourd'hui
             </p>
             <div className="flex flex-col gap-0.5">
-              <p className="text-xs sm:text-sm font-black text-rose-500 truncate">CDF: {formatCurrency(stats.today?.CDF || 0, 'CDF')}</p>
-              <p className="text-[10px] sm:text-xs font-semibold text-rose-500/70 truncate">USD: {formatCurrency(stats.today?.USD || 0, 'USD')}</p>
+              <p className="text-xs sm:text-sm font-black text-rose-500 truncate">CDF: {formatCurrency((stats.today?.CDF || 0) + (pharmacyTodayTotal?.CDF || 0), 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-rose-500/70 truncate">USD: {formatCurrency((stats.today?.USD || 0) + (pharmacyTodayTotal?.USD || 0), 'USD')}</p>
             </div>
+          </div>
+        </div>
+        {/* ★ NOUVEAU : Achats Médicaments du jour */}
+        <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Achats Pharmacie
+            </p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs sm:text-sm font-black text-violet-500 truncate">CDF: {formatCurrency(pharmacyTodayTotal?.CDF || 0, 'CDF')}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-violet-500/70 truncate">USD: {formatCurrency(pharmacyTodayTotal?.USD || 0, 'USD')}</p>
+            </div>
+            {pharmacyTransactions.length > 0 && (
+              <p className="text-[9px] text-muted-foreground mt-1">
+                {pharmacyTransactions.length} transaction{pharmacyTransactions.length > 1 ? 's' : ''} en attente
+              </p>
+            )}
           </div>
         </div>
         <div className="bg-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
@@ -367,6 +414,15 @@ const Expenses = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ★ INFO : Les achats médicaments sont maintenant inclus */}
+      <div className="flex items-center gap-2 px-1">
+        <div className="w-2 h-2 rounded-full bg-violet-500"></div>
+        <p className="text-xs text-muted-foreground">
+          Les achats de médicaments sont automatiquement comptabilisés comme dépenses 
+          et inclus dans le total du jour.
+        </p>
       </div>
 
       {/* ══════ LAYOUT PRINCIPAL ══════ */}

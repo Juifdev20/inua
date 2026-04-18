@@ -178,4 +178,34 @@ public class FinanceTransactionController {
     public ResponseEntity<List<Caisse>> getCaisses() {
         return ResponseEntity.ok(caisseRepository.findByActiveTrue());
     }
+
+    // ========================================
+    // 📊 STATISTIQUES JOURNALIÈRES
+    // ========================================
+
+    @GetMapping("/today-total")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
+    @Operation(summary = "Total des dépenses du jour (achats médicaments inclus)",
+            description = "Inclut toutes les transactions DEPENSE créées aujourd'hui (achats pharmacie + dépenses traditionnelles)")
+    public ResponseEntity<java.util.Map<String, Object>> getTodayTotal() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDateTime startOfDay = today.atStartOfDay();
+        java.time.LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        java.util.List<FinanceTransaction> todayTransactions = transactionRepository
+            .findByTypeAndCreatedAtBetween(TransactionType.DEPENSE, startOfDay, endOfDay);
+
+        java.math.BigDecimal total = todayTransactions.stream()
+            .map(FinanceTransaction::getMontant)
+            .filter(m -> m != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        return ResponseEntity.ok(java.util.Map.of(
+            "success", true,
+            "total", total,
+            "count", todayTransactions.size(),
+            "currency", "CDF",
+            "source", "FinanceTransaction (inclut achats médicaments)"
+        ));
+    }
 }

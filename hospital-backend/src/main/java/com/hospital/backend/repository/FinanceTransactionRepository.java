@@ -86,4 +86,9 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
      */
     @Query("SELECT ft FROM FinanceTransaction ft WHERE ft.status = 'EN_ATTENTE_SCAN' AND ft.createdAt < :dateLimite")
     List<FinanceTransaction> findEnAttenteDepuis(@Param("dateLimite") LocalDateTime dateLimite);
+
+    /**
+     * Liste les transactions par type et période de création
+     */
+    List<FinanceTransaction> findByTypeAndCreatedAtBetween(TransactionType type, LocalDateTime start, LocalDateTime end);
 }

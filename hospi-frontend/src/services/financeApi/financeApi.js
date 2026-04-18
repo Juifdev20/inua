@@ -259,6 +259,18 @@ const financeApi = {
     return response.data;
   },
 
+  // ★ NOUVEAU : Dépenses du jour depuis FinanceTransaction (achats médicaments inclus)
+  getTodayTotalFromTransactions: async () => {
+    const response = await globalApi.get('/finance/transactions/today-total');
+    return response.data;
+  },
+
+  // ★ NOUVEAU : Liste des transactions en attente (achats pharmacie)
+  getPendingTransactions: async () => {
+    const response = await globalApi.get('/finance/transactions/en-attente');
+    return response.data;
+  },
+
   // ═══════════════════════════════════════
   // TARIFS
   // ═══════════════════════════════════════

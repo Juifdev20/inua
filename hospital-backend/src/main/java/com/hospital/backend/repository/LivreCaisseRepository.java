@@ -16,13 +16,13 @@ import java.util.List;
 
 /**
  * Repository pour le Livre de Caisse
- * Combine les Revenues (entrées) et Expenses (sorties)
+ * Combine les Revenues (entrées), Expenses (sorties) et FinanceTransaction (achats médicaments)
  */
 @Repository
 public interface LivreCaisseRepository extends JpaRepository<com.hospital.backend.entity.Revenue, Long> {
 
     /**
-     * Récupère toutes les transactions (Revenues + Expenses) pour une période
+     * Récupère toutes les transactions (Revenues + Expenses + FinanceTransaction) pour une période
      * Utilisé pour la vue détaillée avec pagination
      */
     @Query(value = """
@@ -85,6 +85,30 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
             FROM expenses e
             LEFT JOIN users u ON e.created_by_id = u.id
             WHERE CAST(e.date AS DATE) BETWEEN :dateDebut AND :dateFin
+            
+            UNION ALL
+            
+            -- ★ ACHATS MÉDICAMENTS (FinanceTransaction)
+            SELECT 
+                ft.id + 2000000 as id,
+                ft.created_at as date,
+                'SORTIE' as type,
+                COALESCE(ft.categorie, 'Achat Médicaments') as description,
+                COALESCE(ft.reference_fournisseur, CONCAT('PHARMA-', ft.id)) as document,
+                ft.devise as devise,
+                ft.montant as montant,
+                NULL as patient_nom,
+                NULL as patient_prenom,
+                NULL as patient_code,
+                u.id as caissier_id,
+                CONCAT(u.first_name, ' ', u.last_name) as caissier_nom,
+                NULL as medecin_nom,
+                'PHARMACIE' as source,
+                ft.created_at
+            FROM finance_transactions ft
+            LEFT JOIN users u ON ft.created_by_id = u.id
+            WHERE ft.type = 'DEPENSE'
+              AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
         ) t
         ORDER BY t.date, t.created_at
         """,
@@ -95,6 +119,10 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
             UNION ALL
             SELECT e.id + 1000000 FROM expenses e 
             WHERE CAST(e.date AS DATE) BETWEEN :dateDebut AND :dateFin
+            UNION ALL
+            SELECT ft.id + 2000000 FROM finance_transactions ft
+            WHERE ft.type = 'DEPENSE'
+              AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
         ) as count_table
         """,
         nativeQuery = true)
@@ -168,6 +196,31 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
             LEFT JOIN users u ON e.created_by_id = u.id
             WHERE CAST(e.date AS DATE) BETWEEN :dateDebut AND :dateFin
               AND u.id = :caissierId
+            
+            UNION ALL
+            
+            -- ★ ACHATS MÉDICAMENTS PAR CAISSIER (FinanceTransaction)
+            SELECT 
+                ft.id + 2000000 as id,
+                ft.created_at as date,
+                'SORTIE' as type,
+                COALESCE(ft.categorie, 'Achat Médicaments') as description,
+                COALESCE(ft.reference_fournisseur, CONCAT('PHARMA-', ft.id)) as document,
+                ft.devise as devise,
+                ft.montant as montant,
+                NULL as patient_nom,
+                NULL as patient_prenom,
+                NULL as patient_code,
+                u.id as caissier_id,
+                CONCAT(u.first_name, ' ', u.last_name) as caissier_nom,
+                NULL as medecin_nom,
+                'PHARMACIE' as source,
+                ft.created_at
+            FROM finance_transactions ft
+            LEFT JOIN users u ON ft.created_by_id = u.id
+            WHERE ft.type = 'DEPENSE'
+              AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
+              AND u.id = :caissierId
         ) t
         ORDER BY t.date, t.created_at
         """,
@@ -179,18 +232,37 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
 
     /**
      * Calcule le solde d'ouverture (toutes transactions avant la date de début)
+     * ★ INCLUT LES ACHATS MÉDICAMENTS (FinanceTransaction)
      */
-    @Query("""
+    @Query(value = """
         SELECT 
-            COALESCE(SUM(CASE WHEN r.currency = :currency THEN r.amount ELSE 0 END), 0)
+            COALESCE(SUM(CASE WHEN type = 'ENTREE' THEN montant ELSE 0 END), 0)
             - 
-            COALESCE((SELECT SUM(e.amount) FROM Expense e 
-                      WHERE e.currency = :currency 
-                      AND CAST(e.date AS DATE) < :date), 0)
-        FROM Revenue r
-        WHERE r.currency = :currency
-        AND CAST(r.date AS DATE) < :date
-        """)
+            COALESCE(SUM(CASE WHEN type = 'SORTIE' THEN montant ELSE 0 END), 0)
+        FROM (
+            SELECT 'ENTREE' as type, r.amount as montant
+            FROM revenues r
+            WHERE r.currency = :currency
+            AND CAST(r.date AS DATE) < :date
+            
+            UNION ALL
+            
+            SELECT 'SORTIE' as type, e.amount as montant
+            FROM expenses e
+            WHERE e.currency = :currency
+            AND CAST(e.date AS DATE) < :date
+            
+            UNION ALL
+            
+            -- ★ ACHATS MÉDICAMENTS AVANT LA DATE
+            SELECT 'SORTIE' as type, ft.montant as montant
+            FROM finance_transactions ft
+            WHERE ft.devise = :currency
+            AND ft.type = 'DEPENSE'
+            AND CAST(ft.created_at AS DATE) < :date
+        ) t
+        """,
+        nativeQuery = true)
     BigDecimal calculateSoldeOuverture(
             @Param("date") LocalDate date,
             @Param("currency") Currency currency);
@@ -224,6 +296,18 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
                 e.amount as montant
             FROM expenses e
             WHERE CAST(e.date AS DATE) BETWEEN :dateDebut AND :dateFin
+            
+            UNION ALL
+            
+            -- ★ ACHATS MÉDICAMENTS JOURNALIERS (FinanceTransaction)
+            SELECT 
+                CAST(ft.created_at AS DATE) as date_jour,
+                'SORTIE' as type,
+                ft.devise as devise,
+                ft.montant as montant
+            FROM finance_transactions ft
+            WHERE ft.type = 'DEPENSE'
+              AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
         ) t
         GROUP BY t.date_jour
         ORDER BY t.date_jour
