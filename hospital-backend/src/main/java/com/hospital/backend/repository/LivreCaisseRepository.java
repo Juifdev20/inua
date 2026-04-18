@@ -265,7 +265,7 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
         nativeQuery = true)
     BigDecimal calculateSoldeOuverture(
             @Param("date") LocalDate date,
-            @Param("currency") Currency currency);
+            @Param("currency") String currency);
 
     /**
      * Récupère les totaux journaliers pour la vue synthétique

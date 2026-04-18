@@ -15,7 +15,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -109,15 +111,27 @@ public class FinanceTransactionController {
             @RequestParam(value = "dateEcheance", required = false) String dateEcheance,
             @AuthenticationPrincipal User currentUser) {
         try {
+            // Récupérer l'utilisateur depuis SecurityContext si @AuthenticationPrincipal est null
+            User user = currentUser;
+            if (user == null) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getName() != null) {
+                    String username = auth.getName();
+                    log.info("🔍 @AuthenticationPrincipal null, récupération depuis SecurityContext: {}", username);
+                    // Récupérer l'utilisateur depuis la validation service
+                    user = validationService.findUserByUsername(username);
+                }
+            }
+            
             // Vérifier que l'utilisateur est authentifié
-            if (currentUser == null) {
+            if (user == null) {
                 log.error("❌ Utilisateur non authentifié lors de la validation dépense ID: {}", id);
                 return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
             }
             
             log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}, user: {}", id, modePaiement, 
                     scanFacture != null ? scanFacture.getOriginalFilename() : "null",
-                    currentUser.getUsername());
+                    user.getUsername());
 
             ValidationDepenseDTO dto = ValidationDepenseDTO.builder()
                 .transactionId(id)
@@ -125,7 +139,7 @@ public class FinanceTransactionController {
                 .caisseId(caisseId)
                 .build();
 
-            FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, currentUser);
+            FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, user);
             
             // Retourner une réponse simplifiée pour éviter les problèmes de sérialisation
             return ResponseEntity.ok(ApiResponse.success("Dépense validée avec succès", 
@@ -158,13 +172,24 @@ public class FinanceTransactionController {
             @RequestParam("caisseId") Long caisseId,
             @AuthenticationPrincipal User currentUser) {
         try {
+            // Récupérer l'utilisateur depuis SecurityContext si @AuthenticationPrincipal est null
+            User user = currentUser;
+            if (user == null) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getName() != null) {
+                    String username = auth.getName();
+                    log.info("🔍 @AuthenticationPrincipal null dans payerDette, récupération depuis SecurityContext: {}", username);
+                    user = validationService.findUserByUsername(username);
+                }
+            }
+            
             // Vérifier que l'utilisateur est authentifié
-            if (currentUser == null) {
+            if (user == null) {
                 log.error("❌ Utilisateur non authentifié lors du paiement dette ID: {}", id);
                 return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
             }
             
-            FinanceTransaction payee = validationService.payerDette(id, caisseId, currentUser);
+            FinanceTransaction payee = validationService.payerDette(id, caisseId, user);
             return ResponseEntity.ok(ApiResponse.success("Dette payée avec succès", 
                 Map.of("id", payee.getId(), 
                        "status", payee.getStatus(),

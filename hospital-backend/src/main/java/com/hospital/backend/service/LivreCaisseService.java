@@ -37,9 +37,12 @@ public class LivreCaisseService {
     public LivreCaisseDTO.SyntheseResponse getSynthese(LocalDate dateDebut, LocalDate dateFin) {
         log.info("📊 Génération du Livre de Caisse - Synthèse du {} au {}", dateDebut, dateFin);
 
-        // 1. Calculer les soldes d'ouverture
-        BigDecimal soldeOuvertureUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD);
-        BigDecimal soldeOuvertureCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF);
+        try {
+            // 1. Calculer les soldes d'ouverture
+            log.debug("Calcul solde ouverture USD...");
+            BigDecimal soldeOuvertureUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
+            log.debug("Calcul solde ouverture CDF...");
+            BigDecimal soldeOuvertureCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
 
         if (soldeOuvertureUSD == null) soldeOuvertureUSD = BigDecimal.ZERO;
         if (soldeOuvertureCDF == null) soldeOuvertureCDF = BigDecimal.ZERO;
@@ -111,6 +114,10 @@ public class LivreCaisseService {
                 .soldeOuvertureUSD(soldeOuvertureUSD)
                 .soldeOuvertureCDF(soldeOuvertureCDF)
                 .build();
+        } catch (Exception e) {
+            log.error("❌ Erreur SQL dans getSynthese: {}", e.getMessage(), e);
+            throw new RuntimeException("Erreur base de données: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -122,8 +129,8 @@ public class LivreCaisseService {
                 dateDebut, dateFin, pageable.getPageNumber(), pageable.getPageSize());
 
         // 1. Calculer les soldes d'ouverture
-        BigDecimal soldeCumulatifUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD);
-        BigDecimal soldeCumulatifCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF);
+        BigDecimal soldeCumulatifUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
+        BigDecimal soldeCumulatifCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
 
         if (soldeCumulatifUSD == null) soldeCumulatifUSD = BigDecimal.ZERO;
         if (soldeCumulatifCDF == null) soldeCumulatifCDF = BigDecimal.ZERO;

@@ -4,6 +4,7 @@ import com.hospital.backend.dto.ValidationDepenseDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.CaisseRepository;
 import com.hospital.backend.repository.FinanceTransactionRepository;
+import com.hospital.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,12 @@ public class DepenseValidationService {
     private final CaisseRepository caisseRepository;
     private final CaisseService caisseService;
     private final FileStorageService fileStorageService;
+    private final UserRepository userRepository;
+
+    public User findUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+            .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + username));
+    }
 
     /**
      * Valide une dépense avec scan de facture obligatoire
