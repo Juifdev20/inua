@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   LayoutDashboard, 
   Users, 
@@ -42,6 +43,7 @@ import {
 import { toast } from "sonner";
 
 const Sidebar = () => {
+  const { t } = useTranslation();
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
   const { config } = useConfig();
   
@@ -66,20 +68,20 @@ const Sidebar = () => {
 
   // --- AJOUT DE L'ITEM PATIENTS ICI ---
   const navigationItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, color: 'text-secondary' },
-    { name: 'Patients', path: '/admin/patients', icon: Activity, color: 'text-red-500' }, // Nouveau
-    { name: 'Utilisateurs', path: '/admin/utilisateurs', icon: Users, color: 'text-primary' },
-    { name: 'Rôles', path: '/admin/roles', icon: Shield, color: 'text-accent' },
-    { name: 'Services', path: '/admin/services', icon: Stethoscope, color: 'text-primary' },
-    { name: 'Départements', path: '/admin/departements', icon: Building2, color: 'text-secondary' },
-    { name: 'Configuration', path: '/admin/hospital-settings', icon: Cog, color: 'text-emerald-500' },
-    { name: 'Paramètres', path: '/admin/parametres', icon: Settings, color: 'text-muted-foreground' },
-    { name: 'Audit & Logs', path: '/admin/audit', icon: FileText, color: 'text-warning' },
+    { nameKey: 'admin.dashboard', path: '/admin/dashboard', icon: LayoutDashboard, color: 'text-secondary' },
+    { nameKey: 'admin.patients', path: '/admin/patients', icon: Activity, color: 'text-red-500' }, // Nouveau
+    { nameKey: 'admin.users', path: '/admin/utilisateurs', icon: Users, color: 'text-primary' },
+    { nameKey: 'admin.roles', path: '/admin/roles', icon: Shield, color: 'text-accent' },
+    { nameKey: 'admin.services', path: '/admin/services', icon: Stethoscope, color: 'text-primary' },
+    { nameKey: 'admin.departments', path: '/admin/departements', icon: Building2, color: 'text-secondary' },
+    { nameKey: 'admin.configuration', path: '/admin/hospital-settings', icon: Cog, color: 'text-emerald-500' },
+    { nameKey: 'common.settings', path: '/admin/parametres', icon: Settings, color: 'text-muted-foreground' },
+    { nameKey: 'admin.audit', path: '/admin/audit', icon: FileText, color: 'text-warning' },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    toast.success('À bientôt!', { description: 'Déconnexion réussie' });
+    toast.success(t('logoutSuccess') || 'À bientôt!', { description: t('logoutSuccessDesc') || 'Déconnexion réussie' });
     navigate('/login');
   };
 
@@ -123,7 +125,7 @@ const Sidebar = () => {
                   {config?.appName || 'INUA AFIA'}
                 </h1>
                 <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">
-                  {config?.appDescription || 'Admin Panel'}
+                  {config?.appDescription || t('admin.title')}
                 </p>
               </div>
             </div>
@@ -161,7 +163,7 @@ const Sidebar = () => {
                 }
               >
                 <item.icon className={cn("w-5 h-5 flex-shrink-0", item.color)} />
-                {!sidebarCollapsed && <span className="flex-1">{item.name}</span>}
+                {!sidebarCollapsed && <span className="flex-1">{t(item.nameKey)}</span>}
               </NavLink>
             ))}
           </nav>
@@ -185,13 +187,13 @@ const Sidebar = () => {
                     </span>
                   )}
                 </div>
-                {!sidebarCollapsed && <span className="flex-1">Notifications</span>}
+                {!sidebarCollapsed && <span className="flex-1">{t('common.notifications')}</span>}
               </div>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0 ml-4 shadow-xl border-primary/10" side={sidebarCollapsed ? "right" : "top"} align="start">
               <div className="p-4 border-b border-border bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm">Notifications Récentes</h4>
+                  <h4 className="font-bold text-sm">{t('recentNotifications') || 'Notifications Récentes'}</h4>
                   <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold uppercase tracking-tighter">
                     Temps réel
                   </span>
@@ -260,7 +262,7 @@ const Sidebar = () => {
             )}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!sidebarCollapsed && <span className="ml-3">Déconnexion</span>}
+            {!sidebarCollapsed && <span className="ml-3">{t('common.logout')}</span>}
           </Button>
         </div>
       </aside>
@@ -289,7 +291,7 @@ const Sidebar = () => {
                 }
               >
                 <item.icon className={cn("w-5 h-5 flex-shrink-0", item.color)} />
-                <span>{item.name}</span>
+                <span>{t(item.nameKey)}</span>
               </NavLink>
             ))}
           </nav>
@@ -311,7 +313,7 @@ const Sidebar = () => {
                 </span>
               )}
             </div>
-            <span>Notifications</span>
+            <span>{t('common.notifications')}</span>
           </div>
 
           <NavLink
@@ -333,7 +335,7 @@ const Sidebar = () => {
             className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            <span className="ml-3">Déconnexion</span>
+            <span className="ml-3">{t('common.logout')}</span>
           </Button>
         </div>
       </aside>
@@ -341,13 +343,13 @@ const Sidebar = () => {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-            <AlertDialogDescription>Êtes-vous sûr de vouloir vous déconnecter ?</AlertDialogDescription>
+            <AlertDialogTitle>{t('common.logout')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('confirmLogout')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{t('finance.actions.cancel') || 'Annuler'}</AlertDialogCancel>
             <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">
-              Se déconnecter
+              {t('common.logout')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

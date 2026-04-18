@@ -488,7 +488,7 @@ const FinanceDashboard = () => {
 
   const statCards = [
     {
-      label: "Revenus du jour",
+      label: t('finance.stats.dailyRevenue'),
       dualCurrency: dailyRevenueDual,
       icon: DollarSign,
       color: '#10B981',
@@ -496,7 +496,7 @@ const FinanceDashboard = () => {
       trendUp: true
     },
     {
-      label: 'Revenus mensuels',
+      label: t('finance.stats.monthlyRevenue'),
       dualCurrency: monthlyRevenueDual,
       icon: TrendingUp,
       color: '#3B82F6',
@@ -504,7 +504,7 @@ const FinanceDashboard = () => {
       trendUp: (stats.revenueTrend || 0) >= 0
     },
     {
-      label: 'Factures en attente',
+      label: t('finance.stats.pendingInvoices'),
       value: stats.pendingInvoices || stats.pendingInvoicesCount || 0,
       icon: FileText,
       color: '#F59E0B',
@@ -512,7 +512,7 @@ const FinanceDashboard = () => {
       trendUp: false
     },
     {
-      label: 'Total collecté',
+      label: t('finance.stats.totalCollected'),
       dualCurrency: totalRevenueDual,
       icon: Wallet,
       color: '#8B5CF6',
@@ -520,7 +520,7 @@ const FinanceDashboard = () => {
       trendUp: true
     },
     {
-      label: 'Factures générées',
+      label: t('finance.stats.invoicesGenerated'),
       value: stats.invoicesGenerated || stats.totalInvoicesGenerated || 0,
       icon: CreditCard,
       color: '#06B6D4',
@@ -528,7 +528,7 @@ const FinanceDashboard = () => {
       trendUp: true
     },
     {
-      label: 'Dépenses du mois',
+      label: t('finance.stats.totalExpenses'),
       dualCurrency: monthlyExpensesDual,
       icon: TrendingDown,
       color: '#EF4444',

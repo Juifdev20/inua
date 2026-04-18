@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   LayoutDashboard, 
   Users, 
@@ -21,6 +22,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 
 const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: setControlledCollapsed, onToggle }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   useTheme();
@@ -40,36 +42,11 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
   };
 
   const menuItems = [
-    { 
-      path: '/reception/dashboard', 
-      label: 'Tableau de bord', 
-      icon: LayoutDashboard, 
-      color: 'text-blue-500' 
-    },
-    { 
-      path: '/reception/patients', // Lien vers la liste PatientList.jsx
-      label: 'Dossiers Patients', 
-      icon: Users, 
-      color: 'text-emerald-500' 
-    },
-    { 
-      path: '/reception/admissions', 
-      label: 'Fiches / Admissions', 
-      icon: ClipboardList, 
-      color: 'text-amber-500' 
-    },
-    { 
-      path: '/reception/documents', 
-      label: 'Documents', 
-      icon: FileText, 
-      color: 'text-purple-500' 
-    },
-    { 
-      path: '/reception/settings', 
-      label: 'Paramètres', 
-      icon: Settings, 
-      color: 'text-slate-400' 
-    },
+    { path: '/reception/dashboard', labelKey: 'reception.dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
+    { path: '/reception/patients', labelKey: 'reception.patientFiles', icon: Users, color: 'text-emerald-500' },
+    { path: '/reception/admissions', labelKey: 'reception.admissions', icon: ClipboardList, color: 'text-amber-500' },
+    { path: '/reception/documents', labelKey: 'reception.documents', icon: FileText, color: 'text-purple-500' },
+    { path: '/reception/settings', labelKey: 'common.settings', icon: Settings, color: 'text-slate-400' },
   ];
 
   const handleLogout = () => {
@@ -148,7 +125,7 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
                     "w-5 h-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110", 
                     active ? "text-emerald-500" : item.color,
                   )} />
-                  {!sidebarCollapsed && <span className="flex-1 tracking-tight truncate">{item.label}</span>}
+                  {!sidebarCollapsed && <span className="flex-1 tracking-tight truncate">{t(item.labelKey)}</span>}
                 </Link>
               );
             })}
@@ -205,7 +182,7 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
                   )}
                 >
                   <item.icon className={cn("w-5 h-5", active ? "text-emerald-500" : item.color)} />
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -217,7 +194,7 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:bg-rose-500/10 transition-all uppercase tracking-wider"
             >
               <LogOut className="w-5 h-5" />
-              Quitter la session
+              {t('common.logout')}
             </button>
           </nav>
         </ScrollArea>

@@ -5,6 +5,11 @@
     "admissions": "Admissions Cashier",
     "laboratory": "Laboratory Cashier",
     "pharmacy": "Pharmacy Cashier",
+    "expensesToValidate": "Expenses to Validate",
+    "expenseManagement": "Expense Management",
+    "entryManagement": "Entry Management",
+    "cashbook": "Cash Book",
+    "priceGrid": "Price Grid",
     "services": "Services & Prices",
     "invoices": "Invoice Management",
     "stats": {
@@ -52,6 +57,63 @@
       "error": "Payment error"
     }
   },
+  "doctor": {
+    "title": "Doctor Module",
+    "dashboard": "Dashboard",
+    "appointments": "My Appointments",
+    "myPatients": "My Patients",
+    "consultations": "Consultations",
+    "labResults": "Lab Results",
+    "documents": "Documents / Exams",
+    "chat": "Patient Chat"
+  },
+  "reception": {
+    "title": "Reception Module",
+    "dashboard": "Dashboard",
+    "patientFiles": "Patient Files",
+    "admissions": "Forms / Admissions",
+    "documents": "Documents"
+  },
+  "pharmacy": {
+    "title": "Pharmacy Module",
+    "dashboard": "Dashboard",
+    "prescriptions": "Prescriptions",
+    "salesPOS": "Sales / POS",
+    "salesHistory": "Sales History",
+    "stockInventory": "Stock & Inventory",
+    "stockAlerts": "Stock Alerts",
+    "reports": "Reports"
+  },
+  "laboratory": {
+    "title": "Laboratory Module",
+    "dashboard": "Dashboard",
+    "queue": "Queue",
+    "results": "Results Entry",
+    "workflow": "Exam Workflow",
+    "history": "Patient History",
+    "alerts": "Alerts"
+  },
+  "patient": {
+    "title": "Patient Portal",
+    "dashboard": "Dashboard",
+    "messaging": "Messaging",
+    "myProfile": "My Profile",
+    "myAppointments": "My Appointments",
+    "myDocuments": "My Documents",
+    "billing": "Billing & Payment",
+    "accountSettings": "Account Settings"
+  },
+  "admin": {
+    "title": "Admin Module",
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "users": "Users",
+    "roles": "Roles",
+    "services": "Services",
+    "departments": "Departments",
+    "configuration": "Configuration",
+    "audit": "Audit & Logs"
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",
@@ -60,7 +122,14 @@
     "welcome": "Hello",
     "logout": "Logout",
     "settings": "Settings",
+    "notifications": "Notifications",
     "darkMode": "Dark Mode",
-    "lightMode": "Light Mode"
+    "lightMode": "Light Mode",
+    "logoutSuccess": "See you soon!",
+    "logoutSuccessDesc": "Logout successful",
+    "confirmLogout": "Are you sure you want to logout?",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No notifications",
+    "viewAllNotifications": "View all notifications"
   }
 }

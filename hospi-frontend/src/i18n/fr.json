@@ -5,6 +5,11 @@
     "admissions": "Caisse Admissions",
     "laboratory": "Caisse Laboratoire",
     "pharmacy": "Caisse Pharmacie",
+    "expensesToValidate": "Dépenses à Valider",
+    "expenseManagement": "Gestion des Dépenses",
+    "entryManagement": "Gestion des Entrées",
+    "cashbook": "Livre de Caisse",
+    "priceGrid": "Grille Tarifaire",
     "services": "Services & Prix",
     "invoices": "Gestion des Factures",
     "stats": {
@@ -52,6 +57,63 @@
       "error": "Erreur lors du paiement"
     }
   },
+  "doctor": {
+    "title": "Module Docteur",
+    "dashboard": "Tableau de Bord",
+    "appointments": "Mes Rendez-vous",
+    "myPatients": "Mes Patients",
+    "consultations": "Consultations",
+    "labResults": "Résultats Labo",
+    "documents": "Documents / Examens",
+    "chat": "Chat Patient"
+  },
+  "reception": {
+    "title": "Module Réception",
+    "dashboard": "Tableau de Bord",
+    "patientFiles": "Dossiers Patients",
+    "admissions": "Fiches / Admissions",
+    "documents": "Documents"
+  },
+  "pharmacy": {
+    "title": "Module Pharmacie",
+    "dashboard": "Tableau de Bord",
+    "prescriptions": "Prescriptions",
+    "salesPOS": "Ventes / POS",
+    "salesHistory": "Historique Ventes",
+    "stockInventory": "Stock & Inventaire",
+    "stockAlerts": "Alertes Stock",
+    "reports": "Rapports"
+  },
+  "laboratory": {
+    "title": "Module Laboratoire",
+    "dashboard": "Tableau de Bord",
+    "queue": "File d'attente",
+    "results": "Saisie des Résultats",
+    "workflow": "Workflow Examens",
+    "history": "Historique Patient",
+    "alerts": "Alertes"
+  },
+  "patient": {
+    "title": "Espace Patient",
+    "dashboard": "Tableau de Bord",
+    "messaging": "Messagerie",
+    "myProfile": "Mon Profil",
+    "myAppointments": "Mes Rendez-vous",
+    "myDocuments": "Mes Documents",
+    "billing": "Facture et Paiement",
+    "accountSettings": "Paramètre du Compte"
+  },
+  "admin": {
+    "title": "Module Admin",
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "users": "Utilisateurs",
+    "roles": "Rôles",
+    "services": "Services",
+    "departments": "Départements",
+    "configuration": "Configuration",
+    "audit": "Audit & Logs"
+  },
   "common": {
     "loading": "Chargement...",
     "noData": "Aucune donnée disponible",
@@ -60,7 +122,14 @@
     "welcome": "Bonjour",
     "logout": "Déconnexion",
     "settings": "Paramètres",
+    "notifications": "Notifications",
     "darkMode": "Mode Sombre",
-    "lightMode": "Mode Clair"
+    "lightMode": "Mode Clair",
+    "logoutSuccess": "À bientôt!",
+    "logoutSuccessDesc": "Déconnexion réussie",
+    "confirmLogout": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "markAllAsRead": "Tout marquer lu",
+    "noNotifications": "Aucune notification",
+    "viewAllNotifications": "Voir toutes les notifications"
   }
 }

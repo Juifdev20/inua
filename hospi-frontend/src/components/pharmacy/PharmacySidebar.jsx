@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   FileText,
@@ -40,9 +41,10 @@ import {
 import { toast } from 'sonner';
 
 const PharmacySidebar = () => {
+  const { t } = useTranslation();
   const { 
     sidebarCollapsed, 
-    toggleSidebar,           // ✅ CORRIGÉ
+    toggleSidebar,
     mobileSidebarOpen, 
     toggleMobileSidebar 
   } = usePharmacy();
@@ -70,20 +72,19 @@ const PharmacySidebar = () => {
   const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   const navigationItems = [
-    { name: 'Tableau de bord',     path: '/pharmacy/dashboard',          icon: LayoutDashboard, color: 'text-secondary' },
-    { name: 'Prescriptions',       path: '/pharmacy/prescriptions',      icon: FileText,        color: 'text-primary' },
-    { name: 'Ventes / POS',        path: '/pharmacy/sales',              icon: DollarSign,      color: 'text-accent' },
-    { name: 'Historique Ventes',   path: '/pharmacy/sales/history',      icon: History,         color: 'text-primary' },
-    // { name: 'Achat Médicaments',   path: '/pharmacy/achat-medicament',   icon: ShoppingCart,    color: 'text-emerald-600' }, // ℹ️ Fusionné avec "Stock & Inventaire"
-    { name: 'Stock & Inventaire',  path: '/pharmacy/inventory',          icon: Package,         color: 'text-primary' },
-    { name: 'Alertes Stock',       path: '/pharmacy/alerts',             icon: AlertTriangle,   color: 'text-warning' },
-    { name: 'Rapports',            path: '/pharmacy/reports',            icon: TrendingUp,      color: 'text-primary' },
+    { nameKey: 'pharmacy.dashboard',     path: '/pharmacy/dashboard',          icon: LayoutDashboard, color: 'text-secondary' },
+    { nameKey: 'pharmacy.prescriptions',  path: '/pharmacy/prescriptions',      icon: FileText,        color: 'text-primary' },
+    { nameKey: 'pharmacy.salesPOS',       path: '/pharmacy/sales',              icon: DollarSign,      color: 'text-accent' },
+    { nameKey: 'pharmacy.salesHistory',   path: '/pharmacy/sales/history',      icon: History,         color: 'text-primary' },
+    { nameKey: 'pharmacy.stockInventory', path: '/pharmacy/inventory',          icon: Package,         color: 'text-primary' },
+    { nameKey: 'pharmacy.stockAlerts',    path: '/pharmacy/alerts',             icon: AlertTriangle,   color: 'text-warning' },
+    { nameKey: 'pharmacy.reports',         path: '/pharmacy/reports',            icon: TrendingUp,      color: 'text-primary' },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    toast.success('À bientôt!', { description: 'Déconnexion réussie' });
+    toast.success(t('logoutSuccess') || 'À bientôt!', { description: t('logoutSuccessDesc') || 'Déconnexion réussie' });
     navigate('/login');
   };
 
@@ -122,7 +123,7 @@ const PharmacySidebar = () => {
                 </span>
               )}
             </div>
-            {(!sidebarCollapsed || isMobile) && <span className="flex-1">Notifications</span>}
+            {(!sidebarCollapsed || isMobile) && <span className="flex-1">{t('Notifications')}</span>}
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0 ml-4 shadow-xl border-primary/10" side={sidebarCollapsed && !isMobile ? 'right' : 'top'} align="start">
@@ -140,7 +141,7 @@ const PharmacySidebar = () => {
             {notifications.length === 0 ? (
               <div className="py-10 text-center">
                 <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">Aucune notification</p>
+                <p className="text-xs text-muted-foreground">{t('noNotifications') || 'Aucune notification'}</p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
@@ -168,7 +169,7 @@ const PharmacySidebar = () => {
           </ScrollArea>
           <div className="p-3 border-t border-border">
             <Button variant="ghost" size="sm" className="w-full rounded-lg text-xs font-bold text-primary hover:bg-primary/5" onClick={() => navigate('/pharmacy/notifications')}>
-              Voir toutes les notifications
+              {t('viewAllNotifications') || 'Voir toutes les notifications'}
             </Button>
           </div>
         </PopoverContent>
@@ -181,7 +182,7 @@ const PharmacySidebar = () => {
         sidebarCollapsed && !isMobile && 'justify-center'
       )}>
         <SlidersHorizontal className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span>Paramètres</span>}
+        {(!sidebarCollapsed || isMobile) && <span>{t('common.settings')}</span>}
       </NavLink>
 
       {/* Déconnexion */}
@@ -190,7 +191,7 @@ const PharmacySidebar = () => {
         sidebarCollapsed && !isMobile && 'justify-center px-2'
       )}>
         <LogOut className="w-5 h-5 flex-shrink-0" />
-        {(!sidebarCollapsed || isMobile) && <span className="ml-3">Déconnexion</span>}
+        {(!sidebarCollapsed || isMobile) && <span className="ml-3">{t('common.logout')}</span>}
       </Button>
     </div>
   );
@@ -207,7 +208,7 @@ const PharmacySidebar = () => {
               </div>
               <div className="overflow-hidden">
                 <h1 className="text-lg font-space-grotesk font-bold text-primary tracking-tight truncate">{config?.appName || 'INUA AFIA'}</h1>
-                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">Pharmacie Panel</p>
+                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">{t('pharmacy.title')}</p>
               </div>
             </div>
           ) : (
@@ -228,7 +229,7 @@ const PharmacySidebar = () => {
                 sidebarCollapsed && 'justify-center'
               )}>
                 <item.icon className={cn('w-5 h-5 flex-shrink-0', item.color)} />
-                {!sidebarCollapsed && <span className="flex-1">{item.name}</span>}
+                {!sidebarCollapsed && <span className="flex-1">{t(item.nameKey)}</span>}
               </NavLink>
             ))}
           </nav>
@@ -258,7 +259,7 @@ const PharmacySidebar = () => {
                   isActive ? 'bg-primary/10 text-primary shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
                 )}>
                   <item.icon className={cn('w-5 h-5 flex-shrink-0', item.color)} />
-                  <span>{item.name}</span>
+                  <span>{t(item.nameKey)}</span>
                 </NavLink>
               ))}
             </nav>
@@ -271,8 +272,8 @@ const PharmacySidebar = () => {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-            <AlertDialogDescription>Êtes-vous sûr de vouloir vous déconnecter ?</AlertDialogDescription>
+            <AlertDialogTitle>{t('common.logout')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('confirmLogout') || 'Êtes-vous sûr de vouloir vous déconnecter ?'}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import {
   LayoutDashboard,
@@ -24,6 +25,7 @@ import { Separator } from '../ui/separator';
 const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const DoctorSidebar = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -59,55 +61,14 @@ const DoctorSidebar = () => {
   }, [token]);
 
   const menuItems = [
-    { 
-      path: '/doctor/dashboard', 
-      label: 'Tableau de bord', 
-      icon: LayoutDashboard, 
-      color: 'text-primary' 
-    },
-    { 
-      path: '/doctor/agenda', 
-      label: 'Mes Rendez-vous', 
-      icon: Calendar, 
-      color: 'text-emerald-500' 
-    },
-    { 
-      path: '/doctor/patients', 
-      label: 'Mes Patients', 
-      icon: Users, 
-      color: 'text-blue-500' 
-    },
-    { 
-      path: '/doctor/consultations', 
-      label: 'Consultations', 
-      icon: Stethoscope, 
-      color: 'text-rose-500' 
-    },
-    { 
-      path: '/doctor/lab-results', 
-      label: 'Résultats Labo', 
-      icon: FileText, 
-      color: 'text-violet-500' 
-    },
-    { 
-      path: '/doctor/documents', 
-      label: 'Documents / Examens', 
-      icon: ClipboardList, 
-      color: 'text-amber-500' 
-    },
-    {
-      path: '/doctor/chat',
-      label: 'Chat Patient',
-      icon: MessageSquare,
-      color: 'text-indigo-500',
-      badge: unreadCount
-    },
-    { 
-      path: '/doctor/settings', 
-      label: 'Paramètres', 
-      icon: Settings, 
-      color: 'text-muted-foreground' 
-    },
+    { path: '/doctor/dashboard', labelKey: 'doctor.dashboard', icon: LayoutDashboard, color: 'text-primary' },
+    { path: '/doctor/agenda', labelKey: 'doctor.appointments', icon: Calendar, color: 'text-emerald-500' },
+    { path: '/doctor/patients', labelKey: 'doctor.myPatients', icon: Users, color: 'text-blue-500' },
+    { path: '/doctor/consultations', labelKey: 'doctor.consultations', icon: Stethoscope, color: 'text-rose-500' },
+    { path: '/doctor/lab-results', labelKey: 'doctor.labResults', icon: FileText, color: 'text-violet-500' },
+    { path: '/doctor/documents', labelKey: 'doctor.documents', icon: ClipboardList, color: 'text-amber-500' },
+    { path: '/doctor/chat', labelKey: 'doctor.chat', icon: MessageSquare, color: 'text-indigo-500', badge: unreadCount },
+    { path: '/doctor/settings', labelKey: 'common.settings', icon: Settings, color: 'text-muted-foreground' },
   ];
 
   const handleLogout = () => {
@@ -185,7 +146,7 @@ const DoctorSidebar = () => {
                   </div>
                   {!sidebarCollapsed && (
                     <span className="flex-1 tracking-tight flex items-center gap-2">
-                      {item.label}
+                      {t(item.labelKey)}
                       {item.badge > 0 && (
                         <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
                           {item.badge > 99 ? '99+' : item.badge}
@@ -251,7 +212,7 @@ const DoctorSidebar = () => {
                     )}
                   </div>
                   <span className="flex items-center gap-2">
-                    {item.label}
+                    {t(item.labelKey)}
                     {item.badge > 0 && (
                       <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
                         {item.badge > 99 ? '99+' : item.badge}

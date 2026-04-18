@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import {
   Bell,
@@ -29,6 +30,7 @@ const API_URL = import.meta.env.VITE_BACKEND_URL ||
                 (isLocalhost ? 'http://localhost:8080' : 'https://inuaafia.onrender.com');
 
 const Sidebar = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -38,55 +40,14 @@ const Sidebar = () => {
 
   // Mise à jour de la liste des menus avec "Messagerie"
   const menuItems = [
-    { 
-      path: '/patient/dashboard', 
-      label: 'Tableau de bord', 
-      icon: LayoutDashboard, 
-      color: 'text-primary' 
-    },
-    { 
-      path: '/patient/notifications', 
-      label: 'Notifications', 
-      icon: Bell, 
-      color: 'text-blue-500' 
-    },
-    {
-      path: '/patient/messages',
-      label: 'Messagerie',
-      icon: MessageCircle,
-      color: 'text-emerald-500',
-      badge: unreadCount
-    },
-    { 
-      path: '/patient/profile', 
-      label: 'Mon Profil', 
-      icon: User, 
-      color: 'text-secondary' 
-    },
-    { 
-      path: '/patient/appointments', 
-      label: 'Mes Rendez-vous', 
-      icon: Calendar, 
-      color: 'text-emerald-500' 
-    },
-    { 
-      path: '/patient/documents', 
-      label: 'Mes Documents', 
-      icon: FileText, 
-      color: 'text-emerald-500' 
-    },
-    { 
-      path: '/patient/billing', 
-      label: 'Facture et Paiement', 
-      icon: CreditCard, 
-      color: 'text-amber-500' 
-    },
-    { 
-      path: '/patient/settings', 
-      label: 'Paramètre du Compte', 
-      icon: Settings, 
-      color: 'text-muted-foreground' 
-    },
+    { path: '/patient/dashboard', labelKey: 'patient.dashboard', icon: LayoutDashboard, color: 'text-primary' },
+    { path: '/patient/notifications', labelKey: 'common.notifications', icon: Bell, color: 'text-blue-500' },
+    { path: '/patient/messages', labelKey: 'patient.messaging', icon: MessageCircle, color: 'text-emerald-500', badge: unreadCount },
+    { path: '/patient/profile', labelKey: 'patient.myProfile', icon: User, color: 'text-secondary' },
+    { path: '/patient/appointments', labelKey: 'patient.myAppointments', icon: Calendar, color: 'text-emerald-500' },
+    { path: '/patient/documents', labelKey: 'patient.myDocuments', icon: FileText, color: 'text-emerald-500' },
+    { path: '/patient/billing', labelKey: 'patient.billing', icon: CreditCard, color: 'text-amber-500' },
+    { path: '/patient/settings', labelKey: 'patient.accountSettings', icon: Settings, color: 'text-muted-foreground' },
   ];
 
   // Fetch unread message count
@@ -187,7 +148,7 @@ const Sidebar = () => {
                   </div>
                   {!sidebarCollapsed && (
                     <span className="flex-1 tracking-tight flex items-center gap-2">
-                      {item.label}
+                      {t(item.labelKey)}
                       {item.badge > 0 && (
                         <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
                           {item.badge > 99 ? '99+' : item.badge}
@@ -248,7 +209,7 @@ const Sidebar = () => {
                   )}
                 </div>
                 <span className="flex items-center gap-2">
-                  {item.label}
+                  {t(item.labelKey)}
                   {item.badge > 0 && (
                     <span className="bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-5 px-1.5 rounded-full flex items-center justify-center">
                       {item.badge > 99 ? '99+' : item.badge}
