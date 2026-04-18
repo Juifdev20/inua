@@ -131,5 +131,20 @@
     "markAllAsRead": "Tout marquer lu",
     "noNotifications": "Aucune notification",
     "viewAllNotifications": "Voir toutes les notifications"
+  },
+  "laboratory": {
+    "title": "Module Laboratoire",
+    "dashboard": "Tableau de Bord",
+    "queue": "File d'attente",
+    "results": "Saisie des Résultats",
+    "workflow": "Workflow Examens",
+    "history": "Historique",
+    "alerts": "Notifications"
+  },
+  "common": {
+    "notifications": "Notifications",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "searchPlaceholder": "Rechercher..."
   }
 }

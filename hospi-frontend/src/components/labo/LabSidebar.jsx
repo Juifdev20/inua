@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Clock,
@@ -13,8 +12,8 @@ import {
   ChevronLeft,
   Bell,
   CheckCircle2,
-  HeartPulse,
-  TestTubes,
+  HeartPulse, // Maintenant utilisé comme fallback principal
+  TestTubes, // Importé au cas où
 } from 'lucide-react';
 import { useLaboratory } from '../../context/LaboratoryContext';
 import { useConfig } from '../../context/ConfigContext';
@@ -33,18 +32,53 @@ import {
 } from '../ui/popover';
 import { toast } from 'sonner';
 
-/* Navigation links - Translated */
+/* ─────────────────────────────────────────────
+   Liens de navigation spécifiques LABORATOIRE (Couleurs adaptées au thème Finance/Primary)
+───────────────────────────────────────────── */
 const navigationItems = [
-  { nameKey: 'laboratory.dashboard', path: '/labo/dashboard', icon: LayoutDashboard, color: 'text-secondary' },
-  { nameKey: 'laboratory.queue', path: '/labo/queue', icon: Clock, color: 'text-primary' },
-  { nameKey: 'laboratory.results', path: '/labo/results', icon: ClipboardList, color: 'text-accent' },
-  { nameKey: 'laboratory.workflow', path: '/labo/workflow', icon: GitBranch, color: 'text-primary' },
-  { nameKey: 'laboratory.history', path: '/labo/history', icon: History, color: 'text-secondary' },
-  { nameKey: 'laboratory.alerts', path: '/labo/alerts', icon: AlertTriangle, color: 'text-amber-500', hasBadge: true },
+  {
+    name: 'Tableau de bord',
+    path: '/labo/dashboard',
+    icon: LayoutDashboard,
+    color: 'text-secondary', // Finance utilise text-secondary pour certaines icônes
+  },
+  {
+    name: 'File d\'attente',
+    path: '/labo/queue',
+    icon: Clock,
+    color: 'text-primary', // Finance utilise text-primary pour d'autres
+  },
+  {
+    name: 'Saisie des Résultats',
+    path: '/labo/results',
+    icon: ClipboardList,
+    color: 'text-accent', // Finance utilise text-accent
+  },
+  {
+    name: 'Workflow Examens',
+    path: '/labo/workflow',
+    icon: GitBranch,
+    color: 'text-primary',
+  },
+  {
+    name: 'Historique Patient',
+    path: '/labo/history',
+    icon: History,
+    color: 'text-secondary',
+  },
+  {
+    name: 'Alertes',
+    path: '/labo/alerts',
+    icon: AlertTriangle,
+    color: 'text-amber-500', // Gardé pour l'alerte jaune
+    hasBadge: true,
+  },
 ];
 
+/* ─────────────────────────────────────────────
+   COMPOSANT PRINCIPAL
+───────────────────────────────────────────── */
 const LabSidebar = () => {
-  const { t } = useTranslation();
   const {
     sidebarCollapsed,
     toggleSidebar,
@@ -64,76 +98,145 @@ const LabSidebar = () => {
 
   const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
+  /* ── Helpers ── */
+  const getTimeAgo = (date) => {
+    if (!date) return 'Récemment';
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60)  return "À l'instant";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `Il y a ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    return `Il y a ${hours}h`;
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
-    toast.success(t('logoutSuccess') || 'À bientôt!', { description: t('logoutSuccessDesc') || 'Déconnexion réussie' });
+    toast.success('À bientôt !', { description: 'Déconnexion réussie' });
     navigate('/login');
   };
 
+  /* ── Logo dynamique (Logique Finance) ── */
   const DynamicLogo = ({ className }) => {
-    const logoUrl = config?.logoUrl;
-    if (logoUrl) {
-      return <img src={`${API_BASE_URL}${logoUrl}`} alt="Logo" className={cn('h-8 w-auto object-contain', className)} />;
+    const [imgError, setImgError] = useState(false);
+    if (config?.logoUrl && !imgError) {
+      let finalUrl = config.logoUrl;
+      if (!finalUrl.startsWith('http')) {
+        const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+        finalUrl = `${API_BASE_URL}${cleanPath}`;
+      }
+      return (
+        <img
+          src={finalUrl}
+          alt="Logo"
+          className={cn('object-cover w-full h-full', className)}
+          onError={() => setImgError(true)}
+        />
+      );
     }
-    return <HeartPulse className={cn('h-8 w-8 text-primary', className)} />;
+    // Fallback : Icône HeartPulse (comme FinanceSidebar)
+    return <HeartPulse className={cn('text-white w-6 h-6', className)} strokeWidth={2.5} />;
   };
 
-  const renderBottomNav = (isMobile = false) => (
+  /* ── Bloc bas sidebar (Notifications + Paramètres + Déconnexion) ── */
+  const BottomNav = ({ isMobile = false }) => (
     <div className={cn('p-3 border-t border-border', isMobile && 'pb-6')}>
       <Separator className="mb-3" />
 
+      {/* Notifications */}
       <Popover onOpenChange={(open) => open && markAllAsRead()}>
         <PopoverTrigger asChild>
           <div className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer mb-1',
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mb-1 cursor-pointer group',
             'text-muted-foreground hover:bg-muted hover:text-foreground',
-            sidebarCollapsed && !isMobile && 'justify-center px-2'
+            sidebarCollapsed && !isMobile && 'justify-center',
           )}>
             <div className="relative">
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-bold animate-bounce shadow-sm">
+                  {unreadCount}
                 </span>
               )}
             </div>
-            {(!sidebarCollapsed || isMobile) && <span className="flex-1">{t('common.notifications')}</span>}
+            {(!sidebarCollapsed || isMobile) && (
+              <span className="flex-1">Notifications</span>
+            )}
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-0 ml-4 shadow-xl border-primary/10" side={sidebarCollapsed && !isMobile ? 'right' : 'top'} align="start">
-          <div className="flex items-center justify-between p-3 border-b border-border bg-muted/30">
-            <span className="font-semibold text-sm">{t('common.notifications')}</span>
-            <div className="flex items-center gap-2">
+
+        <PopoverContent
+          className="w-80 p-0 ml-4 shadow-xl border-primary/10"
+          side={sidebarCollapsed && !isMobile ? 'right' : 'top'}
+          align="start"
+        >
+          {/* Header Popover */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TestTubes className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm text-foreground">Alertes Labo</h3>
+              </div>
               {unreadCount > 0 && (
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                  {unreadCount} {unreadCount > 1 ? 'non lues' : 'non lue'}
-                </span>
+                <button
+                  onClick={markAllAsRead}
+                  className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  <CheckCircle2 className="w-3 h-3" /> Tout marquer lu
+                </button>
               )}
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={markAllAsRead}>
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                {t('markAllAsRead') || 'Tout marquer lu'}
-              </Button>
             </div>
           </div>
+
+          {/* Liste notifications */}
           <ScrollArea className="max-h-72">
             {notifications.length === 0 ? (
               <div className="py-10 text-center">
                 <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">{t('noNotifications') || 'Aucune notification'}</p>
+                <p className="text-xs text-muted-foreground">Aucune alerte laboratoire</p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
                 {notifications.slice(0, 8).map((notif) => {
                   const isUnread = !notif.read && !notif.isRead;
+
+                  const getLabIcon = (type) => {
+                    switch (type) {
+                      case 'RESULT_READY': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+                      case 'SAMPLE_MISSING': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+                      case 'VALIDATION': return <ClipboardList className="w-4 h-4 text-accent" />; // Utilisation de accent comme Finance
+                      default: return <Bell className="w-4 h-4 text-primary" />;
+                    }
+                  };
+
                   return (
-                    <div key={notif.id} onClick={() => navigate('/labo/notifications')} className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-                      isUnread ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted'
-                    )}>
-                      <div className={cn('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', isUnread ? 'bg-primary' : 'bg-transparent')} />
+                    <div
+                      key={notif.id}
+                      onClick={() => navigate('/labo/alerts')}
+                      className={cn(
+                        'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
+                        isUnread ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted',
+                      )}
+                    >
+                      <div className={cn(
+                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+                        isUnread ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+                      )}>
+                        {getLabIcon(notif.type)}
+                      </div>
+
                       <div className="flex-1 min-w-0">
-                        <p className={cn('text-sm', isUnread ? 'font-medium' : '')}>{notif.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                        <div className="flex items-center gap-2">
+                          <p className={cn('text-xs font-bold truncate', isUnread ? 'text-foreground' : 'text-muted-foreground')}>
+                            {notif.title}
+                          </p>
+                          {isUnread && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{notif.message}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">{getTimeAgo(notif.createdAt)}</p>
                       </div>
                     </div>
                   );
@@ -142,97 +245,215 @@ const LabSidebar = () => {
             )}
           </ScrollArea>
           <div className="p-3 border-t border-border">
-            <Button variant="ghost" size="sm" className="w-full rounded-lg text-xs font-bold text-primary hover:bg-primary/5" onClick={() => navigate('/labo/notifications')}>
-              {t('viewAllNotifications') || 'Voir toutes les notifications'}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full rounded-lg text-xs font-bold text-primary hover:bg-primary/5"
+              onClick={() => navigate('/labo/alerts')}
+            >
+              Voir toutes les notifications
             </Button>
           </div>
         </PopoverContent>
       </Popover>
 
-      <NavLink to="/labo/settings" onClick={isMobile ? toggleMobileSidebar : undefined} className={({ isActive }) => cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mb-1',
-        isActive ? 'bg-foreground/5 text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        sidebarCollapsed && !isMobile && 'justify-center'
-      )}>
-        <SlidersHorizontal className="w-5 h-5" />
-        {(!sidebarCollapsed || isMobile) && <span>{t('common.settings')}</span>}
+      {/* Paramètres */}
+      <NavLink
+        to="/labo/settings"
+        onClick={isMobile ? toggleMobileSidebar : undefined}
+        className={({ isActive }) =>
+          cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mb-1',
+            isActive
+              ? 'bg-foreground/5 text-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            sidebarCollapsed && !isMobile && 'justify-center'
+          )
+        }
+      >
+        <SlidersHorizontal className="w-5 h-5 flex-shrink-0" />
+        {(!sidebarCollapsed || isMobile) && <span>Paramètres</span>}
       </NavLink>
 
-      <Button variant="ghost" onClick={() => setShowLogoutDialog(true)} className={cn(
-        'w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10',
-        sidebarCollapsed && !isMobile && 'justify-center px-2'
-      )}>
-        <LogOut className="w-5 h-5" />
-        {(!sidebarCollapsed || isMobile) && <span className="ml-3">{t('common.logout')}</span>}
+      {/* Déconnexion */}
+      <Button
+        variant="ghost"
+        onClick={() => setShowLogoutDialog(true)}
+        className={cn(
+          'w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10',
+          sidebarCollapsed && !isMobile && 'justify-center px-2'
+        )}
+      >
+        <LogOut className="w-5 h-5 flex-shrink-0" />
+        {(!sidebarCollapsed || isMobile) && <span className="ml-3">Déconnexion</span>}
       </Button>
     </div>
   );
 
+  /* ── Rendu principal ── */
   return (
     <>
+      {/* ═══════════════════════════════════
+           DESKTOP SIDEBAR
+      ═══════════════════════════════════ */}
       <aside className={cn(
-        'fixed left-0 top-0 z-[70] h-screen bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out',
-        sidebarCollapsed ? 'w-[72px]' : 'w-64',
-        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        'hidden lg:flex flex-col bg-card border-r border-border transition-all duration-300 relative z-30 shrink-0 shadow-lg',
+        sidebarCollapsed ? 'w-20' : 'w-72'
       )}>
-        <div className="flex items-center justify-between p-4 h-16 border-b border-border bg-muted/20">
+        {/* Header Sidebar */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5"> {/* Utilisation du gradient Finance */}
           {!sidebarCollapsed ? (
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="bg-primary/10 p-1.5 rounded-lg flex-shrink-0">
+            <div className="flex items-center gap-3 w-full overflow-hidden">
+              <div className={cn(
+                'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0',
+                !config?.logoUrl ? 'bg-gradient-medical' : 'bg-transparent' // Garde le style par défaut de finance
+              )}>
                 <DynamicLogo />
               </div>
               <div className="overflow-hidden">
-                <h1 className="text-lg font-space-grotesk font-bold text-primary tracking-tight truncate">{config?.appName || 'INUA AFIA'}</h1>
-                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">{t('laboratory.title')}</p>
+                <h1 className="text-lg font-space-grotesk font-bold text-primary tracking-tight truncate">
+                  {config?.appName || 'INUA AFIA'}
+                </h1>
+                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">
+                  Laboratoire
+                </p>
               </div>
             </div>
           ) : (
-            <div className="mx-auto bg-primary/10 p-1.5 rounded-lg">
+            <div className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto overflow-hidden shrink-0',
+              !config?.logoUrl ? 'bg-gradient-medical' : 'bg-transparent'
+            )}>
               <DynamicLogo />
             </div>
           )}
 
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} className={cn('hidden lg:flex h-8 w-8 rounded-full transition-transform duration-300', sidebarCollapsed && 'rotate-180 absolute -right-4 top-5 bg-card border shadow-sm z-50')}>
-            <ChevronLeft className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className={cn(
+              'absolute -right-3 top-5 w-6 h-6 rounded-full border-2 border-border bg-card shadow-md',
+              sidebarCollapsed && 'rotate-180'
+            )}
+          >
+            <ChevronLeft className="w-4 h-4" />
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 py-3 px-2">
+        {/* Navigation links */}
+        <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
             {navigationItems.map((item) => (
-              <NavLink key={item.path} to={item.path} className={({ isActive }) => cn(
-                'group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                sidebarCollapsed && 'justify-center'
-              )}>
-                <item.icon className={cn('w-5 h-5 flex-shrink-0', item.color)} />
-                {!sidebarCollapsed && <span className="flex-1">{t(item.nameKey)}</span>}
-                {item.hasBadge && unreadCount > 0 && !sidebarCollapsed && (
-                  <span className="bg-destructive text-destructive-foreground text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative',
+                    // STYLE ACTIF : Basé sur Finance (bg-primary/10 text-primary)
+                    isActive
+                      ? 'bg-primary/10 text-primary shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted',
+                    sidebarCollapsed && 'justify-center'
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Icône : utilise sa couleur spécifique OU text-primary si actif (comme Finance) */}
+                    <item.icon className={cn('w-5 h-5 flex-shrink-0', isActive ? 'text-primary' : item.color)} />
+                    {!sidebarCollapsed && <span className="flex-1">{item.name}</span>}
+                    
+                    {item.hasBadge && unreadCount > 0 && (
+                      <span className={cn('flex items-center justify-center rounded-full bg-destructive text-white text-[10px] font-bold', sidebarCollapsed ? 'absolute -top-1 -right-1 w-4 h-4' : 'w-5 h-5')}>
+                        {unreadCount}
+                      </span>
+                    )}
+
+                    {/* Indicateur actif à gauche */}
+                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />}
+                  </>
                 )}
               </NavLink>
             ))}
           </nav>
         </ScrollArea>
 
-        {renderBottomNav(true)}
+        {/* Bottom */}
+        <BottomNav />
       </aside>
 
+      {/* ═══════════════════════════════════
+           MOBILE SIDEBAR
+      ═══════════════════════════════════ */}
       {mobileSidebarOpen && (
-        <div className="fixed inset-0 z-[65] bg-black/40 backdrop-blur-md lg:hidden animate-in fade-in duration-300" onClick={toggleMobileSidebar} />
+        <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border lg:hidden shadow-2xl flex flex-col">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 bg-transparent">
+                <DynamicLogo />
+              </div>
+              <h1 className="text-lg font-bold text-primary">
+                {config?.appName || 'INUA AFIA'}
+              </h1>
+            </div>
+            <Button variant="ghost" size="icon" onClick={toggleMobileSidebar}>
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 px-3 py-4">
+            <nav className="space-y-1">
+              {navigationItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={toggleMobileSidebar}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium relative',
+                      isActive
+                        ? 'bg-primary/10 text-primary shadow-md'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )
+                  }
+                >
+                   {({ isActive }) => (
+                    <>
+                      <item.icon className={cn('w-5 h-5 flex-shrink-0', isActive ? 'text-primary' : item.color)} />
+                      <span>{item.name}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </ScrollArea>
+          <BottomNav isMobile />
+        </aside>
       )}
 
+      {/* Overlay mobile */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-foreground/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={toggleMobileSidebar}
+        />
+      )}
+
+      {/* Logout dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('common.logout')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('confirmLogout') || 'Êtes-vous sûr de vouloir vous déconnecter ?'}</AlertDialogDescription>
+            <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir vous déconnecter ?
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowLogoutDialog(false)}>{t('finance.actions.cancel') || 'Annuler'}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('common.logout')}</AlertDialogAction>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout} className="bg-destructive hover:bg-destructive/90">
+              Se déconnecter
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
