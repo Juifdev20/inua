@@ -137,9 +137,11 @@ public class FinanceTransactionController {
             log.warn("❌ Erreur validation dépense: {}", e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Erreur interne validation dépense: {}", e.getMessage(), e);
+            log.error("❌ Erreur interne validation dépense ID {}: {}", id, e.getMessage(), e);
+            // Retourner le message d'erreur complet pour faciliter le debug
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
             return ResponseEntity.internalServerError()
-                .body(ApiResponse.error("Erreur validation: " + e.getMessage()));
+                .body(ApiResponse.error("Erreur validation: " + errorMsg));
         }
     }
 

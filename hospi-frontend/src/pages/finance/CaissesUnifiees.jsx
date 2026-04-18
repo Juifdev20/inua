@@ -155,9 +155,9 @@ const CaissesUnifiees = () => {
     try {
       // Charger toutes les données en parallèle
       const [admissionsRes, labRes, pharmaRes] = await Promise.all([
-        financeApi.getWaitingAdmissions(selectedDate).catch(() => ({ data: [] })),
-        financeApi.getAllLabPayments(selectedDate).catch(() => ({ data: [] })),
-        financeApi.getPendingPharmaInvoices().catch(() => ({ data: [] })),
+        financeApi.getAdmissionsQueue({ date: selectedDate }).catch(() => ({ data: [] })),
+        financeApi.getLaboratoryQueue().catch(() => ({ data: [] })),
+        financeApi.getPharmacyQueue().catch(() => ({ data: [] })),
       ]);
 
       const admissionsData = admissionsRes.data || [];
@@ -215,20 +215,12 @@ const CaissesUnifiees = () => {
     try {
       let response;
       
-      if (activeTab === 'admissions') {
-        response = await financeApi.encaisserAdmission(selectedItem.id, {
-          paymentMethod,
-          amount: selectedItem.totalAmount || selectedItem.amount,
-        });
-      } else if (activeTab === 'laboratoire') {
-        response = await financeApi.payLabTest(selectedItem.id, {
-          paymentMethod,
-        });
-      } else if (activeTab === 'pharmacie') {
-        response = await financeApi.payPharmaInvoice(selectedItem.id, {
-          paymentMethod,
-        });
-      }
+      // Utiliser payInvoice pour tous les types - c'est la méthode existante
+      const amount = selectedItem.totalAmount || selectedItem.amount || selectedItem.montant || 0;
+      response = await financeApi.payInvoice(selectedItem.id, {
+        amountPaid: amount,
+        paymentMethod: paymentMethod,
+      });
 
       if (response?.data?.success) {
         toast.success('Paiement effectué avec succès !');

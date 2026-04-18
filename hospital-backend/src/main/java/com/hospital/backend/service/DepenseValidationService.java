@@ -57,8 +57,19 @@ public class DepenseValidationService {
             throw new IllegalArgumentException("Le scan de la facture fournisseur est obligatoire pour la validation");
         }
 
-        // Upload du scan
-        String scanUrl = fileStorageService.store(scanFacture, "factures-fournisseurs");
+        // Upload du scan avec gestion d'erreur détaillée
+        String scanUrl;
+        try {
+            log.info("📤 Upload fichier: {}, taille: {} bytes, type: {}", 
+                scanFacture.getOriginalFilename(),
+                scanFacture.getSize(),
+                scanFacture.getContentType());
+            scanUrl = fileStorageService.store(scanFacture, "factures-fournisseurs");
+            log.info("✅ Fichier uploadé avec succès: {}", scanUrl);
+        } catch (Exception e) {
+            log.error("❌ Erreur upload fichier: {}", e.getMessage(), e);
+            throw new IllegalStateException("Erreur lors de l'upload du scan: " + e.getMessage());
+        }
         transaction.setScanFactureUrl(scanUrl);
 
         // Appliquer le mode de paiement
@@ -90,7 +101,14 @@ public class DepenseValidationService {
             // Décaissement via CaisseService (gère les caisses virtuelles aussi)
             caisseService.debiterCaisse(validationDTO.getCaisseId(), transaction.getMontant());
 
-            transaction.setCaisse(caisse);
+            // Ne pas associer la caisse virtuelle (id < 0) à la transaction car elle n'est pas persistée
+            // Seules les caisses physiques (id > 0) peuvent être associées
+            if (caisse.getId() != null && caisse.getId() > 0) {
+                transaction.setCaisse(caisse);
+            } else {
+                // Pour les caisses virtuelles, on ne met pas la caisse mais on note dans les logs
+                log.info("Caisse virtuelle utilisée: {}, pas d'association à la transaction", caisse.getNom());
+            }
             transaction.setStatus(TransactionStatus.PAYE);
             transaction.setDateDecaissement(LocalDateTime.now());
 
@@ -147,7 +165,12 @@ public class DepenseValidationService {
         caisseService.debiterCaisse(caisseId, transaction.getMontant());
 
         // Mettre à jour transaction
-        transaction.setCaisse(caisse);
+        // Ne pas associer la caisse virtuelle (id < 0) car elle n'est pas persistée
+        if (caisse.getId() != null && caisse.getId() > 0) {
+            transaction.setCaisse(caisse);
+        } else {
+            log.info("Caisse virtuelle utilisée pour payerDette: {}, pas d'association", caisse.getNom());
+        }
         transaction.setStatus(TransactionStatus.PAYE);
         transaction.setDateDecaissement(LocalDateTime.now());
 

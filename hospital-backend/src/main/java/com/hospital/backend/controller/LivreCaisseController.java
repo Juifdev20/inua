@@ -18,7 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -62,8 +64,20 @@ public class LivreCaisseController {
             return ResponseEntity.badRequest().body(null);
         }
         
-        LivreCaisseDTO.SyntheseResponse response = livreCaisseService.getSynthese(dateDebut, dateFin);
-        return ResponseEntity.ok(response);
+        try {
+            LivreCaisseDTO.SyntheseResponse response = livreCaisseService.getSynthese(dateDebut, dateFin);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Erreur génération synthèse: {}", e.getMessage(), e);
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            return ResponseEntity.internalServerError()
+                .body(LivreCaisseDTO.SyntheseResponse.builder()
+                    .journal(new ArrayList<>())
+                    .totaux(null)
+                    .soldeOuvertureUSD(BigDecimal.ZERO)
+                    .soldeOuvertureCDF(BigDecimal.ZERO)
+                    .build());
+        }
     }
 
     /**
@@ -99,9 +113,22 @@ public class LivreCaisseController {
             size = 100;
         }
         
-        Pageable pageable = PageRequest.of(page, size, Sort.by("date").ascending());
-        LivreCaisseDTO.DetailsResponse response = livreCaisseService.getDetails(dateDebut, dateFin, pageable);
-        return ResponseEntity.ok(response);
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("date").ascending());
+            LivreCaisseDTO.DetailsResponse response = livreCaisseService.getDetails(dateDebut, dateFin, pageable);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Erreur génération détails: {}", e.getMessage(), e);
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            return ResponseEntity.internalServerError()
+                .body(LivreCaisseDTO.DetailsResponse.builder()
+                    .transactions(new ArrayList<>())
+                    .totaux(null)
+                    .page(page)
+                    .size(size)
+                    .totalElements(0)
+                    .build());
+        }
     }
 
     /**

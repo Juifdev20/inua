@@ -66,7 +66,7 @@ public class LivreCaisseService {
             BigDecimal sortieUSD = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
             BigDecimal entreeCDF = row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO;
             BigDecimal sortieCDF = row[4] != null ? (BigDecimal) row[4] : BigDecimal.ZERO;
-            Number nbTrans = (Number) row[5];
+            Number nbTrans = row[5] != null ? (Number) row[5] : 0;
 
             // Calculer les soldes cumulatifs
             soldeCumulatifUSD = soldeCumulatifUSD.add(entreeUSD).subtract(sortieUSD);
