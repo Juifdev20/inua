@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller pour la gestion des transactions Finance liées à la Pharmacie
@@ -39,6 +40,7 @@ public class FinanceTransactionController {
     private final RetourFournisseurService retourService;
     private final FinanceTransactionRepository transactionRepository;
     private final CaisseRepository caisseRepository;
+    private final CaisseService caisseService;
 
     // ========================================
     // 📋 LISTES ET CONSULTATION
@@ -95,7 +97,7 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('CAISSIER', 'FINANCE', 'ADMIN')")
     @Operation(summary = "Valider une dépense avec scan de facture",
             description = "Upload du scan obligatoire. Mode: IMMEDIAT (décaissement) ou CREDIT (dette)")
-    public ResponseEntity<FinanceTransaction> validerDepense(
+    public ResponseEntity<?> validerDepense(
             @PathVariable Long id,
             @Parameter(description = "Scan de la facture fournisseur (PDF/JPG/PNG)", required = true)
             @RequestParam("scanFacture") MultipartFile scanFacture,
@@ -106,15 +108,32 @@ public class FinanceTransactionController {
             @Parameter(description = "Date échéance paiement (si CREDIT)")
             @RequestParam(value = "dateEcheance", required = false) String dateEcheance,
             @AuthenticationPrincipal User currentUser) {
+        try {
+            log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}", id, modePaiement, 
+                    scanFacture != null ? scanFacture.getOriginalFilename() : "null");
 
-        ValidationDepenseDTO dto = ValidationDepenseDTO.builder()
-            .transactionId(id)
-            .modePaiement(modePaiement)
-            .caisseId(caisseId)
-            .build();
+            ValidationDepenseDTO dto = ValidationDepenseDTO.builder()
+                .transactionId(id)
+                .modePaiement(modePaiement)
+                .caisseId(caisseId)
+                .build();
 
-        FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, currentUser);
-        return ResponseEntity.ok(validated);
+            FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, currentUser);
+            
+            // Retourner une réponse simplifiée pour éviter les problèmes de sérialisation
+            return ResponseEntity.ok(ApiResponse.success("Dépense validée avec succès", 
+                Map.of("id", validated.getId(), 
+                       "status", validated.getStatus(),
+                       "montant", validated.getMontant(),
+                       "devise", validated.getDevise())));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("❌ Erreur validation dépense: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Erreur interne validation dépense: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Erreur validation: " + e.getMessage()));
+        }
     }
 
     // ========================================
@@ -125,13 +144,25 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('CAISSIER', 'FINANCE', 'ADMIN')")
     @Operation(summary = "Payer une dette fournisseur",
             description = "Transition A_PAYER -> PAYE avec décaissement de la caisse")
-    public ResponseEntity<FinanceTransaction> payerDette(
+    public ResponseEntity<?> payerDette(
             @PathVariable Long id,
             @RequestParam("caisseId") Long caisseId,
             @AuthenticationPrincipal User currentUser) {
-
-        FinanceTransaction payee = validationService.payerDette(id, caisseId, currentUser);
-        return ResponseEntity.ok(payee);
+        try {
+            FinanceTransaction payee = validationService.payerDette(id, caisseId, currentUser);
+            return ResponseEntity.ok(ApiResponse.success("Dette payée avec succès", 
+                Map.of("id", payee.getId(), 
+                       "status", payee.getStatus(),
+                       "montant", payee.getMontant(),
+                       "devise", payee.getDevise())));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("❌ Erreur paiement dette: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Erreur interne paiement dette: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Erreur paiement: " + e.getMessage()));
+        }
     }
 
     // ========================================
@@ -181,10 +212,10 @@ public class FinanceTransactionController {
 
     @GetMapping("/caisses")
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
-    @Operation(summary = "Liste des caisses actives")
+    @Operation(summary = "Liste des caisses actives (incluant caisse centrale virtuelle)")
     public ResponseEntity<List<Caisse>> getCaisses() {
-        List<Caisse> caisses = caisseRepository.findByActiveTrue();
-        log.info("✅ {} caisse(s) active(s) chargée(s)", caisses.size());
+        List<Caisse> caisses = caisseService.getCaissesActives();
+        log.info("✅ {} caisse(s) chargée(s) (incluant caisses centrales virtuelles)", caisses.size());
         return ResponseEntity.ok(caisses);
     }
 

@@ -217,25 +217,6 @@ const LabSidebar = () => {
           </nav>
         </ScrollArea>
 
-        <ScrollArea className="flex-1 py-4 px-3">
-          <nav className="space-y-1">
-            {navigationItems.map((item) => (
-              <NavLink key={item.path} to={item.path} onClick={toggleMobileSidebar} className={({ isActive }) => cn(
-                'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all',
-                isActive ? 'bg-primary/10 text-primary shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
-              )}>
-                <item.icon className={cn('w-5 h-5 flex-shrink-0', item.color)} />
-                <span>{t(item.nameKey)}</span>
-                {item.hasBadge && unreadCount > 0 && (
-                  <span className="ml-auto bg-rose-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </NavLink>
-            ))}
-          </nav>
-        </ScrollArea>
-
         {renderBottomNav(true)}
       </aside>
 

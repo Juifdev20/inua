@@ -4,12 +4,15 @@ import com.hospital.backend.entity.Caisse;
 import com.hospital.backend.entity.Currency;
 import com.hospital.backend.exception.SoldeInsuffisantException;
 import com.hospital.backend.repository.CaisseRepository;
+import com.hospital.backend.repository.ExpenseRepository;
+import com.hospital.backend.repository.RevenueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,25 +25,106 @@ import java.util.List;
 public class CaisseService {
 
     private final CaisseRepository caisseRepository;
+    private final RevenueRepository revenueRepository;
+    private final ExpenseRepository expenseRepository;
 
     /**
-     * Liste toutes les caisses actives
+     * Liste toutes les caisses actives avec caisse centrale virtuelle
      */
     public List<Caisse> getCaissesActives() {
-        return caisseRepository.findByActiveTrue();
+        List<Caisse> caisses = new ArrayList<>(caisseRepository.findByActiveTrue());
+        
+        // Ajouter la caisse centrale virtuelle pour CDF
+        BigDecimal soldeCentralCDF = calculerSoldeGlobal(Currency.CDF);
+        if (soldeCentralCDF.compareTo(BigDecimal.ZERO) != 0) {
+            Caisse caisseCentralCDF = Caisse.builder()
+                .id(-1L) // ID négatif pour identifier la caisse virtuelle
+                .nom("Caisse Centrale CDF")
+                .description("Solde global calculé (Revenus - Dépenses)")
+                .devise(Currency.CDF)
+                .solde(soldeCentralCDF)
+                .soldeInitial(BigDecimal.ZERO)
+                .active(true)
+                .build();
+            caisses.add(0, caisseCentralCDF); // Ajouter en premier
+        }
+        
+        // Ajouter la caisse centrale virtuelle pour USD
+        BigDecimal soldeCentralUSD = calculerSoldeGlobal(Currency.USD);
+        if (soldeCentralUSD.compareTo(BigDecimal.ZERO) != 0) {
+            Caisse caisseCentralUSD = Caisse.builder()
+                .id(-2L) // ID négatif pour identifier la caisse virtuelle
+                .nom("Caisse Centrale USD")
+                .description("Solde global calculé (Revenus - Dépenses)")
+                .devise(Currency.USD)
+                .solde(soldeCentralUSD)
+                .soldeInitial(BigDecimal.ZERO)
+                .active(true)
+                .build();
+            caisses.add(1, caisseCentralUSD); // Ajouter en deuxième
+        }
+        
+        return caisses;
+    }
+    
+    /**
+     * Calcule le solde global (Revenus - Dépenses) pour une devise
+     */
+    public BigDecimal calculerSoldeGlobal(Currency devise) {
+        BigDecimal totalRevenus = revenueRepository.getTotalByCurrency(devise);
+        BigDecimal totalDepenses = expenseRepository.getTotalByCurrency(devise);
+        
+        BigDecimal solde = totalRevenus.subtract(totalDepenses);
+        log.info("💰 Solde global {}: {} (Revenus: {}, Dépenses: {})", 
+            devise, solde, totalRevenus, totalDepenses);
+        
+        return solde;
     }
 
     /**
-     * Liste les caisses par devise
+     * Liste les caisses par devise avec caisse centrale virtuelle
      */
     public List<Caisse> getCaissesParDevise(Currency devise) {
-        return caisseRepository.findByDeviseAndActiveTrue(devise);
+        List<Caisse> caisses = new ArrayList<>(caisseRepository.findByDeviseAndActiveTrue(devise));
+        
+        // Ajouter la caisse centrale virtuelle pour cette devise
+        BigDecimal soldeGlobal = calculerSoldeGlobal(devise);
+        Long idVirtuel = devise == Currency.CDF ? -1L : -2L;
+        
+        Caisse caisseCentral = Caisse.builder()
+            .id(idVirtuel)
+            .nom("Caisse Centrale " + devise)
+            .description("Solde global calculé (Revenus - Dépenses)")
+            .devise(devise)
+            .solde(soldeGlobal)
+            .soldeInitial(BigDecimal.ZERO)
+            .active(true)
+            .build();
+        caisses.add(0, caisseCentral); // Ajouter en premier
+        
+        return caisses;
     }
 
     /**
-     * Récupère une caisse par ID
+     * Récupère une caisse par ID (y compris les caisses virtuelles)
      */
     public Caisse getCaisse(Long id) {
+        // Gérer les caisses virtuelles (ID négatif)
+        if (id < 0) {
+            Currency devise = id == -1 ? Currency.CDF : Currency.USD;
+            BigDecimal soldeGlobal = calculerSoldeGlobal(devise);
+            
+            return Caisse.builder()
+                .id(id)
+                .nom("Caisse Centrale " + devise)
+                .description("Solde global calculé (Revenus - Dépenses)")
+                .devise(devise)
+                .solde(soldeGlobal)
+                .soldeInitial(BigDecimal.ZERO)
+                .active(true)
+                .build();
+        }
+        
         return caisseRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Caisse non trouvée: " + id));
     }
@@ -51,6 +135,20 @@ public class CaisseService {
      */
     @Transactional
     public void debiterCaisse(Long caisseId, BigDecimal montant) {
+        // Gérer les caisses virtuelles (ID négatif = caisse centrale calculée)
+        if (caisseId < 0) {
+            Currency devise = caisseId == -1 ? Currency.CDF : Currency.USD;
+            BigDecimal soldeGlobal = calculerSoldeGlobal(devise);
+            
+            if (soldeGlobal.compareTo(montant) < 0) {
+                throw new SoldeInsuffisantException("Caisse Centrale " + devise, soldeGlobal, montant);
+            }
+            
+            log.info("💰 Caisse Centrale {} débitée de {} (solde global restant: {})",
+                devise, montant, soldeGlobal.subtract(montant));
+            return; // Pas de persistance pour la caisse virtuelle
+        }
+        
         Caisse caisse = getCaisse(caisseId);
 
         if (!caisse.hasSufficientFunds(montant)) {

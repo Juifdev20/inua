@@ -24,6 +24,7 @@ public class DepenseValidationService {
 
     private final FinanceTransactionRepository transactionRepository;
     private final CaisseRepository caisseRepository;
+    private final CaisseService caisseService;
     private final FileStorageService fileStorageService;
 
     /**
@@ -76,8 +77,8 @@ public class DepenseValidationService {
                 throw new IllegalArgumentException("ID caisse requis pour paiement immédiat");
             }
 
-            Caisse caisse = caisseRepository.findById(validationDTO.getCaisseId())
-                .orElseThrow(() -> new IllegalArgumentException("Caisse non trouvée"));
+            // Utiliser CaisseService pour gérer aussi les caisses virtuelles
+            Caisse caisse = caisseService.getCaisse(validationDTO.getCaisseId());
 
             // Vérifier devise compatible
             if (caisse.getDevise() != transaction.getDevise()) {
@@ -85,16 +86,8 @@ public class DepenseValidationService {
                     "Devise caisse (" + caisse.getDevise() + ") incompatible avec transaction (" + transaction.getDevise() + ")");
             }
 
-            // Vérifier solde
-            if (!caisse.hasSufficientFunds(transaction.getMontant())) {
-                throw new IllegalStateException(
-                    "Solde insuffisant dans la caisse " + caisse.getNom() + 
-                    " (solde: " + caisse.getSolde() + ", requis: " + transaction.getMontant() + ")");
-            }
-
-            // Décaissement
-            caisse.debiter(transaction.getMontant());
-            caisseRepository.save(caisse);
+            // Décaissement via CaisseService (gère les caisses virtuelles aussi)
+            caisseService.debiterCaisse(validationDTO.getCaisseId(), transaction.getMontant());
 
             transaction.setCaisse(caisse);
             transaction.setStatus(TransactionStatus.PAYE);
@@ -143,17 +136,11 @@ public class DepenseValidationService {
             throw new IllegalStateException("Cette transaction n'est pas en mode crédit");
         }
 
-        Caisse caisse = caisseRepository.findById(caisseId)
-            .orElseThrow(() -> new IllegalArgumentException("Caisse non trouvée"));
+        // Utiliser CaisseService pour gérer aussi les caisses virtuelles
+        Caisse caisse = caisseService.getCaisse(caisseId);
 
-        // Vérifier solde
-        if (!caisse.hasSufficientFunds(transaction.getMontant())) {
-            throw new IllegalStateException("Solde insuffisant dans la caisse " + caisse.getNom());
-        }
-
-        // Décaissement
-        caisse.debiter(transaction.getMontant());
-        caisseRepository.save(caisse);
+        // Décaissement via CaisseService (gère les caisses virtuelles aussi)
+        caisseService.debiterCaisse(caisseId, transaction.getMontant());
 
         // Mettre à jour transaction
         transaction.setCaisse(caisse);
