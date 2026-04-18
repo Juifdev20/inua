@@ -48,6 +48,11 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
     List<FinanceTransaction> findByStatusOrderByCreatedAtDesc(TransactionStatus status);
 
     /**
+     * Liste les transactions par type (tous statuts)
+     */
+    List<FinanceTransaction> findByTypeOrderByCreatedAtDesc(TransactionType type);
+
+    /**
      * Liste les transactions en attente avec pagination
      */
     Page<FinanceTransaction> findByStatus(TransactionStatus status, Pageable pageable);

@@ -48,11 +48,17 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
     @Operation(summary = "Liste des dépenses en attente de validation",
             description = "Transactions créées par la pharmacie, en attente de scan et validation")
-    public ResponseEntity<List<FinanceTransaction>> getDepensesEnAttente() {
-        List<FinanceTransaction> transactions = transactionRepository
-            .findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN);
-        log.info("✅ {} transaction(s) en attente chargée(s)", transactions.size());
-        return ResponseEntity.ok(transactions);
+    public ResponseEntity<?> getDepensesEnAttente() {
+        try {
+            List<FinanceTransaction> transactions = transactionRepository
+                .findByTypeOrderByCreatedAtDesc(TransactionType.DEPENSE);
+            log.info("✅ {} dépense(s) chargée(s)", transactions.size());
+            return ResponseEntity.ok(transactions);
+        } catch (Exception e) {
+            log.error("❌ Erreur chargement dépenses: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Erreur chargement dépenses: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/dettes-fournisseurs")

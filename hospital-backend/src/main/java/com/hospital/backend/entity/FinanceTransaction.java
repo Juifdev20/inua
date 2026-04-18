@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -74,12 +75,12 @@ public class FinanceTransaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "caisse_id")
-    @JsonIgnoreProperties({"transactions"})
+    @JsonIgnore
     private Caisse caisse;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "validated_by")
-    @JsonIgnoreProperties({"password", "role", "permissions", "patient"})
+    @JsonIgnore
     private User validatedBy;
 
     @Column(name = "date_validation")
@@ -87,7 +88,7 @@ public class FinanceTransaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
-    @JsonIgnoreProperties({"password", "role", "permissions", "patient"})
+    @JsonIgnore
     private User createdBy;
 
     @Column(name = "transaction_originale_id")
