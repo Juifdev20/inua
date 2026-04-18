@@ -2,8 +2,11 @@ package com.hospital.backend.service;
 
 import com.hospital.backend.dto.LivreCaisseDTO;
 import com.hospital.backend.entity.HospitalConfig;
+import com.hospital.backend.model.AppConfig;
+import com.hospital.backend.repository.AppConfigRepository;
 import com.hospital.backend.repository.LivreCaisseRepository;
 import com.lowagie.text.Document;
+import com.lowagie.text.Image;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -50,6 +53,7 @@ public class LivreCaisseExportService {
     private final LivreCaisseService livreCaisseService;
     private final LivreCaisseRepository livreCaisseRepository;
     private final HospitalConfigService hospitalConfigService;
+    private final AppConfigRepository appConfigRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_FORMATTER_LONG = DateTimeFormatter.ofPattern("EEEE dd/MM/yyyy", java.util.Locale.FRENCH);
@@ -639,21 +643,79 @@ public class LivreCaisseExportService {
     }
 
     /**
-     * Crée l'en-tête PDF avec les informations de l'hôpital
+     * Crée l'en-tête PDF avec les informations de l'hôpital et le logo
      */
     private void createPDFHeader(Document document, HospitalConfig config) throws DocumentException {
+        // Récupérer le logo depuis AppConfig
+        String logoUrl = null;
+        try {
+            Optional<AppConfig> appConfigOpt = appConfigRepository.findById(1L);
+            if (appConfigOpt.isPresent()) {
+                logoUrl = appConfigOpt.get().getLogoUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Impossible de récupérer le logo depuis AppConfig: {}", e.getMessage());
+        }
+
+        // Créer un tableau pour le logo et le texte
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setSpacingAfter(10);
+
+        // Colonne gauche: Logo
+        if (logoUrl != null && !logoUrl.isEmpty()) {
+            try {
+                // Convertir l'URL relative en chemin de fichier
+                String logoPath = logoUrl.replace("/uploads/", "uploads/");
+                java.io.File logoFile = new java.io.File(logoPath);
+
+                if (logoFile.exists()) {
+                    Image logo = Image.getInstance(logoFile.getAbsolutePath());
+                    // Redimensionner le logo (max 80px de hauteur)
+                    logo.scaleToFit(120, 80);
+                    logo.setAlignment(Element.ALIGN_LEFT);
+
+                    PdfPCell logoCell = new PdfPCell(logo, false);
+                    logoCell.setBorder(PdfPCell.NO_BORDER);
+                    logoCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+                    logoCell.setVerticalAlignment(Element.ALIGN_CENTER);
+                    headerTable.addCell(logoCell);
+                } else {
+                    log.warn("Fichier logo non trouvé: {}", logoFile.getAbsolutePath());
+                    PdfPCell emptyCell = new PdfPCell();
+                    emptyCell.setBorder(PdfPCell.NO_BORDER);
+                    headerTable.addCell(emptyCell);
+                }
+            } catch (Exception e) {
+                log.warn("Erreur lors du chargement du logo: {}", e.getMessage());
+                PdfPCell emptyCell = new PdfPCell();
+                emptyCell.setBorder(PdfPCell.NO_BORDER);
+                headerTable.addCell(emptyCell);
+            }
+        } else {
+            PdfPCell emptyCell = new PdfPCell();
+            emptyCell.setBorder(PdfPCell.NO_BORDER);
+            headerTable.addCell(emptyCell);
+        }
+
+        // Colonne droite: Informations de l'hôpital
+        PdfPCell infoCell = new PdfPCell();
+        infoCell.setBorder(PdfPCell.NO_BORDER);
+        infoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        infoCell.setVerticalAlignment(Element.ALIGN_CENTER);
+
         // Nom de l'hôpital
         Font hospitalFont = new Font(Font.HELVETICA, 14, Font.BOLD, new Color(0, 100, 0));
         Paragraph hospitalName = new Paragraph(config.getHospitalName() != null ? config.getHospitalName() : "INUA AFIA", hospitalFont);
-        hospitalName.setAlignment(Element.ALIGN_CENTER);
-        document.add(hospitalName);
+        hospitalName.setAlignment(Element.ALIGN_RIGHT);
+        infoCell.addElement(hospitalName);
 
         // Sous-titre si présent
         if (config.getHeaderSubtitle() != null && !config.getHeaderSubtitle().isEmpty()) {
             Font subtitleFont = new Font(Font.HELVETICA, 10, Font.NORMAL, new Color(80, 80, 80));
             Paragraph subtitle = new Paragraph(config.getHeaderSubtitle(), subtitleFont);
-            subtitle.setAlignment(Element.ALIGN_CENTER);
-            document.add(subtitle);
+            subtitle.setAlignment(Element.ALIGN_RIGHT);
+            infoCell.addElement(subtitle);
         }
 
         // Adresse
@@ -675,10 +737,12 @@ public class LivreCaisseExportService {
         if (!address.isEmpty()) {
             Font addressFont = new Font(Font.HELVETICA, 9, Font.NORMAL, new Color(100, 100, 100));
             Paragraph addressPara = new Paragraph(address.toString(), addressFont);
-            addressPara.setAlignment(Element.ALIGN_CENTER);
-            addressPara.setSpacingAfter(5);
-            document.add(addressPara);
+            addressPara.setAlignment(Element.ALIGN_RIGHT);
+            infoCell.addElement(addressPara);
         }
+
+        headerTable.addCell(infoCell);
+        document.add(headerTable);
 
         // Ligne de séparation
         LineSeparator line = new LineSeparator();
