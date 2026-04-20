@@ -47,6 +47,16 @@ public class FinanceController {
         return ApiResponse.success("Accès autorisé aux rapports financiers");
     }
 
+    @GetMapping("/admissions/queue")
+    @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN', 'RECEPTION', 'CAISSIER')")
+    @Operation(summary = "File d'attente des admissions pour la caisse")
+    public ResponseEntity<Map<String, Object>> getAdmissionsQueue(
+            @RequestParam(required = false) String date) {
+        log.info("📋 [FINANCE] Récupération file d'attente admissions - Date: {}", date);
+        Map<String, Object> result = financeService.getAdmissionsQueue(date);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/invoices")
     @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
     @Operation(summary = "Liste des factures")

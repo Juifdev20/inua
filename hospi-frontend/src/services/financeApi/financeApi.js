@@ -46,8 +46,7 @@ const financeApi = {
   // ADMISSIONS — CAISSE
   // ═══════════════════════════════════════
   getAdmissionsQueue: async (params = {}) => {
-    // Utiliser le nouvel endpoint qui filtre correctement les archivés
-    const response = await globalApi.get('/v1/reception/admissions/queue-fixed', { params });
+    const response = await api.get('/admissions/queue', { params });
     return response.data;
   },
 

@@ -246,8 +246,9 @@ const CaisseAdmissions = () => {
     try {
       console.log('🔄 [DEBUG] Chargement des admissions...');
       const params = { date: selectedDate };
-      const data = await financeApi.getAdmissionsQueue(params);
-      const arr = data?.content || data || [];
+      const response = await financeApi.getAdmissionsQueue(params);
+      // Le backend retourne { success: true, data: [...], count: X }
+      const arr = response?.data || response?.content || response || [];
       const list = Array.isArray(arr) ? arr : [];
       
       console.log('📋 [DEBUG] Données reçues du backend:', list.length, 'admissions');

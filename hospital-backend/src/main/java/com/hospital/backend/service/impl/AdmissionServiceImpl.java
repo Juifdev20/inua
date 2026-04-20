@@ -65,6 +65,21 @@ public class AdmissionServiceImpl implements AdmissionService {
         User doctor = userRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Docteur introuvable avec l'ID: " + dto.getDoctorId()));
 
+        // Calculer les montants pour l'admission
+        Long patientId = patient.getId();
+        java.math.BigDecimal ficheAmount = pricingService.getFicheAmount(patientId);
+        boolean isNewFiche = ficheAmount.compareTo(java.math.BigDecimal.ZERO) > 0;
+
+        // Si une consultation existe déjà avec des services, calculer le montant total
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+        if (isNewFiche) {
+            totalAmount = totalAmount.add(ficheAmount);
+        }
+        // Ajouter le montant du DTO s'il est fourni
+        if (dto.getTotalAmount() != null) {
+            totalAmount = totalAmount.add(dto.getTotalAmount());
+        }
+
         Admission admission = Admission.builder()
                 .patient(patient)
                 .doctor(doctor)
@@ -77,22 +92,19 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .symptoms(dto.getSymptoms())
                 .notes(dto.getNotes())
                 .status(dto.getStatus() != null ? dto.getStatus() : Admission.AdmissionStatus.EN_ATTENTE)
+                .totalAmount(totalAmount.compareTo(java.math.BigDecimal.ZERO) > 0 ? totalAmount : java.math.BigDecimal.ZERO)
                 .build();
 
         Admission saved = admissionRepository.save(admission);
-        log.info("Admission créée avec succès ID: {}", saved.getId());
-        
-        // Calculer les montants et créer la facture automatiquement
-        Long patientId = saved.getPatient().getId();
-        java.math.BigDecimal ficheAmount = pricingService.getFicheAmount(patientId);
-        boolean isNewFiche = ficheAmount.compareTo(java.math.BigDecimal.ZERO) > 0;
-        
+        log.info("Admission créée avec succès ID: {}, Total: {}", saved.getId(), saved.getTotalAmount());
+
+        // Log des frais de fiche
         if (isNewFiche) {
             log.info("💰 Nouvelle fiche détectée pour le patient {} - Montant: {}", patientId, ficheAmount);
         } else {
             log.info("📝 Fiche déjà payée pour le patient {} - Pas de frais de fiche", patientId);
         }
-        
+
         // Créer la facture d'admission avec frais de fiche (si applicable)
         InvoiceDTO invoice = invoiceService.createAdmissionInvoice(
                 patientId,
@@ -102,8 +114,8 @@ public class AdmissionServiceImpl implements AdmissionService {
                 dto.getReasonForVisit(),
                 doctor
         );
-        
-        log.info("✅ Facture d'admission créée - ID: {}, Fiche: {}, Total: {}", 
+
+        log.info("✅ Facture d'admission créée - ID: {}, Fiche: {}, Total: {}",
                 invoice.getId(), isNewFiche ? ficheAmount : "0 (déjà payée)", invoice.getTotalAmount());
         
         return mapToDTO(saved);
@@ -123,6 +135,7 @@ public class AdmissionServiceImpl implements AdmissionService {
         if (dto.getSymptoms() != null) admission.setSymptoms(dto.getSymptoms());
         if (dto.getNotes() != null) admission.setNotes(dto.getNotes());
         if (dto.getStatus() != null) admission.setStatus(dto.getStatus());
+        if (dto.getTotalAmount() != null) admission.setTotalAmount(dto.getTotalAmount());
 
         Admission updated = admissionRepository.save(admission);
         log.info("Admission mise à jour avec succès ID: {}", updated.getId());
@@ -157,6 +170,7 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .symptoms(admission.getSymptoms())
                 .notes(admission.getNotes())
                 .status(admission.getStatus())
+                .totalAmount(admission.getTotalAmount())
                 .createdAt(admission.getCreatedAt())
                 .updatedAt(admission.getUpdatedAt())
                 .build();

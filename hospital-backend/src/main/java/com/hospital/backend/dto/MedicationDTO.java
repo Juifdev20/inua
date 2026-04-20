@@ -38,10 +38,14 @@ public class MedicationDTO {
     @NotNull(message = "Le prix d'achat est obligatoire")
     @Positive(message = "Le prix d'achat doit être positif")
     private BigDecimal price;
-    
+
+    private Currency purchaseCurrency;
+
     @NotNull(message = "Le prix de vente est obligatoire")
     @Positive(message = "Le prix de vente doit être positif")
     private BigDecimal unitPrice;
+
+    private Currency saleCurrency;
     
     @NotNull(message = "La quantité en stock est obligatoire")
     @Positive(message = "La quantité en stock doit être positive")
@@ -50,7 +54,7 @@ public class MedicationDTO {
     private Integer minimumStock;
     private LocalDateTime expiryDate;
     private LocalDate purchaseDate;
-    private Currency devise;
+    private Currency devise;  // Gardé pour compatibilité (déprécié, utiliser purchaseCurrency)
     private Boolean isActive;
     private Boolean requiresPrescription;
     private LocalDateTime createdAt;

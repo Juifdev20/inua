@@ -16,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
-@PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR', 'FINANCE', 'CAISSIER')")
 public class AdmissionController {
 
     private final AdmissionService admissionService;
@@ -30,7 +30,7 @@ public class AdmissionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR', 'FINANCE', 'CAISSIER')")
     public ResponseEntity<List<AdmissionDTO>> getAllAdmissions() {
         log.info("Récupération de toutes les admissions");
         List<AdmissionDTO> admissions = admissionService.getAll();

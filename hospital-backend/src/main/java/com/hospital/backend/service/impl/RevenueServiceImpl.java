@@ -69,7 +69,7 @@ public class RevenueServiceImpl implements RevenueService {
                 .amount(invoice.getPaidAmount() != null ? invoice.getPaidAmount() : invoice.getTotalAmount())
                 .source(source)
                 .paymentMethod(invoice.getPaymentMethod())
-                .currency(Currency.CDF)  // Par défaut en CDF
+                .currency(Currency.USD)  // Par défaut en USD
                 .referenceInvoice(invoice)
                 .description("Paiement facture " + invoice.getInvoiceCode())
                 .createdBy(createdBy)

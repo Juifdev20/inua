@@ -106,7 +106,7 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
                 'PHARMACIE' as source,
                 ft.created_at
             FROM finance_transactions ft
-            LEFT JOIN users u ON ft.created_by_id = u.id
+            LEFT JOIN users u ON ft.created_by = u.id
             WHERE ft.type = 'DEPENSE'
               AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
         ) t
@@ -217,7 +217,7 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
                 'PHARMACIE' as source,
                 ft.created_at
             FROM finance_transactions ft
-            LEFT JOIN users u ON ft.created_by_id = u.id
+            LEFT JOIN users u ON ft.created_by = u.id
             WHERE ft.type = 'DEPENSE'
               AND CAST(ft.created_at AS DATE) BETWEEN :dateDebut AND :dateFin
               AND u.id = :caissierId
@@ -235,29 +235,29 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
      * ★ INCLUT LES ACHATS MÉDICAMENTS (FinanceTransaction)
      */
     @Query(value = """
-        SELECT 
+        SELECT
             COALESCE(SUM(CASE WHEN type = 'ENTREE' THEN montant ELSE 0 END), 0)
-            - 
+            -
             COALESCE(SUM(CASE WHEN type = 'SORTIE' THEN montant ELSE 0 END), 0)
         FROM (
             SELECT 'ENTREE' as type, r.amount as montant
             FROM revenues r
-            WHERE r.currency = :currency
+            WHERE r.currency = :currencyCode
             AND CAST(r.date AS DATE) < :date
-            
+
             UNION ALL
-            
+
             SELECT 'SORTIE' as type, e.amount as montant
             FROM expenses e
-            WHERE e.currency = :currency
+            WHERE e.currency = :currencyCode
             AND CAST(e.date AS DATE) < :date
-            
+
             UNION ALL
-            
+
             -- ★ ACHATS MÉDICAMENTS AVANT LA DATE
             SELECT 'SORTIE' as type, ft.montant as montant
             FROM finance_transactions ft
-            WHERE ft.devise = :currency
+            WHERE ft.devise = :currencyCode
             AND ft.type = 'DEPENSE'
             AND CAST(ft.created_at AS DATE) < :date
         ) t
@@ -265,7 +265,7 @@ public interface LivreCaisseRepository extends JpaRepository<com.hospital.backen
         nativeQuery = true)
     BigDecimal calculateSoldeOuverture(
             @Param("date") LocalDate date,
-            @Param("currency") String currency);
+            @Param("currencyCode") String currencyCode);
 
     /**
      * Récupère les totaux journaliers pour la vue synthétique

@@ -4,6 +4,7 @@ import com.hospital.backend.dto.*;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.CaisseRepository;
 import com.hospital.backend.repository.FinanceTransactionRepository;
+import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +43,7 @@ public class FinanceTransactionController {
     private final FinanceTransactionRepository transactionRepository;
     private final CaisseRepository caisseRepository;
     private final CaisseService caisseService;
+    private final UserRepository userRepository;
 
     // ========================================
     // 📋 LISTES ET CONSULTATION
@@ -55,8 +56,8 @@ public class FinanceTransactionController {
     public ResponseEntity<?> getDepensesEnAttente() {
         try {
             List<FinanceTransaction> transactions = transactionRepository
-                .findByTypeOrderByCreatedAtDesc(TransactionType.DEPENSE);
-            log.info("✅ {} dépense(s) chargée(s)", transactions.size());
+                .findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN);
+            log.info("✅ {} dépense(s) en attente de validation chargée(s)", transactions.size());
             return ResponseEntity.ok(transactions);
         } catch (Exception e) {
             log.error("❌ Erreur chargement dépenses: {}", e.getMessage(), e);
@@ -108,30 +109,18 @@ public class FinanceTransactionController {
             @Parameter(description = "ID caisse (requis si IMMEDIAT)")
             @RequestParam(value = "caisseId", required = false) Long caisseId,
             @Parameter(description = "Date échéance paiement (si CREDIT)")
-            @RequestParam(value = "dateEcheance", required = false) String dateEcheance,
-            @AuthenticationPrincipal User currentUser) {
+            @RequestParam(value = "dateEcheance", required = false) String dateEcheance) {
         try {
-            // Récupérer l'utilisateur depuis SecurityContext si @AuthenticationPrincipal est null
-            User user = currentUser;
-            if (user == null) {
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                if (auth != null && auth.getName() != null) {
-                    String username = auth.getName();
-                    log.info("🔍 @AuthenticationPrincipal null, récupération depuis SecurityContext: {}", username);
-                    // Récupérer l'utilisateur depuis la validation service
-                    user = validationService.findUserByUsername(username);
-                }
+            // ✅ CORRECTION: Récupérer l'utilisateur depuis SecurityContextHolder (évite null avec multipart)
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                log.error("❌ Utilisateur non authentifié");
+                return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié. Veuillez vous reconnecter."));
             }
-            
-            // Vérifier que l'utilisateur est authentifié
-            if (user == null) {
-                log.error("❌ Utilisateur non authentifié lors de la validation dépense ID: {}", id);
-                return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
-            }
-            
-            log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}, user: {}", id, modePaiement, 
+
+            log.info("📤 Validation dépense ID: {}, mode: {}, fichier: {}, par: {}", id, modePaiement,
                     scanFacture != null ? scanFacture.getOriginalFilename() : "null",
-                    user.getUsername());
+                    currentUser.getUsername());
 
             ValidationDepenseDTO dto = ValidationDepenseDTO.builder()
                 .transactionId(id)
@@ -139,11 +128,11 @@ public class FinanceTransactionController {
                 .caisseId(caisseId)
                 .build();
 
-            FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, user);
-            
+            FinanceTransaction validated = validationService.validerDepense(id, scanFacture, dto, currentUser);
+
             // Retourner une réponse simplifiée pour éviter les problèmes de sérialisation
-            return ResponseEntity.ok(ApiResponse.success("Dépense validée avec succès", 
-                Map.of("id", validated.getId(), 
+            return ResponseEntity.ok(ApiResponse.success("Dépense validée avec succès",
+                Map.of("id", validated.getId(),
                        "status", validated.getStatus(),
                        "montant", validated.getMontant(),
                        "devise", validated.getDevise())));
@@ -151,12 +140,35 @@ public class FinanceTransactionController {
             log.warn("❌ Erreur validation dépense: {}", e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Erreur interne validation dépense ID {}: {}", id, e.getMessage(), e);
-            // Retourner le message d'erreur complet pour faciliter le debug
-            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            log.error("❌ Erreur interne validation dépense: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(ApiResponse.error("Erreur validation: " + errorMsg));
+                .body(ApiResponse.error("Erreur validation: " + e.getMessage()));
         }
+    }
+
+    // ✅ CORRECTION: Méthode utilitaire pour récupérer l'utilisateur depuis SecurityContextHolder
+    // Nécessaire car @AuthenticationPrincipal peut être null avec les requêtes multipart/form-data
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() != null) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof User) {
+                    return (User) principal;
+                } else if (principal instanceof String) {
+                    // Si le principal est juste un username (String), récupérer l'utilisateur complet
+                    String username = (String) principal;
+                    return userRepository.findByUsername(username).orElse(null);
+                } else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                    org.springframework.security.core.userdetails.UserDetails userDetails =
+                        (org.springframework.security.core.userdetails.UserDetails) principal;
+                    return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur récupération utilisateur authentifié: {}", e.getMessage());
+        }
+        return null;
     }
 
     // ========================================
@@ -169,27 +181,13 @@ public class FinanceTransactionController {
             description = "Transition A_PAYER -> PAYE avec décaissement de la caisse")
     public ResponseEntity<?> payerDette(
             @PathVariable Long id,
-            @RequestParam("caisseId") Long caisseId,
-            @AuthenticationPrincipal User currentUser) {
+            @RequestParam("caisseId") Long caisseId) {
         try {
-            // Récupérer l'utilisateur depuis SecurityContext si @AuthenticationPrincipal est null
-            User user = currentUser;
-            if (user == null) {
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                if (auth != null && auth.getName() != null) {
-                    String username = auth.getName();
-                    log.info("🔍 @AuthenticationPrincipal null dans payerDette, récupération depuis SecurityContext: {}", username);
-                    user = validationService.findUserByUsername(username);
-                }
-            }
-            
-            // Vérifier que l'utilisateur est authentifié
-            if (user == null) {
-                log.error("❌ Utilisateur non authentifié lors du paiement dette ID: {}", id);
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
                 return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
             }
-            
-            FinanceTransaction payee = validationService.payerDette(id, caisseId, user);
+            FinanceTransaction payee = validationService.payerDette(id, caisseId, currentUser);
             return ResponseEntity.ok(ApiResponse.success("Dette payée avec succès", 
                 Map.of("id", payee.getId(), 
                        "status", payee.getStatus(),
@@ -213,10 +211,14 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
     @Operation(summary = "Créer un avoir pour corriger une transaction",
             description = "La transaction originale sera marquée CONTRE_PASSEE. Jamais de suppression!")
-    public ResponseEntity<FinanceTransaction> corrigerTransaction(
+    public ResponseEntity<?> corrigerTransaction(
             @PathVariable Long id,
-            @RequestBody CorrectionTransactionDTO dto,
-            @AuthenticationPrincipal User currentUser) {
+            @RequestBody CorrectionTransactionDTO dto) {
+
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
+        }
 
         dto.setTransactionOriginaleId(id);
         FinanceTransaction avoir = correctionService.creerAvoir(dto, currentUser);
@@ -238,9 +240,13 @@ public class FinanceTransactionController {
     @PreAuthorize("hasRole('PHARMACIEN')")
     @Operation(summary = "Traiter un retour de médicaments au fournisseur",
             description = "Débite le stock et crée automatiquement un avoir")
-    public ResponseEntity<FinanceTransaction> traiterRetour(
-            @RequestBody RetourFournisseurDTO dto,
-            @AuthenticationPrincipal User currentUser) {
+    public ResponseEntity<?> traiterRetour(
+            @RequestBody RetourFournisseurDTO dto) {
+
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Utilisateur non authentifié"));
+        }
 
         FinanceTransaction avoir = retourService.traiterRetour(dto, currentUser);
         return ResponseEntity.ok(avoir);

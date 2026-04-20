@@ -328,4 +328,10 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     Optional<String> findLastNumeroFicheByYear(@Param("yearSuffix") String yearSuffix);
 
     Optional<Consultation> findByNumeroFiche(String numeroFiche);
+
+    /**
+     * Récupère les consultations associées à une admission
+     * Utilisé par UltraSimpleFinanceService pour calculer le montant total
+     */
+    List<Consultation> findByAdmissionId(Long admissionId);
 }

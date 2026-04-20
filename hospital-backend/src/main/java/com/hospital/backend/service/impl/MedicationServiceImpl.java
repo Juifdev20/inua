@@ -143,7 +143,9 @@ public class MedicationServiceImpl implements MedicationService {
             .form(dto.getForm())
             .strength(dto.getStrength())
             .price(dto.getPrice())
+            .purchaseCurrency(dto.getPurchaseCurrency() != null ? dto.getPurchaseCurrency() : dto.getDevise())
             .unitPrice(dto.getUnitPrice())
+            .saleCurrency(dto.getSaleCurrency())
             .stockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 0)
             .minimumStock(dto.getMinimumStock() != null ? dto.getMinimumStock() : 10)
             .expiryDate(dto.getExpiryDate())
@@ -162,7 +164,11 @@ public class MedicationServiceImpl implements MedicationService {
         if (dto.getCategory() != null) medication.setCategory(dto.getCategory());
         if (dto.getForm() != null) medication.setForm(dto.getForm());
         if (dto.getStrength() != null) medication.setStrength(dto.getStrength());
+        if (dto.getPrice() != null) medication.setPrice(dto.getPrice());
+        if (dto.getPurchaseCurrency() != null) medication.setPurchaseCurrency(dto.getPurchaseCurrency());
+        if (dto.getDevise() != null && dto.getPurchaseCurrency() == null) medication.setPurchaseCurrency(dto.getDevise());
         if (dto.getUnitPrice() != null) medication.setUnitPrice(dto.getUnitPrice());
+        if (dto.getSaleCurrency() != null) medication.setSaleCurrency(dto.getSaleCurrency());
         if (dto.getStockQuantity() != null) medication.setStockQuantity(dto.getStockQuantity());
         if (dto.getMinimumStock() != null) medication.setMinimumStock(dto.getMinimumStock());
         if (dto.getExpiryDate() != null) medication.setExpiryDate(dto.getExpiryDate());
@@ -189,11 +195,14 @@ public class MedicationServiceImpl implements MedicationService {
             .form(m.getForm())
             .strength(m.getStrength())
             .price(m.getPrice())
+            .purchaseCurrency(m.getPurchaseCurrency())
             .unitPrice(m.getUnitPrice())
+            .saleCurrency(m.getSaleCurrency())
             .stockQuantity(m.getStockQuantity())
             .minimumStock(m.getMinimumStock())
             .expiryDate(m.getExpiryDate())
             .purchaseDate(m.getPurchaseDate())
+            .devise(m.getPurchaseCurrency())  // Pour compatibilité
             .isActive(m.getIsActive())
             .requiresPrescription(m.getRequiresPrescription())
             .createdAt(m.getCreatedAt())

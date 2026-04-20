@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hospital.backend.entity.Admission;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -45,6 +46,8 @@ public class AdmissionDTO {
 
     @JsonProperty("status")
     private Admission.AdmissionStatus status;
+
+    private BigDecimal totalAmount;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

@@ -81,7 +81,6 @@ import ReceptionPayments from "./pages/reception/ReceptionPayments";
 /* 💰 Finance */
 import FinanceLayout from "./components/finance/FinanceLayout";
 import FinanceDashboard from "./pages/finance/FinanceDashboard";
-import CaissesUnifiees from "./pages/finance/CaissesUnifiees";
 import CaisseAdmissions from "./pages/finance/CaisseAdmissions";
 import CaisseLaboratoire from "./pages/finance/CaisseLaboratoire";
 import CaissePharmacie from "./pages/finance/CaissePharmacie";
@@ -259,14 +258,9 @@ function App() {
                 >
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<FinanceDashboard />} />
-                  
-                  {/* Nouvelle page caisses unifiée */}
-                  <Route path="caisses" element={<CaissesUnifiees />} />
-                  
-                  {/* Redirections des anciennes routes vers la nouvelle page */}
-                  <Route path="caisse-admissions" element={<Navigate to="/finance/caisses?tab=admissions" replace />} />
-                  <Route path="caisse-laboratoire" element={<Navigate to="/finance/caisses?tab=laboratoire" replace />} />
-                  <Route path="caisse-pharmacie" element={<Navigate to="/finance/caisses?tab=pharmacie" replace />} />
+                  <Route path="caisse-admissions" element={<CaisseAdmissions />} />
+                  <Route path="caisse-laboratoire" element={<CaisseLaboratoire />} />
+                  <Route path="caisse-pharmacie" element={<CaissePharmacie />} />
                   <Route
                     path="depenses"
                     element={

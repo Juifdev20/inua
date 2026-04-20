@@ -2,7 +2,6 @@
   "finance": {
     "title": "Module Finance",
     "dashboard": "Tableau de Bord",
-    "caisses": "Caisses",
     "admissions": "Caisse Admissions",
     "laboratory": "Caisse Laboratoire",
     "pharmacy": "Caisse Pharmacie",

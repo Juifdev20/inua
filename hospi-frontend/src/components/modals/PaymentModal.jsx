@@ -43,7 +43,7 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
           backendMethod = 'CARTE_BANCAIRE';
           break;
         case 'mobile':
-          backendMethod = 'MOBILE';
+          backendMethod = 'MOBILE_MONEY';
           break;
         default:
           throw new Error('Méthode de paiement invalide');
@@ -56,9 +56,9 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
       
       let response;
       if (isPharmacyInvoice) {
-        // Paiement pour facture pharmacie - endpoint spécifique
+        // Paiement pour facture pharmacie - endpoint spécifique avec /v1
         response = await api.post(
-          `${BACKEND_URL}/api/finance/prescription/process-payment/${invoice.id}?paymentMethod=${backendMethod}`
+          `${BACKEND_URL}/api/v1/finance/prescription/process-payment/${invoice.id}?paymentMethod=${backendMethod}`
         );
       } else {
         // Paiement standard (laboratoire, etc.)

@@ -47,9 +47,17 @@ public class Medication {
     
     @Column(name = "price", precision = 10, scale = 2)
     private BigDecimal price;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchase_currency")
+    private Currency purchaseCurrency;
+
     @Column(name = "unit_price", precision = 10, scale = 2)
     private BigDecimal unitPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sale_currency")
+    private Currency saleCurrency;
     
     @Column(name = "stock_quantity")
     private Integer stockQuantity;
@@ -63,9 +71,11 @@ public class Medication {
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
     
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
-    
+
+    @Builder.Default
     @Column(name = "requires_prescription")
     private Boolean requiresPrescription = true;
     

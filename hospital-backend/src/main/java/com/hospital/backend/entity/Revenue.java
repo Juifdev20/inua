@@ -36,7 +36,7 @@ public class Revenue {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false)
-    private Currency currency = Currency.CDF;  // Par défaut en CDF
+    private Currency currency = Currency.USD;  // Par défaut en USD
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_invoice_id")

@@ -33,7 +33,8 @@ public class PharmacieFinanceIntegrationService {
         log.info("Création transaction finance pour commande pharmacie ID: {}", reception.getCommandeId());
 
         // Vérifier si transaction existe déjà (éviter doublons)
-        if (transactionRepository.existsByCommandePharmacieIdAndType(
+        // Note: Si commandeId est null (achat direct), on ne vérifie pas les doublons par commandeId
+        if (reception.getCommandeId() != null && transactionRepository.existsByCommandePharmacieIdAndType(
                 reception.getCommandeId(), TransactionType.DEPENSE)) {
             log.warn("Transaction déjà existante pour commande {}", reception.getCommandeId());
             throw new IllegalStateException("Une transaction existe déjà pour cette commande");

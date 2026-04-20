@@ -37,12 +37,9 @@ public class LivreCaisseService {
     public LivreCaisseDTO.SyntheseResponse getSynthese(LocalDate dateDebut, LocalDate dateFin) {
         log.info("📊 Génération du Livre de Caisse - Synthèse du {} au {}", dateDebut, dateFin);
 
-        try {
-            // 1. Calculer les soldes d'ouverture
-            log.debug("Calcul solde ouverture USD...");
-            BigDecimal soldeOuvertureUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
-            log.debug("Calcul solde ouverture CDF...");
-            BigDecimal soldeOuvertureCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
+        // 1. Calculer les soldes d'ouverture (codes: USD, CDF)
+        BigDecimal soldeOuvertureUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
+        BigDecimal soldeOuvertureCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
 
         if (soldeOuvertureUSD == null) soldeOuvertureUSD = BigDecimal.ZERO;
         if (soldeOuvertureCDF == null) soldeOuvertureCDF = BigDecimal.ZERO;
@@ -69,7 +66,7 @@ public class LivreCaisseService {
             BigDecimal sortieUSD = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
             BigDecimal entreeCDF = row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO;
             BigDecimal sortieCDF = row[4] != null ? (BigDecimal) row[4] : BigDecimal.ZERO;
-            Number nbTrans = row[5] != null ? (Number) row[5] : 0;
+            Number nbTrans = (Number) row[5];
 
             // Calculer les soldes cumulatifs
             soldeCumulatifUSD = soldeCumulatifUSD.add(entreeUSD).subtract(sortieUSD);
@@ -114,10 +111,6 @@ public class LivreCaisseService {
                 .soldeOuvertureUSD(soldeOuvertureUSD)
                 .soldeOuvertureCDF(soldeOuvertureCDF)
                 .build();
-        } catch (Exception e) {
-            log.error("❌ Erreur SQL dans getSynthese: {}", e.getMessage(), e);
-            throw new RuntimeException("Erreur base de données: " + e.getMessage(), e);
-        }
     }
 
     /**
@@ -137,7 +130,25 @@ public class LivreCaisseService {
 
         // 2. Récupérer toutes les transactions (pour calculer les soldes cumulatifs)
         // Note: On récupère tout pour calculer correctement le solde, même si on pagine l'affichage
-        List<Object[]> allTransactions = livreCaisseRepository.findTransactionsByPeriode(dateDebut, dateFin, Pageable.unpaged()).getContent();
+        log.info("🔍 [DETAILS] Exécution requête findTransactionsByPeriode du {} au {}", dateDebut, dateFin);
+
+        List<Object[]> allTransactions;
+        try {
+            allTransactions = livreCaisseRepository.findTransactionsByPeriode(dateDebut, dateFin, Pageable.unpaged()).getContent();
+            log.info("🔍 [DETAILS] Nombre de transactions brutes récupérées: {}", allTransactions.size());
+        } catch (Exception e) {
+            log.error("❌ [DETAILS] ERREUR lors de l'exécution de la requête: {}", e.getMessage(), e);
+            allTransactions = new ArrayList<>();
+        }
+
+        if (allTransactions.isEmpty()) {
+            log.warn("⚠️ [DETAILS] Aucune transaction trouvée pour la période {} - {}", dateDebut, dateFin);
+        } else {
+            // Log la première transaction pour debug
+            Object[] firstRow = allTransactions.get(0);
+            log.info("🔍 [DETAILS] Première transaction - Colonnes: {}, ID: {}, Type: {}",
+                firstRow.length, firstRow[0], firstRow[2]);
+        }
 
         List<LivreCaisseDTO.DetailTransaction> transactions = new ArrayList<>();
 

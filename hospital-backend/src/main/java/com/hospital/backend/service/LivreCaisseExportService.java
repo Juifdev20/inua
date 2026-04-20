@@ -317,7 +317,7 @@ public class LivreCaisseExportService {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // EXCEL - Onglet 2: DETAILS TRANSACTIONS
+    // EXCEL - Onglet 2: DETAILS TRANSACTIONS (Format Comptable)
     // ═════════════════════════════════════════════════════════════════════════
     private void createDetailsSheet(Workbook workbook, LocalDate dateDebut, LocalDate dateFin, Long caissierId) {
         Sheet sheet = workbook.createSheet("DETAILS TRANSACTIONS");
@@ -328,10 +328,20 @@ public class LivreCaisseExportService {
         CellStyle currencyStyle = createCurrencyStyle(workbook);
         CellStyle greenStyle = createColoredStyle(workbook, COLOR_GREEN, COLOR_WHITE);
         CellStyle redStyle = createColoredStyle(workbook, COLOR_RED, COLOR_WHITE);
+        CellStyle monthTotalStyle = createMonthTotalStyle(workbook);
+        CellStyle yearTotalStyle = createYearTotalStyle(workbook);
+        CellStyle titleStyle = createTitleStyle(workbook);
 
-        // En-têtes
-        Row headerRow = sheet.createRow(0);
-        String[] headers = {"ANNÉE", "MOIS", "DATE", "TYPE TRANSACTION", "DESCRIPTION", "DEVISE", "MONTANT", "PATIENT/FOURNISSEUR", "DOCUMENT"};
+        // Titre
+        Row titleRow = sheet.createRow(0);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("LIVRE DE CAISSE - DÉTAILS TRANSACTIONS");
+        titleCell.setCellStyle(titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 7));
+
+        // En-têtes de colonnes (format comptable)
+        Row headerRow = sheet.createRow(2);
+        String[] headers = {"ANNÉE", "MOIS", "DATE", "TYPE TRANSACTION", "DEVISE", "ENTRÉE", "SORTIE", "SOLDE"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
@@ -346,94 +356,248 @@ public class LivreCaisseExportService {
             details = livreCaisseRepository.findTransactionsByPeriode(dateDebut, dateFin, org.springframework.data.domain.Pageable.unpaged()).getContent();
         }
 
-        // Données
-        int rowNum = 1;
-        String currentYear = "";
+        // Variables pour tracking et calculs
+        int rowNum = 3;
+        int currentYear = 0;
         String currentMonth = "";
-        String currentDate = "";
+        LocalDate currentDate = null;
+
+        // Soldes cumulatifs par devise
+        BigDecimal soldeUSD = BigDecimal.ZERO;
+        BigDecimal soldeCDF = BigDecimal.ZERO;
+
+        // Totaux mensuels
+        BigDecimal monthEntreeUSD = BigDecimal.ZERO;
+        BigDecimal monthSortieUSD = BigDecimal.ZERO;
+        BigDecimal monthEntreeCDF = BigDecimal.ZERO;
+        BigDecimal monthSortieCDF = BigDecimal.ZERO;
+
+        // Totaux annuels
+        BigDecimal yearEntreeUSD = BigDecimal.ZERO;
+        BigDecimal yearSortieUSD = BigDecimal.ZERO;
+        BigDecimal yearEntreeCDF = BigDecimal.ZERO;
+        BigDecimal yearSortieCDF = BigDecimal.ZERO;
 
         for (Object[] row : details) {
             java.sql.Timestamp dateTs = (java.sql.Timestamp) row[1];
             LocalDate date = dateTs.toLocalDateTime().toLocalDate();
 
-            String year = String.valueOf(date.getYear());
+            int year = date.getYear();
             String month = date.format(java.time.format.DateTimeFormatter.ofPattern("MMMM", java.util.Locale.FRENCH));
             String dateStr = date.format(DATE_FORMATTER_LONG);
 
             String type = (String) row[2];
-            String description = (String) row[3];
-            String document = (String) row[4];
             String devise = (String) row[5];
             BigDecimal montant = row[6] != null ? (BigDecimal) row[6] : BigDecimal.ZERO;
-            String patientNom = (String) row[7];
-            String patientPrenom = (String) row[8];
-            String patientCode = (String) row[9];
 
+            // Détection changement d'année
+            if (year != currentYear && currentYear != 0) {
+                // Afficher total année précédente
+                rowNum = addYearTotalRow(sheet, rowNum, currentYear, yearEntreeUSD, yearSortieUSD,
+                    yearEntreeCDF, yearSortieCDF, yearTotalStyle, currencyStyle);
+                // Reset totaux annuels
+                yearEntreeUSD = BigDecimal.ZERO;
+                yearSortieUSD = BigDecimal.ZERO;
+                yearEntreeCDF = BigDecimal.ZERO;
+                yearSortieCDF = BigDecimal.ZERO;
+            }
+
+            // Détection changement de mois
+            if (!month.equals(currentMonth) && !currentMonth.isEmpty()) {
+                // Afficher total mois précédent
+                rowNum = addMonthTotalRow(sheet, rowNum, currentMonth, monthEntreeUSD, monthSortieUSD,
+                    monthEntreeCDF, monthSortieCDF, soldeUSD, soldeCDF, monthTotalStyle, currencyStyle);
+                // Reset totaux mensuels
+                monthEntreeUSD = BigDecimal.ZERO;
+                monthSortieUSD = BigDecimal.ZERO;
+                monthEntreeCDF = BigDecimal.ZERO;
+                monthSortieCDF = BigDecimal.ZERO;
+            }
+
+            // Mise à jour trackers
+            if (year != currentYear) currentYear = year;
+            if (!month.equals(currentMonth)) currentMonth = month;
+
+            // Mise à jour soldes cumulatifs
+            if ("USD".equals(devise)) {
+                if ("ENTREE".equals(type)) {
+                    soldeUSD = soldeUSD.add(montant);
+                    monthEntreeUSD = monthEntreeUSD.add(montant);
+                    yearEntreeUSD = yearEntreeUSD.add(montant);
+                } else {
+                    soldeUSD = soldeUSD.subtract(montant);
+                    monthSortieUSD = monthSortieUSD.add(montant);
+                    yearSortieUSD = yearSortieUSD.add(montant);
+                }
+            } else { // CDF
+                if ("ENTREE".equals(type)) {
+                    soldeCDF = soldeCDF.add(montant);
+                    monthEntreeCDF = monthEntreeCDF.add(montant);
+                    yearEntreeCDF = yearEntreeCDF.add(montant);
+                } else {
+                    soldeCDF = soldeCDF.subtract(montant);
+                    monthSortieCDF = monthSortieCDF.add(montant);
+                    yearSortieCDF = yearSortieCDF.add(montant);
+                }
+            }
+
+            // Créer la ligne de transaction
             Row dataRow = sheet.createRow(rowNum++);
 
-            // Année (fusionnée)
-            if (!year.equals(currentYear)) {
-                currentYear = year;
-                dataRow.createCell(0).setCellValue(year);
-            } else {
-                dataRow.createCell(0).setCellValue("");
-            }
+            // Année
+            dataRow.createCell(0).setCellValue(year);
+            dataRow.getCell(0).setCellStyle(dataStyle);
 
-            // Mois (fusionné)
-            if (!month.equals(currentMonth)) {
-                currentMonth = month;
-                dataRow.createCell(1).setCellValue(month);
-            } else {
-                dataRow.createCell(1).setCellValue("");
-            }
+            // Mois
+            dataRow.createCell(1).setCellValue(month);
+            dataRow.getCell(1).setCellStyle(dataStyle);
 
-            // Date (fusionnée)
-            if (!dateStr.equals(currentDate)) {
-                currentDate = dateStr;
-                dataRow.createCell(2).setCellValue(dateStr);
-            } else {
-                dataRow.createCell(2).setCellValue("");
-            }
+            // Date
+            dataRow.createCell(2).setCellValue(dateStr);
+            dataRow.getCell(2).setCellStyle(dataStyle);
 
-            // Type
+            // Type Transaction
             Cell typeCell = dataRow.createCell(3);
-            typeCell.setCellValue(type.equals("ENTREE") ? "Paiement (Entrée)" : "Dépense (Sortie)");
-            typeCell.setCellStyle(type.equals("ENTREE") ? greenStyle : redStyle);
-
-            // Description
-            dataRow.createCell(4).setCellValue(description != null ? description : "");
-            dataRow.getCell(4).setCellStyle(dataStyle);
+            String typeLabel = "ENTREE".equals(type) ? "Paiements (Entrée)" : "Dépenses (Sortie)";
+            typeCell.setCellValue(typeLabel);
+            typeCell.setCellStyle("ENTREE".equals(type) ? greenStyle : redStyle);
 
             // Devise
-            dataRow.createCell(5).setCellValue(devise);
-            dataRow.getCell(5).setCellStyle(dataStyle);
+            dataRow.createCell(4).setCellValue(devise);
+            dataRow.getCell(4).setCellStyle(dataStyle);
 
-            // Montant
-            Cell montantCell = dataRow.createCell(6);
-            montantCell.setCellValue(montant.doubleValue());
-            montantCell.setCellStyle(currencyStyle);
+            // Entrée ou Sortie
+            BigDecimal entree = "ENTREE".equals(type) ? montant : BigDecimal.ZERO;
+            BigDecimal sortie = "SORTIE".equals(type) ? montant : BigDecimal.ZERO;
 
-            // Patient/Fournisseur
-            String patientFull = patientPrenom != null ? patientPrenom + " " + (patientNom != null ? patientNom : "") : (patientNom != null ? patientNom : "");
-            if (patientCode != null) patientFull += " (" + patientCode + ")";
-            dataRow.createCell(7).setCellValue(patientFull);
-            dataRow.getCell(7).setCellStyle(dataStyle);
+            Cell entreeCell = dataRow.createCell(5);
+            if (entree.compareTo(BigDecimal.ZERO) > 0) {
+                entreeCell.setCellValue(entree.doubleValue());
+            } else {
+                entreeCell.setCellValue("");
+            }
+            entreeCell.setCellStyle(currencyStyle);
 
-            // Document
-            dataRow.createCell(8).setCellValue(document != null ? document : "");
-            dataRow.getCell(8).setCellStyle(dataStyle);
+            Cell sortieCell = dataRow.createCell(6);
+            if (sortie.compareTo(BigDecimal.ZERO) > 0) {
+                sortieCell.setCellValue(sortie.doubleValue());
+            } else {
+                sortieCell.setCellValue("");
+            }
+            sortieCell.setCellStyle(currencyStyle);
+
+            // Solde cumulatif
+            BigDecimal solde = "USD".equals(devise) ? soldeUSD : soldeCDF;
+            Cell soldeCell = dataRow.createCell(7);
+            soldeCell.setCellValue(solde.doubleValue());
+            soldeCell.setCellStyle(currencyStyle);
+        }
+
+        // Total dernier mois
+        if (!currentMonth.isEmpty()) {
+            rowNum = addMonthTotalRow(sheet, rowNum, currentMonth, monthEntreeUSD, monthSortieUSD,
+                monthEntreeCDF, monthSortieCDF, soldeUSD, soldeCDF, monthTotalStyle, currencyStyle);
+        }
+
+        // Total dernière année
+        if (currentYear != 0) {
+            rowNum = addYearTotalRow(sheet, rowNum, currentYear, yearEntreeUSD, yearSortieUSD,
+                yearEntreeCDF, yearSortieCDF, yearTotalStyle, currencyStyle);
         }
 
         // Largeurs de colonnes
         sheet.setColumnWidth(0, 10);
         sheet.setColumnWidth(1, 12);
         sheet.setColumnWidth(2, 25);
-        sheet.setColumnWidth(3, 20);
-        sheet.setColumnWidth(4, 40);
-        sheet.setColumnWidth(5, 10);
+        sheet.setColumnWidth(3, 25);
+        sheet.setColumnWidth(4, 12);
+        sheet.setColumnWidth(5, 15);
         sheet.setColumnWidth(6, 15);
-        sheet.setColumnWidth(7, 35);
-        sheet.setColumnWidth(8, 20);
+        sheet.setColumnWidth(7, 15);
+    }
+
+    private int addMonthTotalRow(Sheet sheet, int rowNum, String month,
+            BigDecimal entreeUSD, BigDecimal sortieUSD, BigDecimal entreeCDF, BigDecimal sortieCDF,
+            BigDecimal soldeUSD, BigDecimal soldeCDF,
+            CellStyle labelStyle, CellStyle currencyStyle) {
+
+        // Ligne vide pour séparation
+        rowNum++;
+
+        // Total USD
+        Row usdRow = sheet.createRow(rowNum++);
+        usdRow.createCell(0).setCellValue("");
+        usdRow.createCell(1).setCellValue("TOTAL");
+        usdRow.getCell(1).setCellStyle(labelStyle);
+        usdRow.createCell(2).setCellValue(month.toUpperCase());
+        usdRow.getCell(2).setCellStyle(labelStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 2, 3));
+        usdRow.createCell(4).setCellValue("USD");
+        usdRow.getCell(4).setCellStyle(labelStyle);
+        usdRow.createCell(5).setCellValue(entreeUSD.doubleValue());
+        usdRow.getCell(5).setCellStyle(currencyStyle);
+        usdRow.createCell(6).setCellValue(sortieUSD.doubleValue());
+        usdRow.getCell(6).setCellStyle(currencyStyle);
+        usdRow.createCell(7).setCellValue(soldeUSD.doubleValue());
+        usdRow.getCell(7).setCellStyle(currencyStyle);
+
+        // Total CDF
+        Row cdfRow = sheet.createRow(rowNum++);
+        cdfRow.createCell(0).setCellValue("");
+        cdfRow.createCell(1).setCellValue("");
+        cdfRow.createCell(2).setCellValue("");
+        cdfRow.createCell(3).setCellValue("");
+        cdfRow.createCell(4).setCellValue("CDF");
+        cdfRow.getCell(4).setCellStyle(labelStyle);
+        cdfRow.createCell(5).setCellValue(entreeCDF.doubleValue());
+        cdfRow.getCell(5).setCellStyle(currencyStyle);
+        cdfRow.createCell(6).setCellValue(sortieCDF.doubleValue());
+        cdfRow.getCell(6).setCellStyle(currencyStyle);
+        cdfRow.createCell(7).setCellValue(soldeCDF.doubleValue());
+        cdfRow.getCell(7).setCellStyle(currencyStyle);
+
+        return rowNum;
+    }
+
+    private int addYearTotalRow(Sheet sheet, int rowNum, int year,
+            BigDecimal entreeUSD, BigDecimal sortieUSD, BigDecimal entreeCDF, BigDecimal sortieCDF,
+            CellStyle labelStyle, CellStyle currencyStyle) {
+
+        // Ligne vide
+        rowNum++;
+
+        // Total Année USD
+        Row usdRow = sheet.createRow(rowNum++);
+        usdRow.createCell(0).setCellValue("TOTAL ANNÉE " + year);
+        usdRow.getCell(0).setCellStyle(labelStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 3));
+        usdRow.createCell(4).setCellValue("USD");
+        usdRow.getCell(4).setCellStyle(labelStyle);
+        usdRow.createCell(5).setCellValue(entreeUSD.doubleValue());
+        usdRow.getCell(5).setCellStyle(currencyStyle);
+        usdRow.createCell(6).setCellValue(sortieUSD.doubleValue());
+        usdRow.getCell(6).setCellStyle(currencyStyle);
+        BigDecimal soldeUSD = entreeUSD.subtract(sortieUSD);
+        usdRow.createCell(7).setCellValue(soldeUSD.doubleValue());
+        usdRow.getCell(7).setCellStyle(currencyStyle);
+
+        // Total Année CDF
+        Row cdfRow = sheet.createRow(rowNum++);
+        cdfRow.createCell(0).setCellValue("");
+        cdfRow.createCell(1).setCellValue("");
+        cdfRow.createCell(2).setCellValue("");
+        cdfRow.createCell(3).setCellValue("");
+        cdfRow.createCell(4).setCellValue("CDF");
+        cdfRow.getCell(4).setCellStyle(labelStyle);
+        cdfRow.createCell(5).setCellValue(entreeCDF.doubleValue());
+        cdfRow.getCell(5).setCellStyle(currencyStyle);
+        cdfRow.createCell(6).setCellValue(sortieCDF.doubleValue());
+        cdfRow.getCell(6).setCellStyle(currencyStyle);
+        BigDecimal soldeCDF = entreeCDF.subtract(sortieCDF);
+        cdfRow.createCell(7).setCellValue(soldeCDF.doubleValue());
+        cdfRow.getCell(7).setCellStyle(currencyStyle);
+
+        return rowNum;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -638,6 +802,38 @@ public class LivreCaisseExportService {
         style.setBorderTop(BorderStyle.THIN);
         style.setBorderLeft(BorderStyle.THIN);
         style.setBorderRight(BorderStyle.THIN);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        return style;
+    }
+
+    private CellStyle createMonthTotalStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        org.apache.poi.ss.usermodel.Font font = workbook.createFont();
+        font.setBold(true);
+        font.setColor(IndexedColors.WHITE.getIndex());
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        return style;
+    }
+
+    private CellStyle createYearTotalStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        org.apache.poi.ss.usermodel.Font font = workbook.createFont();
+        font.setBold(true);
+        font.setColor(IndexedColors.WHITE.getIndex());
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.DARK_GREEN.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderBottom(BorderStyle.MEDIUM);
+        style.setBorderTop(BorderStyle.MEDIUM);
+        style.setBorderLeft(BorderStyle.MEDIUM);
+        style.setBorderRight(BorderStyle.MEDIUM);
         style.setAlignment(HorizontalAlignment.CENTER);
         return style;
     }

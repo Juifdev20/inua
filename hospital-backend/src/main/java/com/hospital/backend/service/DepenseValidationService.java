@@ -3,6 +3,7 @@ package com.hospital.backend.service;
 import com.hospital.backend.dto.ValidationDepenseDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.CaisseRepository;
+import com.hospital.backend.repository.ExpenseRepository;
 import com.hospital.backend.repository.FinanceTransactionRepository;
 import com.hospital.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,8 @@ public class DepenseValidationService {
     private final CaisseRepository caisseRepository;
     private final CaisseService caisseService;
     private final FileStorageService fileStorageService;
+    private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
-
-    public User findUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-            .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + username));
-    }
 
     /**
      * Valide une dépense avec scan de facture obligatoire
@@ -44,8 +41,7 @@ public class DepenseValidationService {
                                               ValidationDepenseDTO validationDTO,
                                               User validatedBy) {
         
-        String validatorName = validatedBy != null ? validatedBy.getUsername() : "SYSTEM";
-        log.info("Validation dépense ID: {} par {}", transactionId, validatorName);
+        log.info("Validation dépense ID: {} par {}", transactionId, validatedBy.getUsername());
 
         FinanceTransaction transaction = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction non trouvée: " + transactionId));
@@ -64,19 +60,8 @@ public class DepenseValidationService {
             throw new IllegalArgumentException("Le scan de la facture fournisseur est obligatoire pour la validation");
         }
 
-        // Upload du scan avec gestion d'erreur détaillée
-        String scanUrl;
-        try {
-            log.info("📤 Upload fichier: {}, taille: {} bytes, type: {}", 
-                scanFacture.getOriginalFilename(),
-                scanFacture.getSize(),
-                scanFacture.getContentType());
-            scanUrl = fileStorageService.store(scanFacture, "factures-fournisseurs");
-            log.info("✅ Fichier uploadé avec succès: {}", scanUrl);
-        } catch (Exception e) {
-            log.error("❌ Erreur upload fichier: {}", e.getMessage(), e);
-            throw new IllegalStateException("Erreur lors de l'upload du scan: " + e.getMessage());
-        }
+        // Upload du scan
+        String scanUrl = fileStorageService.store(scanFacture, "factures-fournisseurs");
         transaction.setScanFactureUrl(scanUrl);
 
         // Appliquer le mode de paiement
@@ -108,16 +93,26 @@ public class DepenseValidationService {
             // Décaissement via CaisseService (gère les caisses virtuelles aussi)
             caisseService.debiterCaisse(validationDTO.getCaisseId(), transaction.getMontant());
 
-            // Ne pas associer la caisse virtuelle (id < 0) à la transaction car elle n'est pas persistée
-            // Seules les caisses physiques (id > 0) peuvent être associées
-            if (caisse.getId() != null && caisse.getId() > 0) {
+            // Ne pas persister la caisse virtuelle (ID < 0), juste logger
+            if (caisse.getId() > 0) {
                 transaction.setCaisse(caisse);
             } else {
-                // Pour les caisses virtuelles, on ne met pas la caisse mais on note dans les logs
-                log.info("Caisse virtuelle utilisée: {}, pas d'association à la transaction", caisse.getNom());
+                log.info("Caisse virtuelle {} utilisée (non persistée)", caisse.getNom());
             }
             transaction.setStatus(TransactionStatus.PAYE);
             transaction.setDateDecaissement(LocalDateTime.now());
+
+            // Créer l'Expense pour le livre de caisse et les calculs globaux
+            Expense expense = Expense.builder()
+                .amount(transaction.getMontant())
+                .category(Expense.ExpenseCategory.PHARMACIE)
+                .currency(transaction.getDevise())
+                .date(LocalDateTime.now())
+                .description("Validation dépense: " + (transaction.getCategorie() != null ? transaction.getCategorie() : "Achat Médicaments"))
+                .createdBy(validatedBy)
+                .build();
+            expenseRepository.save(expense);
+            log.info("✅ Expense créée ID: {} pour transaction {}", expense.getId(), transactionId);
 
             log.info("Décaissement immédiat effectué: {} {} sur caisse {}",
                 transaction.getMontant(), transaction.getDevise(), caisse.getNom());
@@ -151,9 +146,6 @@ public class DepenseValidationService {
      */
     @Transactional
     public FinanceTransaction payerDette(Long transactionId, Long caisseId, User payeur) {
-        String payeurName = payeur != null ? payeur.getUsername() : "SYSTEM";
-        log.info("Paiement différé demandé pour transaction: {} par {}", transactionId, payeurName);
-        
         FinanceTransaction transaction = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction non trouvée"));
 
@@ -172,14 +164,26 @@ public class DepenseValidationService {
         caisseService.debiterCaisse(caisseId, transaction.getMontant());
 
         // Mettre à jour transaction
-        // Ne pas associer la caisse virtuelle (id < 0) car elle n'est pas persistée
-        if (caisse.getId() != null && caisse.getId() > 0) {
+        // Ne pas persister la caisse virtuelle (ID < 0)
+        if (caisse.getId() > 0) {
             transaction.setCaisse(caisse);
         } else {
-            log.info("Caisse virtuelle utilisée pour payerDette: {}, pas d'association", caisse.getNom());
+            log.info("Caisse virtuelle {} utilisée pour paiement (non persistée)", caisse.getNom());
         }
         transaction.setStatus(TransactionStatus.PAYE);
         transaction.setDateDecaissement(LocalDateTime.now());
+
+        // Créer l'Expense pour le livre de caisse (paiement de dette)
+        Expense expense = Expense.builder()
+            .amount(transaction.getMontant())
+            .category(Expense.ExpenseCategory.PHARMACIE)
+            .currency(transaction.getDevise())
+            .date(LocalDateTime.now())
+            .description("Paiement dette: " + (transaction.getCategorie() != null ? transaction.getCategorie() : "Achat Médicaments"))
+            .createdBy(payeur)
+            .build();
+        expenseRepository.save(expense);
+        log.info("✅ Expense créée pour paiement dette ID: {}", expense.getId());
 
         log.info("Paiement différé effectué: {} {} pour transaction {}",
             transaction.getMontant(), transaction.getDevise(), transactionId);

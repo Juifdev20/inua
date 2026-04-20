@@ -147,16 +147,18 @@ export const Admissions = () => {
   const calculatePricing = async (patientId, serviceId) => {
     setIsCalculating(true);
     try {
-      const result = await pricingService.calculateAdmissionAmount(patientId, serviceId);
+      const result = await pricingService.calculateAdmissionPrice(patientId, serviceId);
       setPricingDetails(result);
     } catch (error) {
       console.error('Erreur calcul pricing:', error);
+      // Fallback: calcul simple sans vérification de fiche
+      const DEFAULT_FICHE_AMOUNT = 10;
       setPricingDetails({
-        ficheAmount: isNewPatient ? DEFAULT_FICHE_AMOUNT : 0,
-        ficheRequired: isNewPatient,
+        ficheAmount: 0,
+        ficheRequired: false,
         consulAmount: selectedServicePrice,
-        totalAmount: selectedServicePrice + (isNewPatient ? DEFAULT_FICHE_AMOUNT : 0),
-        hasActiveFile: !isNewPatient
+        totalAmount: selectedServicePrice,
+        hasActiveFile: true
       });
     } finally {
       setIsCalculating(false);
