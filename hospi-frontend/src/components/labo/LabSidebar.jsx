@@ -31,6 +31,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from '../ui/popover';
 import { toast } from 'sonner';
+import LogoInuaAfya from '../LogoInuaAfya';
 
 /* ─────────────────────────────────────────────
    Liens de navigation spécifiques LABORATOIRE (Couleurs adaptées au thème Finance/Primary)

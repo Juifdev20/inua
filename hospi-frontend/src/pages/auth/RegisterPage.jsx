@@ -6,6 +6,7 @@ import { Activity, Mail, Lock, User, Phone, UserPlus, Loader2, ArrowLeft, Sparkl
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import LogoInuaAfya from '../../components/LogoInuaAfya';
+import { BACKEND_URL } from '../../config/environment';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -247,7 +248,7 @@ const RegisterPage = () => {
             {/* OAuth2 Register Buttons - En bas du formulaire */}
             <div className="flex justify-center">
               <a
-                href="/oauth2/authorization/google"
+                href={`${BACKEND_URL}/oauth2/authorization/google`}
                 className="w-full max-w-xs flex items-center justify-center gap-2 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-200 font-medium text-sm"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">

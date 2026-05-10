@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Shield, CheckCircle, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import LogoInuaAfya from '../../components/LogoInuaAfya';
 import { completeOAuthSetup } from '../../services/otpAuthApi';
 import { useAuth } from '../../context/AuthContext';
 
