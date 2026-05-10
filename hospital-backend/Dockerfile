@@ -55,12 +55,13 @@ RUN chown -R hospital:hospital /app
 # Passer à l'utilisateur non-root
 USER hospital
 
-# Exposer le port dynamique (Render fournit $PORT)
-EXPOSE ${PORT:-8080}
+# Exposer le port 10000 (Render utilise ce port par défaut)
+EXPOSE 10000
 
-# Healthcheck pour Render (utilise le port dynamique)
+# Healthcheck pour Render
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD sh -c 'curl -f http://localhost:${PORT:-8080}/actuator/health || exit 1'
+  CMD curl -f http://localhost:10000/actuator/health || exit 1
 
-# Commande de démarrage avec le port Render
-ENTRYPOINT ["sh", "-c", "java -jar -Dserver.port=${PORT:-8080} app.jar"]
+# Commande de démarrage - Render fournit $PORT (utilise shell pour expanse la variable)
+ENV PORT=10000
+ENTRYPOINT ["sh", "-c", "java -jar -Dserver.port=$PORT app.jar"]
