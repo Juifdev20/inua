@@ -1,0 +1,73 @@
+========================================
+MODIFICATIONS MANUELLES À FAIRE
+========================================
+
+FICHIER 1: ConsultationMapper.java
+Ligne: ~74 (après .dateSortie)
+----------------------------------------
+
+TROUVE CECI:
+    .dateSortie(consultation.getDateSortie())
+
+    // --- TESTS ET PRESCRIPTIONS ---
+
+REMPLACE PAR CECI:
+    .dateSortie(consultation.getDateSortie())
+
+    // ✅ DATE DE CLÔTURE (finalisation par le docteur)
+    .dateCloture(consultation.getDateCloture())
+
+    // --- TESTS ET PRESCRIPTIONS ---
+
+
+========================================
+
+FICHIER 2: DoctorController.java  
+Ligne: ~257 (après setUpdatedAt)
+----------------------------------------
+
+TROUVE CECI:
+    consultation.setUpdatedAt(LocalDateTime.now());
+    Consultation saved = consultationRepository.save(consultation);
+
+REMPLACE PAR CECI:
+    consultation.setUpdatedAt(LocalDateTime.now());
+    
+    // ✅ DATE DE CLÔTURE - enregistrer quand le docteur finalise
+    consultation.setDateCloture(LocalDateTime.now());
+    
+    Consultation saved = consultationRepository.save(consultation);
+
+
+========================================
+RÉCAPITULATIF DES MODIFICATIONS DÉJÀ FAITES:
+========================================
+
+✅ Backend:
+   - Consultation.java: Ajout du champ dateCloture
+   - ConsultationDTO.java: Ajout du champ dateCloture
+   - PatientServiceImpl.java: Mappage complet des consultations
+   
+✅ Frontend:
+   - PatientDetail.jsx: Timeline avec Début et Clôture
+   - Import de l'icône CheckCircle2
+
+✅ SQL:
+   - add_date_cloture.sql: Migration pour la base de données
+
+⚠️ À FAIRE MANUELLEMENT:
+   - ConsultationMapper.java: Ajouter .dateCloture()
+   - DoctorController.java: Ajouter setDateCloture()
+
+========================================
+PROCEDURE DE TEST:
+========================================
+
+1. Exécute le SQL: add_date_cloture.sql
+2. Redémarre le backend Spring Boot
+3. Va dans "Consultations"
+4. Ouvre une consultation et clique "Terminer"
+5. Va dans "Mes Patients" → Dossier patient
+6. Tu devrais voir la timeline avec:
+   - Début: 01/04/2026
+   - Clôture: 07/04/2026 (date actuelle)

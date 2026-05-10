@@ -1,0 +1,7 @@
+
+# Secrets and sensitive config
+hospital-backend/src/main/resources/application-local.properties
+hospital-backend/src/main/resources/application-prod.properties
+*.env
+.env.local
+.env.production

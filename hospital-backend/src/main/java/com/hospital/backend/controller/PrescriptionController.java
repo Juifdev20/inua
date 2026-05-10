@@ -1,0 +1,117 @@
+package com.hospital.backend.controller;
+
+import com.hospital.backend.dto.PrescriptionDTO;
+import com.hospital.backend.dto.ApiResponse;
+import com.hospital.backend.dto.PageResponse;
+import com.hospital.backend.service.PrescriptionService;
+import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.entity.User;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import java.time.LocalDateTime;
+import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/prescriptions")
+@RequiredArgsConstructor
+@Slf4j
+@Tag(name = "Prescriptions", description = "Gestion des prescriptions médicales")
+@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
+public class PrescriptionController {
+
+    private final PrescriptionService prescriptionService;
+    private final UserRepository userRepository;
+
+    @PostMapping("/create")
+    @PreAuthorize("hasAnyRole('DOCTEUR', 'DOCTOR', 'ADMIN')")
+    @Operation(summary = "Créer une prescription", description = "Crée une nouvelle prescription à partir des résultats de laboratoire")
+    public ResponseEntity<ApiResponse<PrescriptionDTO>> createPrescription(
+            @Valid @RequestBody PrescriptionDTO prescriptionDTO, 
+            Authentication authentication) {
+        log.info("🔥🔥🔥 [PRESCRIPTION CONTROLLER] /api/prescriptions/create APPELÉ! 🔥🔥🔥");
+        System.out.println("🔥🔥🔥 [PRESCRIPTION CONTROLLER] /api/prescriptions/create APPELÉ! 🔥🔥🔥");
+        System.out.flush();
+        try {
+            // Récupérer le docteur connecté depuis le JWT token
+            String username = authentication.getName();
+            User doctor = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Docteur non trouvé: " + username));
+            
+            // Injecter automatiquement le doctorId dans le DTO
+            prescriptionDTO.setDoctorId(doctor.getId());
+            
+            log.info("Création d'une prescription pour le patient ID: {} par le docteur: {} (ID: {})", 
+                    prescriptionDTO.getPatientId(), doctor.getUsername(), doctor.getId());
+            System.out.println("[PRESCRIPTION] patientId=" + prescriptionDTO.getPatientId() + " doctor=" + doctor.getUsername() + " doctorId=" + doctor.getId());
+            System.out.flush();
+            
+            PrescriptionDTO createdPrescription = prescriptionService.createPrescription(prescriptionDTO);
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Prescription créée avec succès", createdPrescription));
+                    
+        } catch (Exception e) {
+            log.error("Erreur lors de la création de la prescription: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de la création de la prescription: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/pending")
+    @PreAuthorize("hasAnyAuthority('ROLE_PHARMACIE', 'ROLE_PHARMACY', 'ROLE_ADMIN')")
+    @Operation(summary = "Liste des prescriptions en attente", description = "Récupère toutes les prescriptions en attente de validation par la pharmacie")
+    public ResponseEntity<ApiResponse<List<PrescriptionDTO>>> getPendingPrescriptions() {
+        try {
+            log.info("Récupération des prescriptions en attente pour la pharmacie");
+            
+            List<PrescriptionDTO> pendingPrescriptions = prescriptionService.getPendingPrescriptions();
+            
+            return ResponseEntity.ok(ApiResponse.success("Prescriptions en attente récupérées avec succès", pendingPrescriptions));
+                    
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des prescriptions en attente: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de la récupération des prescriptions: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/paid")
+    @PreAuthorize("hasAnyAuthority('ROLE_PHARMACIE', 'ROLE_PHARMACY', 'ROLE_ADMIN', 'ROLE_FINANCE', 'ROLE_CAISSE')")
+    @Operation(summary = "Liste des prescriptions payées", description = "Récupère toutes les prescriptions payées dans une période donnée")
+    public ResponseEntity<ApiResponse<PageResponse<PrescriptionDTO>>> getPaidPrescriptions(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        try {
+            log.info("💰 Récupération des prescriptions payées - Période: {} au {}", startDate, endDate);
+            
+            LocalDateTime start = startDate != null ? LocalDateTime.parse(startDate + "T00:00:00") : LocalDateTime.now().minusDays(30);
+            LocalDateTime end = endDate != null ? LocalDateTime.parse(endDate + "T23:59:59") : LocalDateTime.now();
+            
+            Pageable pageable = PageRequest.of(page, size);
+            PageResponse<PrescriptionDTO> paidPrescriptions = prescriptionService.getPaidPrescriptions(start, end, pageable);
+            
+            log.info("✅ {} prescriptions payées trouvées", paidPrescriptions.getTotalElements());
+            
+            return ResponseEntity.ok(ApiResponse.success("Prescriptions payées récupérées avec succès", paidPrescriptions));
+                    
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération des prescriptions payées: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de la récupération des prescriptions payées: " + e.getMessage()));
+        }
+    }
+}

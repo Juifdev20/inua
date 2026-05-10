@@ -1,0 +1,589 @@
+/**
+ * STYLES D'IMPRESSION MÉDICALE PROFESSIONNELLE
+ * ============================================
+ * Optimisé pour impression A4 haute qualité
+ * - Masque complètement l'interface de l'application
+ * - Force le fond blanc (override dark mode)
+ * - Utilise toute la largeur du papier A4
+ * - Gestion professionnelle des couleurs et sauts de page
+ */
+
+/* ==========================================
+   MASQUER L'INTERFACE DE L'APPLICATION
+   ========================================== */
+@media print {
+  /* Masquer TOUS les éléments de navigation et UI */
+  header,
+  nav,
+  .sidebar,
+  .navbar,
+  .app-header,
+  .top-bar,
+  .header,
+  .navigation,
+  .menu,
+  .app-menu,
+  .toolbar,
+  aside,
+  .print\:hidden,
+  .no-print,
+  button,
+  .button,
+  [role=\"navigation\"],
+  [role=\"banner\"],
+  [class*=\"sidebar\"],
+  [class*=\"navigation\"],
+  [class*=\"header\"],
+  [class*=\"topbar\"],
+  [class*=\"navbar\"],
+  [class*=\"menu\"],
+  input,
+  select,
+  textarea,
+  form:not(.print-form) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Masquer les barres de recherche */
+  [type=\"search\"],
+  [placeholder*=\"Rechercher\"],
+  [placeholder*=\"rechercher\"],
+  [placeholder*=\"Search\"],
+  [placeholder*=\"search\"],
+  [class*=\"searchbar\"],
+  [class*=\"search-bar\"],
+  [class*=\"search-input\"],
+  [class*=\"search-field\"] {
+    display: none !important;
+  }
+
+  /* ==========================================
+     FORCER FOND BLANC ET TEXTE NOIR
+     (Override du Dark Mode)
+     ========================================== */
+
+  /* Application globale */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Fond blanc obligatoire */
+  html,
+  body,
+  main,
+  .app,
+  .App,
+  #root,
+  #app,
+  [class*=\"background\"],
+  [class*=\"bg-\"] {
+    background: white !important;
+    background-color: white !important;
+  }
+
+  /* Texte noir par défaut */
+  body,
+  html,
+  p,
+  span,
+  div,
+  td,
+  th,
+  li,
+  label,
+  .text,
+  [class*=\"text-\"] {
+    color: black !important;
+  }
+
+  /* ==========================================
+     CONFIGURATION PAGE A4
+     ========================================== */
+
+  @page {
+    size: A4 portrait;
+    margin: 5mm 4mm; /* Marges minimales pour utiliser tout l'espace A4 */
+  }
+
+  /* Supprimer marges du body */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* ==========================================
+     CONTENEUR D'IMPRESSION - PLEINE LARGEUR
+     ========================================== */
+
+  .medical-print-container,
+  [class*=\"print-container\"],
+  [class*=\"report-container\"],
+  .container,
+  .content,
+  main {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Supprimer TOUTES les contraintes de largeur */
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .max-w-lg,
+  .max-w-md,
+  .max-w-sm,
+  .mx-auto,
+  [class*=\"max-w-\"],
+  [class*=\"container\"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Supprimer les paddings excessifs */
+  .p-2, .p-3, .p-4, .p-5, .p-6, .p-8,
+  .px-2, .px-3, .px-4, .px-5, .px-6, .px-8,
+  .py-2, .py-3, .py-4, .py-5, .py-6, .py-8,
+  .sm\\:p-3, .sm\\:p-4, .sm\\:p-6, .lg\\:p-8 {
+    padding: 1mm !important;
+  }
+
+  .px-2, .px-3, .px-4, .px-6, .px-8 {
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+  }
+
+  /* Forcer les tableaux et grilles à utiliser toute la largeur */
+  table, .print-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .grid, .grid-cols-1, .grid-cols-2, .grid-cols-4 {
+    width: 100% !important;
+    gap: 1mm !important;
+  }
+
+  /* ==========================================
+     EN-TÊTE AVEC COULEUR PRÉSERVÉE
+     ========================================== */
+
+  .print-header {
+    background-color: #059669 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    border-radius: 0 !important;
+    padding: 6mm 4mm !important;
+    margin: 0 !important;
+  }
+
+  .print-header * {
+    color: white !important;
+  }
+
+  /* Logo et éléments de l'en-tête */
+  .print-header .bg-white {
+    background-color: white !important;
+  }
+
+  .print-header .bg-white\\/20 {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* ==========================================
+     CONTENU AVEC BORDURE
+     ========================================== */
+
+  .print-content,
+  [class*=\"content\"] {
+    border: 2px solid #059669 !important;
+    border-top: none !important;
+    background: white !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ==========================================
+     SECTIONS - GESTION DES SAUTS DE PAGE
+     ========================================== */
+
+  .print-section,
+  section,
+  .section,
+  [class*=\"section\"] {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* En-têtes de section */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Paragraphes */
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ==========================================
+     TABLEAUX
+     ========================================== */
+
+  .print-table,
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* En-têtes de tableau répétés sur chaque page */
+  .print-table thead,
+  table thead {
+    display: table-header-group !important;
+  }
+
+  /* Lignes de tableau - éviter les coupures */
+  .print-table tr,
+  table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Cellules de tableau */
+  .print-table td,
+  .print-table th,
+  table td,
+  table th {
+    padding: 2mm 3mm !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* En-têtes de tableau */
+  .print-table th,
+  table th {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Lignes alternées */
+  .print-table tr:nth-child(even),
+  table tr:nth-child(even) {
+    background: #f9fafb !important;
+  }
+
+  /* ==========================================
+     COULEURS SPÉCIFIQUES
+     ========================================== */
+
+  /* Couleurs émeraude (pour l'hôpital) */
+  .text-emerald-600 { color: #059669 !important; }
+  .text-emerald-700 { color: #047857 !important; }
+  .text-emerald-800 { color: #065f46 !important; }
+  .bg-emerald-50 { background-color: #ecfdf5 !important; }
+  .bg-emerald-100 { background-color: #d1fae5 !important; }
+  .border-emerald-200 { border-color: #a7f3d0 !important; }
+  .border-emerald-600 { border-color: #059669 !important; }
+
+  /* Couleurs de statut */
+  .bg-amber-50 { background-color: #fffbeb !important; }
+  .bg-amber-100 { background-color: #fef3c7 !important; }
+  .text-amber-800 { color: #92400e !important; }
+  .border-amber-200 { border-color: #fde68a !important; }
+
+  .bg-red-100 { background-color: #fee2e2 !important; }
+  .text-red-600 { color: #dc2626 !important; }
+  .text-red-800 { color: #991b1b !important; }
+
+  .bg-green-100 { background-color: #dcfce7 !important; }
+  .text-green-800 { color: #166534 !important; }
+
+  /* Couleurs neutres */
+  .bg-muted, .bg-muted\\/50, .bg-muted\\/30 {
+    background-color: #f9fafb !important;
+  }
+
+  .bg-card, .bg-background {
+    background-color: white !important;
+  }
+
+  .text-muted-foreground {
+    color: #6b7280 !important;
+  }
+
+  .text-foreground {
+    color: #1f2937 !important;
+  }
+
+  .border-border {
+    border-color: #e5e7eb !important;
+  }
+
+  /* ==========================================
+     BADGES ET ÉLÉMENTS DE STATUT
+     ========================================== */
+
+  .badge,
+  [class*=\"badge\"],
+  [class*=\"Badge\"] {
+    display: inline-block !important;
+    padding: 1mm 2mm !important;
+    border-radius: 2mm !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+  }
+
+  /* ==========================================
+     TYPOGRAPHIE OPTIMISÉE
+     ========================================== */
+
+  body {
+    font-family: 'Segoe UI', 'Arial', sans-serif !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+  }
+
+  .text-xs { font-size: 8pt !important; }
+  .text-sm { font-size: 9pt !important; }
+  .text-base { font-size: 10pt !important; }
+  .text-lg { font-size: 11pt !important; }
+  .text-xl { font-size: 12pt !important; }
+  .text-2xl { font-size: 14pt !important; }
+  .text-3xl { font-size: 16pt !important; }
+
+  /* Tailles plus petites pour mobile */
+  .text-\[10px\] { font-size: 8pt !important; }
+
+  /* ==========================================
+     ESPACEMENTS OPTIMISÉS
+     ========================================== */
+
+  /* Gaps */
+  .gap-2, .gap-3, .gap-4 {
+    gap: 2mm !important;
+  }
+
+  /* Marges verticales */
+  .space-y-2 > * + * { margin-top: 2mm !important; }
+  .space-y-3 > * + * { margin-top: 2mm !important; }
+  .space-y-4 > * + * { margin-top: 3mm !important; }
+
+  /* Marges individuelles */
+  .mb-2, .mb-3 { margin-bottom: 2mm !important; }
+  .mb-4, .mb-6 { margin-bottom: 3mm !important; }
+  .mt-2, .mt-3 { margin-top: 2mm !important; }
+  .mt-4 { margin-top: 3mm !important; }
+
+  /* Padding des sections */
+  .p-2, .p-3 {
+    padding: 2mm !important;
+  }
+
+  .p-4 {
+    padding: 3mm !important;
+  }
+
+  /* ==========================================
+     GRILLES RESPONSIVE
+     ========================================== */
+
+  /* Grilles sur 2 colonnes */
+  .grid-cols-2,
+  .sm\\:grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Grilles sur 4 colonnes (constantes vitales) */
+  .grid-cols-4,
+  .sm\\:grid-cols-4 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  /* Flex */
+  .flex-col,
+  .sm\\:flex-row {
+    flex-direction: row !important;
+  }
+
+  /* ==========================================
+     VISIBILITÉ ET OVERFLOW
+     ========================================== */
+
+  /* Supprimer tout overflow caché */
+  * {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+
+  /* Containers scrollables */
+  .overflow-x-auto,
+  .overflow-auto,
+  [class*=\"overflow\"] {
+    overflow: visible !important;
+  }
+
+  /* Truncate désactivé */
+  .truncate {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  /* ==========================================
+     BORDURES ET ARRONDIS
+     ========================================== */
+
+  /* Supprimer les arrondis pour l'impression */
+  .rounded,
+  .rounded-lg,
+  .rounded-xl,
+  .rounded-t-lg,
+  .rounded-b-lg,
+  [class*=\"rounded\"] {
+    border-radius: 0 !important;
+  }
+
+  /* Bordures */
+  .border {
+    border: 1px solid #e5e7eb !important;
+  }
+
+  .border-2 {
+    border: 2px solid #059669 !important;
+  }
+
+  .border-t-0 {
+    border-top: none !important;
+  }
+
+  /* ==========================================
+     OMBRES ET EFFETS
+     ========================================== */
+
+  /* Supprimer toutes les ombres */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  [class*=\"shadow\"] {
+    box-shadow: none !important;
+  }
+
+  /* Backdrop blur */
+  .backdrop-blur-sm,
+  [class*=\"backdrop\"] {
+    backdrop-filter: none !important;
+  }
+
+  /* ==========================================
+     ÉLÉMENTS SPÉCIAUX
+     ========================================== */
+
+  /* Icônes - taille réduite */
+  svg,
+  [class*=\"lucide\"],
+  .icon {
+    width: 3mm !important;
+    height: 3mm !important;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Logos */
+  .logo,
+  [class*=\"logo\"] {
+    max-height: 15mm !important;
+  }
+
+  /* ==========================================
+     UTILITAIRES DE SAUT DE PAGE
+     ========================================== */
+
+  /* Forcer un saut de page avant */
+  .page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  /* Forcer un saut de page après */
+  .page-break-after {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  /* Éviter un saut de page */
+  .no-break,
+  .avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* ==========================================
+     NETTOYAGE FINAL
+     ========================================== */
+
+  /* Supprimer animations */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Supprimer cursors */
+  * {
+    cursor: default !important;
+  }
+
+  /* Liens - apparence normale */
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Focus et hover - désactivés */
+  *:hover,
+  *:focus,
+  *:active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ==========================================
+   APERÇU ÉCRAN (Preview avant impression)
+   ========================================== */
+@media screen {
+  .medical-print-container {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    max-width: 210mm; /* Largeur A4 */
+  }
+}

@@ -1,0 +1,183 @@
+    /**
+     * Crée l'en-tête PDF complet avec toutes les informations de l'hôpital
+     */
+    private void createPDFHeader(Document document, HospitalConfig config) throws DocumentException {
+        // Récupérer toutes les infos de configuration
+        String hospitalName = config.getHospitalName() != null ? config.getHospitalName() : "INUA AFIA";
+        String hospitalCode = config.getHospitalCode() != null ? config.getHospitalCode() : "";
+        String hospitalLogoUrl = config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
+        Boolean enableLogoOnDocuments = config.getEnableLogoOnDocuments() != null ? config.getEnableLogoOnDocuments() : false;
+        String headerTitle = config.getHeaderTitle() != null ? config.getHeaderTitle() : "";
+        String headerSubtitle = config.getHeaderSubtitle() != null ? config.getHeaderSubtitle() : "";
+        
+        // Infos administratives
+        String ministryName = config.getMinistryName() != null ? config.getMinistryName() : "";
+        String departmentName = config.getDepartmentName() != null ? config.getDepartmentName() : "";
+        String zoneName = config.getZoneName() != null ? config.getZoneName() : "";
+        String region = config.getRegion() != null ? config.getRegion() : "";
+        String city = config.getCity() != null ? config.getCity() : "";
+        String country = config.getCountry() != null ? config.getCountry() : "";
+        
+        // Contacts
+        String address = config.getAddress() != null ? config.getAddress() : "";
+        String phone = config.getPhoneNumber() != null ? config.getPhoneNumber() : "";
+        String email = config.getEmail() != null ? config.getEmail() : "";
+        String website = config.getWebsite() != null ? config.getWebsite() : "";
+        String postalCode = config.getPostalCode() != null ? config.getPostalCode() : "";
+        
+        // Couleur personnalisée ou défaut (vert)
+        Color primaryColor;
+        try {
+            if (config.getPrimaryColor() != null && !config.getPrimaryColor().isEmpty()) {
+                primaryColor = Color.decode(config.getPrimaryColor());
+            } else {
+                primaryColor = new Color(0, 128, 128);
+            }
+        } catch (Exception e) {
+            primaryColor = new Color(0, 128, 128);
+        }
+        
+        // Ligne 1: En-tête administratif (Ministère | Département | Zone)
+        if (!ministryName.isEmpty() || !departmentName.isEmpty() || !zoneName.isEmpty()) {
+            StringBuilder adminLine = new StringBuilder();
+            if (!ministryName.isEmpty()) adminLine.append(ministryName);
+            if (!departmentName.isEmpty()) {
+                if (adminLine.length() > 0) adminLine.append(" | ");
+                adminLine.append(departmentName);
+            }
+            if (!zoneName.isEmpty()) {
+                if (adminLine.length() > 0) adminLine.append(" | ");
+                adminLine.append(zoneName);
+            }
+            if (!region.isEmpty()) {
+                if (adminLine.length() > 0) adminLine.append(" | ");
+                adminLine.append(region);
+            }
+            if (adminLine.length() > 0) {
+                Font adminFont = new Font(Font.HELVETICA, 8, Font.NORMAL, Color.DARK_GRAY);
+                Paragraph adminPara = new Paragraph(adminLine.toString(), adminFont);
+                adminPara.setAlignment(Element.ALIGN_CENTER);
+                document.add(adminPara);
+            }
+        }
+        
+        // Ligne 2: Logo + Nom hôpital
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setSpacingAfter(10);
+        
+        // Colonne gauche: Logo
+        if (enableLogoOnDocuments && !hospitalLogoUrl.isEmpty()) {
+            try {
+                Image logoImage = null;
+                
+                // Base64
+                if (hospitalLogoUrl.startsWith("data:image")) {
+                    String base64Data = hospitalLogoUrl.substring(hospitalLogoUrl.indexOf(",") + 1);
+                    byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                    logoImage = Image.getInstance(imageBytes);
+                } else if (hospitalLogoUrl.startsWith("http://") || hospitalLogoUrl.startsWith("https://")) {
+                    // URL
+                    logoImage = Image.getInstance(new URL(hospitalLogoUrl));
+                }
+                
+                if (logoImage != null) {
+                    logoImage.scaleToFit(120, 80);
+                    logoImage.setAlignment(Element.ALIGN_LEFT);
+                    
+                    PdfPCell logoCell = new PdfPCell(logoImage, false);
+                    logoCell.setBorder(PdfPCell.NO_BORDER);
+                    logoCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+                    logoCell.setVerticalAlignment(Element.ALIGN_CENTER);
+                    headerTable.addCell(logoCell);
+                } else {
+                    headerTable.addCell(new PdfPCell() {{ setBorder(PdfPCell.NO_BORDER); }});
+                }
+            } catch (Exception e) {
+                log.warn("Erreur chargement logo: {}", e.getMessage());
+                headerTable.addCell(new PdfPCell() {{ setBorder(PdfPCell.NO_BORDER); }});
+            }
+        } else {
+            headerTable.addCell(new PdfPCell() {{ setBorder(PdfPCell.NO_BORDER); }});
+        }
+        
+        // Colonne droite: Informations hôpital
+        PdfPCell infoCell = new PdfPCell();
+        infoCell.setBorder(PdfPCell.NO_BORDER);
+        infoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        infoCell.setVerticalAlignment(Element.ALIGN_CENTER);
+        
+        // Titre principal (nom hôpital)
+        Font hospitalFont = new Font(Font.HELVETICA, 16, Font.BOLD, primaryColor);
+        String mainTitle = !headerTitle.isEmpty() ? headerTitle : hospitalName;
+        Paragraph hospitalNamePara = new Paragraph(mainTitle.toUpperCase(), hospitalFont);
+        hospitalNamePara.setAlignment(Element.ALIGN_RIGHT);
+        infoCell.addElement(hospitalNamePara);
+        
+        // Sous-titre
+        if (!headerSubtitle.isEmpty()) {
+            Font subtitleFont = new Font(Font.HELVETICA, 10, Font.ITALIC, Color.GRAY);
+            Paragraph subtitle = new Paragraph(headerSubtitle, subtitleFont);
+            subtitle.setAlignment(Element.ALIGN_RIGHT);
+            infoCell.addElement(subtitle);
+        }
+        
+        // Code établissement
+        if (!hospitalCode.isEmpty()) {
+            Font codeFont = new Font(Font.HELVETICA, 9, Font.NORMAL, Color.GRAY);
+            Paragraph codePara = new Paragraph("Code: " + hospitalCode, codeFont);
+            codePara.setAlignment(Element.ALIGN_RIGHT);
+            infoCell.addElement(codePara);
+        }
+        
+        headerTable.addCell(infoCell);
+        document.add(headerTable);
+        
+        // Ligne 3: Coordonnées complètes
+        StringBuilder addressLine = new StringBuilder();
+        if (!address.isEmpty()) addressLine.append(address);
+        if (!postalCode.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(" - BP ").append(postalCode);
+            else addressLine.append("BP ").append(postalCode);
+        }
+        if (!city.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(", ");
+            addressLine.append(city);
+        }
+        if (!country.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(", ");
+            addressLine.append(country);
+        }
+        
+        if (addressLine.length() > 0) {
+            Font addrFont = new Font(Font.HELVETICA, 9, Font.NORMAL, Color.DARK_GRAY);
+            Paragraph addrPara = new Paragraph(addressLine.toString(), addrFont);
+            addrPara.setAlignment(Element.ALIGN_RIGHT);
+            document.add(addrPara);
+        }
+        
+        // Contacts
+        StringBuilder contactLine = new StringBuilder();
+        if (!phone.isEmpty()) contactLine.append("Tél: ").append(phone);
+        if (!email.isEmpty()) {
+            if (contactLine.length() > 0) contactLine.append(" | ");
+            contactLine.append("Email: ").append(email);
+        }
+        if (!website.isEmpty()) {
+            if (contactLine.length() > 0) contactLine.append(" | ");
+            contactLine.append("Web: ").append(website);
+        }
+        
+        if (contactLine.length() > 0) {
+            Font contactFont = new Font(Font.HELVETICA, 9, Font.NORMAL, Color.DARK_GRAY);
+            Paragraph contactPara = new Paragraph(contactLine.toString(), contactFont);
+            contactPara.setAlignment(Element.ALIGN_RIGHT);
+            document.add(contactPara);
+        }
+        
+        // Ligne de séparation
+        LineSeparator line = new LineSeparator();
+        line.setPercentage(100);
+        line.setLineColor(primaryColor);
+        document.add(line);
+    }

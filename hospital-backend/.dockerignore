@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts (seront générés dans le conteneur)
+target/
+build/
+
+# Dépendances Maven (seront téléchargées dans le conteneur)
+!pom.xml
+
+# Logs
+*.log
+logs
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node.js / Frontend (si présent)
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Documentation
+README.md
+docs
+*.md
+
+# Tests
+test
+tests
+src/test
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Environnement local
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-dev.properties
+
+# Docker Compose (mais PAS le Dockerfile !)
+docker-compose.yml
+
+# Bases de données locales
+*.db
+*.sqlite
+*.h2.db

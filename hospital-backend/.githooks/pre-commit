@@ -1,0 +1,187 @@
+#!/bin/bash
+# ============================================================
+# HOOK PRE-COMMIT FLYWAY - Vérification automatique des migrations
+# ============================================================
+# Installation: git config core.hooksPath .githooks
+# Rendre exécutable: chmod +x .githooks/pre-commit
+# ============================================================
+
+set -e  # Arrêt immédiat en cas d'erreur
+
+echo "🔍 Vérification des migrations Flyway..."
+
+# Couleurs pour les messages
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Répertoire des migrations
+MIGRATION_DIR="src/main/resources/db/migration"
+
+# Vérifier si des fichiers de migration sont présents dans le commit
+STAGED_MIGRATIONS=$(git diff --cached --name-only --diff-filter=A | grep "^${MIGRATION_DIR}/" | grep "\.sql$" || true)
+MODIFIED_MIGRATIONS=$(git diff --cached --name-only --diff-filter=M | grep "^${MIGRATION_DIR}/" | grep "\.sql$" || true)
+
+# ============================================================
+# RÈGLE 1: Interdiction de modifier une migration existante
+# ============================================================
+if [ -n "$MODIFIED_MIGRATIONS" ]; then
+    echo "${RED}❌ ERREUR: Modification de migrations existantes détectée !${NC}"
+    echo "${YELLOW}Fichiers modifiés:${NC}"
+    echo "$MODIFIED_MIGRATIONS"
+    echo ""
+    echo "${RED}⛔ INTERDIT: Vous ne pouvez pas modifier une migration déjà commitée.${NC}"
+    echo "${YELLOW}Solution: Créez une NOUVELLE migration avec le numéro suivant.${NC}"
+    echo ""
+    echo "Exemple:"
+    echo "  git checkout -- ${MIGRATION_DIR}/V5__xxx.sql  # Annuler la modification"
+    echo "  touch ${MIGRATION_DIR}/V6__correction.sql    # Créer une nouvelle"
+    exit 1
+fi
+
+# ============================================================
+# RÈGLE 2: Vérification du nommage des nouvelles migrations
+# ============================================================
+if [ -n "$STAGED_MIGRATIONS" ]; then
+    echo "${GREEN}📁 Nouvelles migrations détectées:${NC}"
+    echo "$STAGED_MIGRATIONS"
+    echo ""
+    
+    # Pattern Flyway strict: V{numéro}__{description}.sql
+    # Accepte: V1__init.sql, V2__add_table.sql, V1.2__fix.sql
+    # Refuse: v1_init.sql, V1_init.sql, V01__init.sql
+    INVALID_NAME_PATTERN='^.*V[0-9]+(__|[a-zA-Z]).*\.sql$'
+    
+    for file in $STAGED_MIGRATIONS; do
+        filename=$(basename "$file")
+        
+        # Vérification du pattern exact
+        if ! echo "$filename" | grep -qE '^V[0-9]+(__[a-zA-Z0-9_]+)?\.sql$'; then
+            echo "${RED}❌ ERREUR DE NOMMAGE: $filename${NC}"
+            echo ""
+            echo "${YELLOW}Le nom ne respecte pas la convention Flyway:${NC}"
+            echo "  Format requis: V{numéro}__{description}.sql"
+            echo "  Exemples valides:"
+            echo "    ✅ V1__init_schema.sql"
+            echo "    ✅ V2__add_user_table.sql"
+            echo "    ✅ V3.1__fix_index.sql"
+            echo ""
+            echo "  Exemples INVALIDES:"
+            echo "    ❌ v1__init.sql        (v minuscule)"
+            echo "    ❌ V1_init.sql         (un seul underscore)"
+            echo "    ❌ V01__init.sql       (zéro non significatif)"
+            echo "    ❌ V2 add table.sql    (espaces sans underscores)"
+            echo "    ❌ 2__init.sql         (pas de V)"
+            echo ""
+            exit 1
+        fi
+        
+        echo "${GREEN}✅ Nommage correct: $filename${NC}"
+    done
+    echo ""
+fi
+
+# ============================================================
+# RÈGLE 3: Vérification des doublons de numéros de version
+# ============================================================
+if [ -n "$STAGED_MIGRATIONS" ]; then
+    # Extraire tous les numéros de version (V1, V2...)
+    ALL_VERSIONS=$(find "$MIGRATION_DIR" -name "V*.sql" -type f | sed 's/.*\/V\([0-9.]*\)__.*/\1/' | sort)
+    STAGED_VERSIONS=$(echo "$STAGED_MIGRATIONS" | sed 's/.*\/V\([0-9.]*\)__.*/\1/' | sort)
+    
+    # Vérifier les doublons
+    DUPLICATE_VERSIONS=$(echo "$ALL_VERSIONS" | uniq -d)
+    
+    if [ -n "$DUPLICATE_VERSIONS" ]; then
+        echo "${RED}❌ ERREUR: Numéros de version en doublon !${NC}"
+        echo "${YELLOW}Versions dupliquées:${NC}"
+        echo "$DUPLICATE_VERSIONS"
+        echo ""
+        echo "${YELLOW}Chaque migration doit avoir un numéro unique.${NC}"
+        
+        # Afficher les fichiers en conflit
+        for version in $DUPLICATE_VERSIONS; do
+            echo ""
+            echo "${YELLOW}Fichiers pour la version V${version}:${NC}"
+            find "$MIGRATION_DIR" -name "V${version}__*.sql" -type f | while read -r f; do
+                if git diff --cached --name-only | grep -q "^${f}$"; then
+                    echo "  🆕 ${f} (nouveau - ce commit)"
+                else
+                    echo "  📁 ${f} (existant)"
+                fi
+            done
+        done
+        echo ""
+        exit 1
+    fi
+    
+    # Vérifier la séquence (pas de trou de plus de 1 entre versions majeures)
+    MAX_VERSION=$(echo "$ALL_VERSIONS" | grep -E '^[0-9]+$' | sort -n | tail -1)
+    MAX_STAGED=$(echo "$STAGED_VERSIONS" | grep -E '^[0-9]+$' | sort -n | tail -1)
+    
+    if [ -n "$MAX_VERSION" ] && [ -n "$MAX_STAGED" ]; then
+        if [ "$MAX_STAGED" -gt "$((MAX_VERSION + 1))" ]; then
+            echo "${YELLOW}⚠️  AVERTISSEMENT: Saut de version détecté${NC}"
+            echo "   Dernière version: V${MAX_VERSION}"
+            echo "   Nouvelle version: V${MAX_STAGED}"
+            echo ""
+            echo "${YELLOW}Il manque les versions entre V${MAX_VERSION} et V${MAX_STAGED}.${NC}"
+            echo "Voulez-vous vraiment continuer ? (ce n'est pas recommandé)"
+            echo "Tapez 'oui' pour forcer le commit:"
+            read -r response
+            if [ "$response" != "oui" ]; then
+                echo "${RED}Commit annulé.${NC}"
+                exit 1
+            fi
+        fi
+    fi
+fi
+
+# ============================================================
+# RÈGLE 4: Vérification basique de la syntaxe SQL
+# ============================================================
+if [ -n "$STAGED_MIGRATIONS" ]; then
+    echo "🔍 Vérification de la syntaxe SQL..."
+    
+    for file in $STAGED_MIGRATIONS; do
+        # Vérifier que le fichier n'est pas vide
+        if [ ! -s "$file" ]; then
+            echo "${RED}❌ ERREUR: Le fichier $file est vide !${NC}"
+            exit 1
+        fi
+        
+        # Vérifier la présence d'instructions SQL valides
+        VALID_KEYWORDS="CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|GRANT|REVOKE|COMMENT"
+        if ! grep -qiE "^\s*(${VALID_KEYWORDS})" "$file"; then
+            echo "${YELLOW}⚠️  AVERTISSEMENT: $file${NC}"
+            echo "   Aucune instruction SQL standard détectée (CREATE, ALTER, INSERT...)"
+            echo "   Vérifiez que votre script contient bien des commandes SQL."
+            echo ""
+        fi
+        
+        # Vérifier les instructions dangereuses (DROP TABLE sans IF EXISTS)
+        if grep -qiE "DROP\s+TABLE\s+(?!IF\s+EXISTS)" "$file"; then
+            echo "${YELLOW}⚠️  ATTENTION: DROP TABLE sans IF EXISTS détecté dans $file${NC}"
+            echo "   Conseil: Utilisez 'DROP TABLE IF EXISTS' pour plus de sécurité."
+            echo ""
+        fi
+        
+        # Vérifier les DROP COLUMN sans IF EXISTS (PostgreSQL)
+        if grep -qiE "ALTER\s+TABLE.*DROP\s+COLUMN\s+(?!IF\s+EXISTS)" "$file"; then
+            echo "${YELLOW}⚠️  ATTENTION: DROP COLUMN sans IF EXISTS détecté dans $file${NC}"
+            echo ""
+        fi
+    done
+fi
+
+# ============================================================
+# ✅ TOUTES LES VÉRIFICATIONS ONT RÉUSSI
+# ============================================================
+if [ -n "$STAGED_MIGRATIONS" ]; then
+    echo "${GREEN}✅ Toutes les vérifications Flyway ont réussi !${NC}"
+    echo "${GREEN}📦 Migrations prêtes pour le commit.${NC}"
+    echo ""
+fi
+
+exit 0
