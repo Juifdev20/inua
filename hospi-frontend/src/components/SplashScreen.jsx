@@ -8,6 +8,8 @@ const SplashScreen = ({ onComplete }) => {
 
   useEffect(() => {
     let mounted = true;
+    const startTime = Date.now();
+    const MIN_DISPLAY_TIME = 2500; // 2.5 secondes minimum
 
     // Track real resource loading progress
     const updateProgress = () => {
@@ -32,18 +34,23 @@ const SplashScreen = ({ onComplete }) => {
         else if (finalProgress < 90) setLoadingText('Préparation de l\'interface...');
         else setLoadingText('Finalisation...');
 
-        // If complete, trigger onComplete
+        // If complete, check minimum display time before triggering onComplete
         if (finalProgress >= 100) {
           setLoadingText('Prêt !');
+          const elapsedTime = Date.now() - startTime;
+          const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsedTime);
+          
           setTimeout(() => {
             if (mounted) onComplete?.();
-          }, 500);
+          }, remainingTime + 500);
         }
       } else {
         // Fallback: simulate if Performance API not available
         setProgress(prev => {
           if (prev >= 100) {
-            onComplete?.();
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsedTime);
+            setTimeout(() => onComplete?.(), remainingTime);
             return 100;
           }
           return Math.min(prev + 5, 100);
@@ -62,7 +69,9 @@ const SplashScreen = ({ onComplete }) => {
       if (mounted) {
         setProgress(100);
         setLoadingText('Prêt !');
-        setTimeout(() => onComplete?.(), 300);
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsedTime);
+        setTimeout(() => onComplete?.(), remainingTime + 300);
       }
     };
 

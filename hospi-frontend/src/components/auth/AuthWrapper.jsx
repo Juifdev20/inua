@@ -13,43 +13,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Heart, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/AuthService';
 import BiometricPrompt from './BiometricPrompt';
 import { toast } from 'sonner';
-
-/**
- * 🎨 Splash Screen Component
- */
-const SplashScreen = () => (
-  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-    <div className="relative">
-      {/* Logo animé */}
-      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center shadow-2xl animate-pulse">
-        <Activity className="w-12 h-12 text-white" />
-      </div>
-      
-      {/* Cercles animés */}
-      <div className="absolute inset-0 rounded-3xl border-2 border-blue-400/30 animate-ping" />
-      <div className="absolute -inset-4 rounded-3xl border border-green-400/20 animate-pulse" />
-    </div>
-    
-    <h1 className="mt-8 text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-      INUA AFYA
-    </h1>
-    
-    <p className="mt-2 text-gray-500 dark:text-gray-400 font-medium italic flex items-center gap-2">
-      <Heart className="w-4 h-4 text-red-500 animate-pulse" />
-      "Votre santé, notre priorité"
-    </p>
-    
-    <div className="mt-8 flex items-center gap-2 text-sm text-gray-400">
-      <Loader2 className="w-4 h-4 animate-spin" />
-      <span>Chargement...</span>
-    </div>
-  </div>
-);
+import SplashScreen from '../SplashScreen';
 
 /**
  * 🛡️ AuthWrapper - HOC pour la gestion de l'authentification
@@ -140,7 +108,7 @@ const AuthWrapper = ({ children }) => {
 
   // 🎨 Afficher le splash screen pendant l'initialisation
   if (isInitializing || authLoading) {
-    return <SplashScreen />;
+    return <SplashScreen onComplete={() => setIsInitializing(false)} />;
   }
 
   return (
