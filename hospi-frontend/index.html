@@ -39,9 +39,109 @@
     
   </head>
   <body>
+    <!-- 🎨 Preloader - S'affiche immédiatement pendant chargement React -->
+    <div id="preloader" style="
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      transition: opacity 0.5s ease-out;
+    ">
+      <div style="text-align: center;">
+        <!-- Logo -->
+        <div style="
+          width: 120px;
+          height: 120px;
+          margin: 0 auto 20px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+          animation: pulse 2s ease-in-out infinite;
+        ">
+          <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+            <path d="M30 40h40v20H30z" fill="white"/>
+            <path d="M40 30h20v40H40z" fill="white"/>
+            <path d="M50 35c-8 0-15 6-15 13 0 8 7 15 15 15 8 0 15-7 15-15 0-7-7-13-15-13z" fill="#ef4444"/>
+          </svg>
+        </div>
+        
+        <h1 style="
+          color: white;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 24px;
+          font-weight: 700;
+          margin: 0 0 10px;
+          letter-spacing: 4px;
+        ">INUA AFYA</h1>
+        
+        <p style="
+          color: #94a3b8;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 12px;
+          margin: 0 0 30px;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+        ">Système de Gestion Hospitalier</p>
+        
+        <!-- Barre de progression -->
+        <div style="
+          width: 200px;
+          height: 4px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 2px;
+          margin: 0 auto;
+          overflow: hidden;
+        ">
+          <div id="preloader-bar" style="
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+          "></div>
+        </div>
+      </div>
+      
+      <style>
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+      </style>
+    </div>
     
     <div id="root"></div>
     
+    <script>
+      // Progression simulée pendant chargement
+      let progress = 0;
+      const bar = document.getElementById('preloader-bar');
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        if (bar) bar.style.width = progress + '%';
+      }, 200);
+      
+      // Cacher preloader quand React est prêt
+      window.hidePreloader = function() {
+        clearInterval(interval);
+        if (bar) bar.style.width = '100%';
+        setTimeout(() => {
+          const preloader = document.getElementById('preloader');
+          if (preloader) {
+            preloader.style.opacity = '0';
+            setTimeout(() => preloader.remove(), 500);
+          }
+        }, 300);
+      };
+    </script>
     
     <script type="module" src="/src/main.jsx"></script>
   </body>
