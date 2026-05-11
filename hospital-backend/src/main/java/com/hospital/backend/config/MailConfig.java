@@ -17,19 +17,19 @@ import java.util.Properties;
 @Slf4j
 public class MailConfig {
 
-    @Value("${spring.mail.host:smtp.gmail.com}")
+    @Value("${EMAIL_HOST:${spring.mail.host:smtp.gmail.com}}")
     private String host;
 
-    @Value("${spring.mail.port:587}")
+    @Value("${EMAIL_PORT:${spring.mail.port:587}}")
     private int port;
 
-    @Value("${spring.mail.username:}")
+    @Value("${EMAIL_USERNAME:${spring.mail.username:}}")
     private String username;
 
-    @Value("${spring.mail.password:}")
+    @Value("${EMAIL_PASSWORD:${spring.mail.password:}}")
     private String password;
 
-    @Value("${app.email.from:}")
+    @Value("${MAIL_FROM:${app.email.from:}}")
     private String fromEmail;
 
     @Bean
