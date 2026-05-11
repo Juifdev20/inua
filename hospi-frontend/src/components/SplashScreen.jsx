@@ -4,24 +4,78 @@ import { LogoInuaAfyaAnimated } from './LogoInuaAfya';
 
 const SplashScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
+  const [loadingText, setLoadingText] = useState('Initialisation...');
 
   useEffect(() => {
-    // Progression du chargement
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
+    let mounted = true;
+
+    // Track real resource loading progress
+    const updateProgress = () => {
+      if (!mounted) return;
+
+      // Use Performance API to track resource loading
+      if (performance && performance.getEntriesByType) {
+        const resources = performance.getEntriesByType('resource');
+        const totalResources = resources.length || 1;
+        const loadedResources = resources.filter(r => r.responseEnd > 0).length;
+        
+        // Calculate progress based on loaded resources
+        let realProgress = Math.min((loadedResources / totalResources) * 100, 95);
+        
+        // Add buffer for React initialization
+        const finalProgress = Math.min(realProgress + 5, 100);
+        setProgress(Math.round(finalProgress));
+
+        // Update loading text based on progress
+        if (finalProgress < 30) setLoadingText('Chargement des ressources...');
+        else if (finalProgress < 60) setLoadingText('Configuration de l\'application...');
+        else if (finalProgress < 90) setLoadingText('Préparation de l\'interface...');
+        else setLoadingText('Finalisation...');
+
+        // If complete, trigger onComplete
+        if (finalProgress >= 100) {
+          setLoadingText('Prêt !');
           setTimeout(() => {
-            onComplete?.();
+            if (mounted) onComplete?.();
           }, 500);
-          return 100;
         }
-        return prev + 2;
-      });
-    }, 60);
+      } else {
+        // Fallback: simulate if Performance API not available
+        setProgress(prev => {
+          if (prev >= 100) {
+            onComplete?.();
+            return 100;
+          }
+          return Math.min(prev + 5, 100);
+        });
+      }
+    };
+
+    // Initial update
+    updateProgress();
+
+    // Update progress every 100ms
+    const interval = setInterval(updateProgress, 100);
+
+    // Listen for load event
+    const handleLoad = () => {
+      if (mounted) {
+        setProgress(100);
+        setLoadingText('Prêt !');
+        setTimeout(() => onComplete?.(), 300);
+      }
+    };
+
+    if (document.readyState === 'complete') {
+      handleLoad();
+    } else {
+      window.addEventListener('load', handleLoad);
+    }
 
     return () => {
-      clearInterval(progressInterval);
+      mounted = false;
+      clearInterval(interval);
+      window.removeEventListener('load', handleLoad);
     };
   }, [onComplete]);
 
