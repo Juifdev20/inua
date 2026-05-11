@@ -1,21 +1,23 @@
-const CACHE_NAME = 'inuaafya-v5';
+const CACHE_NAME = 'inuaafya-v6';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  // Icons PWA
+  // Icons PWA - Toutes les tailles pour WebAPK
   '/icons/favicon-16x16.png',
   '/icons/favicon-32x32.png',
+  '/icons/favicon-48x48.png',
   '/icons/icon-72x72.png',
   '/icons/icon-96x96.png',
   '/icons/icon-128x128.png',
   '/icons/icon-144x144.png',
   '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
+  '/icons/icon-192x192-maskable.png',
   '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
+  '/icons/icon-512x512-maskable.png',
   '/icons/apple-touch-icon.png',
-  '/icons/logo.svg',
   // Pages critiques
   '/login',
   '/dashboard',
@@ -149,23 +151,26 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'Nouvelle notification d\'InuaAfya',
-    icon: '/logo192.png',
-    badge: '/logo192.png',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
+    tag: 'inuaafya-notification',
+    requireInteraction: false,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1
+      primaryKey: 1,
+      url: '/'
     },
     actions: [
       {
         action: 'explore',
         title: 'Voir',
-        icon: '/logo192.png'
+        icon: '/icons/icon-96x96.png'
       },
       {
         action: 'close',
         title: 'Fermer',
-        icon: '/logo192.png'
+        icon: '/icons/icon-96x96.png'
       }
     ]
   };
