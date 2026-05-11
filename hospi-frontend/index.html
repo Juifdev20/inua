@@ -52,24 +52,26 @@
       transition: opacity 0.5s ease-out;
     ">
       <div style="text-align: center;">
-        <!-- Logo -->
+        <!-- Logo - Utilise l'image réelle du projet -->
         <div style="
-          width: 120px;
-          height: 120px;
+          width: 140px;
+          height: 140px;
           margin: 0 auto 20px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
           animation: pulse 2s ease-in-out infinite;
         ">
-          <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-            <path d="M30 40h40v20H30z" fill="white"/>
-            <path d="M40 30h20v40H40z" fill="white"/>
-            <path d="M50 35c-8 0-15 6-15 13 0 8 7 15 15 15 8 0 15-7 15-15 0-7-7-13-15-13z" fill="#ef4444"/>
-          </svg>
+          <img 
+            src="/icons/icon-192x192.png" 
+            alt="Inua Afya Logo"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              filter: drop-shadow(0 20px 40px rgba(16, 185, 129, 0.4));
+            "
+          />
         </div>
         
         <h1 style="
