@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/pricing")
 @RequiredArgsConstructor
 @Slf4j
-public class PricingController {
+public class  PricingController {
 
     private final PricingService pricingService;
     private final MedicalServiceRepository medicalServiceRepository;

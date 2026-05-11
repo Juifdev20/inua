@@ -40,8 +40,19 @@ serviceWorkerRegistration.register({
   },
   onSuccess: (registration) => {
     console.log('Service Worker activé avec succès!');
+    // 🔥 Forcer le contrôle immédiat pour WebAPK
+    if (registration && registration.active) {
+      registration.active.postMessage({ type: 'SKIP_WAITING' });
+    }
   }
 });
+
+// 🔥 S'assurer que le SW contrôle la page pour l'installation PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(registration => {
+    console.log('✅ SW contrôle la page:', registration.scope);
+  });
+}
 
 // 🔐 PWA: Initialiser la persistance du stockage (important pour mobile)
 initStoragePersistence().then(() => {
