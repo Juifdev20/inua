@@ -87,28 +87,10 @@
           color: #94a3b8;
           font-family: system-ui, -apple-system, sans-serif;
           font-size: 12px;
-          margin: 0 0 30px;
+          margin: 0;
           text-transform: uppercase;
           letter-spacing: 2px;
         ">Système de Gestion Hospitalier</p>
-        
-        <!-- Barre de progression -->
-        <div style="
-          width: 200px;
-          height: 4px;
-          background: rgba(255,255,255,0.1);
-          border-radius: 2px;
-          margin: 0 auto;
-          overflow: hidden;
-        ">
-          <div id="preloader-bar" style="
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #34d399);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-          "></div>
-        </div>
       </div>
       
       <style>
@@ -122,26 +104,13 @@
     <div id="root"></div>
     
     <script>
-      // Progression simulée pendant chargement
-      let progress = 0;
-      const bar = document.getElementById('preloader-bar');
-      const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress > 90) progress = 90;
-        if (bar) bar.style.width = progress + '%';
-      }, 200);
-      
       // Cacher preloader quand React est prêt
       window.hidePreloader = function() {
-        clearInterval(interval);
-        if (bar) bar.style.width = '100%';
-        setTimeout(() => {
-          const preloader = document.getElementById('preloader');
-          if (preloader) {
-            preloader.style.opacity = '0';
-            setTimeout(() => preloader.remove(), 500);
-          }
-        }, 300);
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+          preloader.style.opacity = '0';
+          setTimeout(() => preloader.remove(), 500);
+        }
       };
     </script>
     
