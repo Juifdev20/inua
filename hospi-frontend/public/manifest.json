@@ -15,16 +15,22 @@
   },
   "icons": [
     {
-      "src": "/inuaafya-logo-dark.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo192.png?v=3",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/inuaafya-logo.svg",
+      "src": "/logo512.png?v=3",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/inuaafya-logo-dark.svg?v=3",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "categories": ["healthcare", "medical", "productivity"],
