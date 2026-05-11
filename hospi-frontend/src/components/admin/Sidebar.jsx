@@ -91,9 +91,7 @@ const Sidebar = () => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 animate-slideInFromLeft w-full overflow-hidden">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0">
-                <LogoInuaAfya size={40} />
-              </div>
+              <LogoInuaAfya size={40} />
               <div className="overflow-hidden">
                 <h1 className="text-lg font-space-grotesk font-bold text-primary tracking-tight truncate">
                   INUA AFYA
@@ -104,9 +102,7 @@ const Sidebar = () => {
               </div>
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto overflow-hidden shrink-0">
-              <LogoInuaAfya size={40} />
-            </div>
+            <LogoInuaAfya size={40} />
           )}
           
           <Button
@@ -245,9 +241,7 @@ const Sidebar = () => {
         )}>
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0">
-              <LogoInuaAfya size={40} />
-            </div>
+            <LogoInuaAfya size={40} />
             <h1 className="text-lg font-bold text-primary">INUA AFYA</h1>
           </div>
         </div>

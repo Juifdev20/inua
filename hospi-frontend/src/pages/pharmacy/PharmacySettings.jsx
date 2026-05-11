@@ -547,9 +547,9 @@ const PharmacySettings = () => {
       
       {/* Opening Hours */}
       <SettingsSection title="Heures d'Ouverture" icon={Clock}>
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-x-auto">
           {days.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+            <div key={key} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg min-w-max">
               <div className="w-28 font-medium text-sm">{label}</div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

@@ -299,12 +299,7 @@ const LabSidebar = () => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5"> {/* Utilisation du gradient Finance */}
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 w-full overflow-hidden">
-              <div className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0',
-                'bg-transparent' // Logo sans fond pour uniformité avec Finance
-              )}>
-                <DynamicLogo />
-              </div>
+              <DynamicLogo />
               <div className="overflow-hidden">
                 <h1 className="text-lg font-space-grotesk font-bold text-primary tracking-tight truncate">
                   {config?.appName || 'INUA AFYA'}
@@ -315,12 +310,7 @@ const LabSidebar = () => {
               </div>
             </div>
           ) : (
-            <div className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto overflow-hidden shrink-0',
-              'bg-transparent' // Logo sans fond pour uniformité avec Finance
-            )}>
-              <DynamicLogo />
-            </div>
+            <DynamicLogo />
           )}
 
           <Button
@@ -386,9 +376,7 @@ const LabSidebar = () => {
         <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border lg:hidden shadow-2xl flex flex-col">
           <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0 bg-transparent">
-                <DynamicLogo />
-              </div>
+              <DynamicLogo />
               <h1 className="text-lg font-bold text-primary">
                 {config?.appName || 'INUA AFYA'}
               </h1>

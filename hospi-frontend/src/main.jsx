@@ -31,13 +31,6 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// 🎨 Cacher le preloader HTML quand React est monté
-setTimeout(() => {
-  if (window.hidePreloader) {
-    window.hidePreloader();
-  }
-}, 100);
-
 
 // ✅ PWA: Enregistrer le service worker
 serviceWorkerRegistration.register({

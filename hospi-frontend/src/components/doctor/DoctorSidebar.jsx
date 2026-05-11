@@ -90,18 +90,14 @@ const DoctorSidebar = () => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 animate-slideInFromLeft overflow-hidden">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg shrink-0">
-                <LogoInuaAfya size={40} />
-              </div>
+              <LogoInuaAfya size={40} />
               <div className="overflow-hidden">
                 <h1 className="text-lg font-bold text-foreground tracking-tight truncate">INUA AFYA</h1>
                 <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Espace Docteur</p>
               </div>
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto shrink-0">
-               <LogoInuaAfya size={40} />
-            </div>
+            <LogoInuaAfya size={40} />
           )}
           
           <Button

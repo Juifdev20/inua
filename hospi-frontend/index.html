@@ -39,62 +39,7 @@
     
   </head>
   <body>
-    <!-- 🎨 Preloader - S'affiche immédiatement pendant chargement React -->
-    <div id="preloader" style="
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      transition: opacity 0.5s ease-out;
-    ">
-      <div style="text-align: center;">
-        <!-- Logo - Utilise l'image réelle du projet -->
-        <div style="
-          width: 140px;
-          height: 140px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          animation: pulse 2s ease-in-out infinite;
-        ">
-          <img 
-            src="/icons/icon-192x192.png" 
-            alt="Inua Afya Logo"
-            style="
-              width: 100%;
-              height: 100%;
-              object-fit: contain;
-              filter: drop-shadow(0 20px 40px rgba(16, 185, 129, 0.4));
-            "
-          />
-        </div>
-      </div>
-      
-      <style>
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-      </style>
-    </div>
-    
     <div id="root"></div>
-    
-    <script>
-      // Cacher preloader quand React est prêt
-      window.hidePreloader = function() {
-        const preloader = document.getElementById('preloader');
-        if (preloader) {
-          preloader.style.opacity = '0';
-          setTimeout(() => preloader.remove(), 500);
-        }
-      };
-    </script>
-    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
