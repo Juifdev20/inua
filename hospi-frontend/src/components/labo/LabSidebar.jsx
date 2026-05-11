@@ -301,7 +301,7 @@ const LabSidebar = () => {
             <div className="flex items-center gap-3 w-full overflow-hidden">
               <div className={cn(
                 'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0',
-                !config?.logoUrl ? 'bg-gradient-medical' : 'bg-transparent' // Garde le style par défaut de finance
+                'bg-transparent' // Logo sans fond pour uniformité avec Finance
               )}>
                 <DynamicLogo />
               </div>
@@ -317,7 +317,7 @@ const LabSidebar = () => {
           ) : (
             <div className={cn(
               'w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto overflow-hidden shrink-0',
-              !config?.logoUrl ? 'bg-gradient-medical' : 'bg-transparent'
+              'bg-transparent' // Logo sans fond pour uniformité avec Finance
             )}>
               <DynamicLogo />
             </div>
