@@ -90,28 +90,29 @@ const SplashScreen = ({ onComplete }) => {
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50 overflow-hidden">
-      {/* Content - Centered with padding */}
-      <div className="flex flex-col items-center justify-center w-full max-w-md px-6 py-10">
+      {/* Content - Centered with padding and max height */}
+      <div className="flex flex-col items-center justify-center w-full max-w-md px-6 py-8" style={{ minHeight: '100vh' }}>
         {/* Top Text - INUA AFYA */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="mb-6 sm:mb-8"
+          className="mb-8"
         >
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-[0.15em] sm:tracking-[0.2em] text-white text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.2em] text-white text-center">
             <span className="text-emerald-400">INUA</span>{' '}
             <span className="text-white">AFYA</span>
           </h1>
         </motion.div>
 
-        {/* Logo - Smaller and centered */}
+        {/* Logo - Centered with glow effect */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24"
+          className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 relative"
         >
+          <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl" />
           <LogoInuaAfyaAnimated size="100%" />
         </motion.div>
 
@@ -120,9 +121,9 @@ const SplashScreen = ({ onComplete }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="mt-6 sm:mt-8"
+          className="mt-10"
         >
-          <p className="text-slate-400 text-[10px] sm:text-xs md:text-sm tracking-widest uppercase text-center">
+          <p className="text-slate-400 text-xs sm:text-sm tracking-widest uppercase text-center">
             Votre santé, notre priorité
           </p>
         </motion.div>
