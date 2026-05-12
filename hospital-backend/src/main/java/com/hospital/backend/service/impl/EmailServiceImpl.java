@@ -33,6 +33,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.name:Inua Afya}")
     private String appName;
 
+    @Value("${app.email.fallback:noreply@inuaafya.com}")
+    private String fallbackEmail;
+
     @Override
     @Async("taskExecutor")
     public void sendCredentialsEmail(String to, String firstName, String lastName, 
@@ -281,11 +284,31 @@ public class EmailServiceImpl implements EmailService {
             throws Exception {
         
         log.info("📧 [EMAIL INTERNAL] Préparation email pour: {}", to);
-        log.info("📧 [EMAIL INTERNAL] From: {}, Subject: {}", fromEmail, subject);
+        log.info("📧 [EMAIL INTERNAL] From: [{}], Subject: {}", fromEmail, subject);
+        log.info("📧 [EMAIL INTERNAL] From length: {}, From bytes: {}", 
+                fromEmail != null ? fromEmail.length() : "null",
+                fromEmail != null ? fromEmail.getBytes(StandardCharsets.UTF_8) : "null");
         
         // ★ Vérification préliminaire des credentials
         if (fromEmail == null || fromEmail.isEmpty()) {
             throw new IllegalStateException("L'adresse d'expéditeur (fromEmail) n'est pas configurée");
+        }
+        
+        // ★ Nettoyage et validation de l'adresse email
+        String cleanFromEmail = fromEmail.trim();
+        
+        // Vérifier les caractères problématiques
+        if (cleanFromEmail.contains("Ã") || cleanFromEmail.contains("©") || cleanFromEmail.length() > 100) {
+            log.error("❌ [EMAIL INTERNAL] Adresse fromEmail contient des caractères invalides: {}", cleanFromEmail);
+            // Utiliser une adresse de repli si configurée, sinon lancer une erreur
+            cleanFromEmail = fallbackEmail != null && !fallbackEmail.isEmpty() ? fallbackEmail : "noreply@inuaafya.com";
+            log.warn("⚠️ [EMAIL INTERNAL] Utilisation de l'adresse de repli: {}", cleanFromEmail);
+        }
+        
+        // Validation basique du format email
+        if (!cleanFromEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            log.error("❌ [EMAIL INTERNAL] Format d'adresse fromEmail invalide: {}", cleanFromEmail);
+            throw new IllegalStateException("Format de l'adresse d'expéditeur invalide: " + cleanFromEmail);
         }
         
         try {
@@ -294,7 +317,7 @@ public class EmailServiceImpl implements EmailService {
                 MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
                 StandardCharsets.UTF_8.name());
 
-            helper.setFrom(fromEmail.trim(), appName);
+            helper.setFrom(cleanFromEmail, appName);
             helper.setTo(to.trim());
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
