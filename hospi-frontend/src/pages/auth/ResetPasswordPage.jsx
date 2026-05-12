@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Lock, ArrowLeft, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import LogoInuaAfya from '../../components/LogoInuaAfya';
+import { getApiUrl } from '../../config/environment';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ const ResetPasswordPage = () => {
 
     try {
       // Appel API pour réinitialiser le mot de passe
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch(getApiUrl('/api/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword: password }),
