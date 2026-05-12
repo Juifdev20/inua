@@ -28,7 +28,7 @@ const AdminLayoutContent = () => {
         
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-surface scrollbar-thin">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fadeIn">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:pt-10 animate-fadeIn">
             <Outlet />
           </div>
         </main>

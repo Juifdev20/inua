@@ -18,6 +18,7 @@ import OfflineIndicator from "./components/OfflineIndicator";
 import AppLauncher from "./components/AppLauncher";
 import AuthWrapper from "./components/auth/AuthWrapper";
 import PasswordChangeWrapper from "./components/auth/PasswordChangeWrapper";
+import DesktopHeader from "./components/DesktopHeader";
 
 /* 🌍 Pages publiques */
 import LandingPage from "./pages/Landingpage";
@@ -441,6 +442,11 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
               </AuthWrapper>
+
+                {/* Desktop Header - Window Controls Overlay */}
+                <div className="hidden lg:block">
+                  <DesktopHeader />
+                </div>
 
                 <PWAInstallPrompt />
                 <OfflineIndicator />

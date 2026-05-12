@@ -49,7 +49,7 @@ const ReceptionLayoutContent = () => {
             Le padding (py-6) et les marges (px) sont identiques au docteur.
         */}
         <main className="flex-1 overflow-y-auto bg-muted/10 scrollbar-thin">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in duration-500">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:pt-10 animate-in fade-in duration-500">
             <Outlet />
           </div>
         </main>
