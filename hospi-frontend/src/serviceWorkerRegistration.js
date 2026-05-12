@@ -55,23 +55,6 @@ function registerValidSW(swUrl, config) {
     .register(swUrl)
     .then(registration => {
       console.log('Service Worker enregistré avec succès:', registration);
-      console.log('Service Worker scope:', registration.scope);
-      console.log('Service Worker active:', registration.active);
-      console.log('Service Worker installing:', registration.installing);
-      console.log('Service Worker waiting:', registration.waiting);
-
-      // 🔥 CRITIQUE: Forcer le service worker à prendre le contrôle immédiatement pour WebAPK
-      registration.addEventListener('controllerchange', () => {
-        console.log('Service Worker: Nouveau contrôleur actif - rechargement de la page');
-        window.location.reload();
-      });
-
-      // 🔥 CRITIQUE: Vérifier si le SW contrôle déjà la page
-      if (navigator.serviceWorker.controller) {
-        console.log('✅ Service Worker contrôle déjà la page');
-      } else {
-        console.log('⚠️ Service Worker ne contrôle pas encore la page');
-      }
 
       // Vérifier les mises à jour
       registration.addEventListener('updatefound', () => {
@@ -80,7 +63,6 @@ function registerValidSW(swUrl, config) {
           return;
         }
         installingWorker.onstatechange = () => {
-          console.log('Service Worker state changed:', installingWorker.state);
           if (installingWorker.state === 'installed') {
             if (navigator.serviceWorker.controller) {
               // At this point, the updated precached content has been fetched,

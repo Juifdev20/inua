@@ -60,32 +60,12 @@ createRoot(document.getElementById('root')).render(
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
     console.log('Nouvelle version disponible!');
-    // Forcer l'activation immédiate du nouveau service worker
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
+    // Optionnel: afficher une notification à l'utilisateur
   },
   onSuccess: (registration) => {
     console.log('Service Worker activé avec succès!');
-    // 🔥 CRITIQUE: Forcer le contrôle immédiat pour WebAPK
-    if (registration && registration.active) {
-      registration.active.postMessage({ type: 'SKIP_WAITING' });
-    }
-    // 🔥 CRITIQUE: Forcer le claim des clients pour WebAPK
-    registration.claim();
   }
 });
-
-// 🔥 S'assurer que le SW contrôle la page pour l'installation PWA
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(registration => {
-    console.log('✅ SW prêt:', registration.scope);
-    console.log('✅ SW actif:', registration.active);
-    // 🔥 CRITIQUE: Forcer le claim immédiat pour WebAPK
-    registration.claim();
-    console.log('✅ SW claim effectué');
-  });
-}
 
 // 🔐 PWA: Initialiser la persistance du stockage (important pour mobile)
 initStoragePersistence().then(() => {

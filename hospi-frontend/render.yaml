@@ -5,21 +5,6 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
-      # Service worker - doit être servi avec le bon content-type
-      - type: file
-        source: /sw.js
-        headers:
-          - name: Content-Type
-            value: application/javascript
-          - name: Service-Worker-Allowed
-            value: /
-      # Manifest - doit être servi avec le bon content-type
-      - type: file
-        source: /manifest.json
-        headers:
-          - name: Content-Type
-            value: application/manifest+json
-      # Routes SPA
       - type: rewrite
         source: /*
         destination: /index.html

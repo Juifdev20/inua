@@ -1,23 +1,30 @@
-const CACHE_NAME = 'inuaafya-v7';
+const CACHE_NAME = 'inuaafia-v5';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  // Icons PWA - Toutes les tailles pour WebAPK
+  // Icons PWA
   '/icons/favicon-16x16.png',
   '/icons/favicon-32x32.png',
-  '/icons/favicon-48x48.png',
   '/icons/icon-72x72.png',
   '/icons/icon-96x96.png',
   '/icons/icon-128x128.png',
   '/icons/icon-144x144.png',
   '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
-  '/icons/icon-192x192-maskable.png',
   '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
-  '/icons/icon-512x512-maskable.png',
-  '/icons/apple-touch-icon.png'
+  '/icons/apple-touch-icon.png',
+  '/icons/logo.svg',
+  // Pages critiques
+  '/login',
+  '/dashboard',
+  '/appointments',
+  '/patients/profile',
+  // Page offline
+  '/offline.html',
+  // Assets statiques
+  '/vite.svg'
 ];
 
 // Installation du service worker
@@ -33,30 +40,26 @@ self.addEventListener('install', (event) => {
         console.error('Service Worker: Erreur lors de la mise en cache', error);
       })
   );
-  // 🔥 CRITIQUE: Forcer l'activation immédiate du nouveau SW
-  self.skipWaiting();
 });
 
 // Activation du service worker
 self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activation...');
   event.waitUntil(
-    Promise.all([
-      // Nettoyer les anciens caches
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('Service Worker: Suppression de l\'ancien cache', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      }),
-      // 🔥 CRITIQUE: Forcer le claim immédiat des clients pour WebAPK
-      self.clients.claim()
-    ]).then(() => {
-      console.log('Service Worker: Activation terminée, clients claimés');
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Supprimer tous les anciens caches (inuaafia-v1, v2, etc.)
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Suppression de l\'ancien cache', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('Service Worker: Tous les anciens caches ont été nettoyés');
+      // Forcer le claim des clients pour appliquer immédiatement le nouveau SW
+      return self.clients.claim();
     })
   );
 });
@@ -93,10 +96,12 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Si la ressource est en cache, on la retourne
         if (response) {
+          console.log('Service Worker: Ressource trouvée dans le cache', event.request.url);
           return response;
         }
 
         // Sinon, on fait la requête réseau
+        console.log('Service Worker: Requête réseau', event.request.url);
         return fetch(event.request).then((response) => {
           // Vérifier si la réponse est valide
           if (!response || response.status !== 200 || response.type !== 'basic') {
@@ -106,16 +111,8 @@ self.addEventListener('fetch', (event) => {
           // Cloner la réponse car elle ne peut être utilisée qu'une fois
           const responseToCache = response.clone();
 
-          // Mettre en cache les nouvelles requêtes GET pour les ressources statiques uniquement
-          if (event.request.method === 'GET' && 
-              (event.request.destination === 'image' || 
-               event.request.destination === 'style' ||
-               event.request.destination === 'script' ||
-               event.request.url.includes('.png') ||
-               event.request.url.includes('.jpg') ||
-               event.request.url.includes('.svg') ||
-               event.request.url.includes('.css') ||
-               event.request.url.includes('.js'))) {
+          // Mettre en cache les nouvelles requêtes GET
+          if (event.request.method === 'GET') {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
@@ -126,9 +123,9 @@ self.addEventListener('fetch', (event) => {
         }).catch((error) => {
           console.error('Service Worker: Erreur réseau', error);
           
-          // Pour les requêtes de navigation, retourner index.html (SPA)
+          // Pour les requêtes de navigation, retourner la page offline
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match('/offline.html');
           }
         });
       })
@@ -151,33 +148,30 @@ self.addEventListener('message', (event) => {
 // Notification push (optionnel)
 self.addEventListener('push', (event) => {
   const options = {
-    body: event.data ? event.data.text() : 'Nouvelle notification d\'InuaAfya',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    body: event.data ? event.data.text() : 'Nouvelle notification d\'InuaAfia',
+    icon: '/logo192.png',
+    badge: '/logo192.png',
     vibrate: [100, 50, 100],
-    tag: 'inuaafya-notification',
-    requireInteraction: false,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1,
-      url: '/'
+      primaryKey: 1
     },
     actions: [
       {
         action: 'explore',
         title: 'Voir',
-        icon: '/icons/icon-96x96.png'
+        icon: '/logo192.png'
       },
       {
         action: 'close',
         title: 'Fermer',
-        icon: '/icons/icon-96x96.png'
+        icon: '/logo192.png'
       }
     ]
   };
 
   event.waitUntil(
-    self.registration.showNotification('InuaAfya', options)
+    self.registration.showNotification('InuaAfia', options)
   );
 });
 
