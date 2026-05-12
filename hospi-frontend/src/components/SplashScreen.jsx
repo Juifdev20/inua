@@ -105,11 +105,14 @@ const SplashScreen = ({ onComplete }) => {
           </h1>
         </motion.div>
 
-        {/* Logo - Centered with glow effect */}
+        {/* Logo - Centered with glow effect and rotation */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          animate={{ scale: 1, opacity: 1, rotate: 360 }}
+          transition={{ 
+            scale: { duration: 0.6, ease: "easeOut" },
+            rotate: { duration: 2, repeat: Infinity, ease: "linear" }
+          }}
           className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 relative"
         >
           <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl" />

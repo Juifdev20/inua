@@ -1,3 +1,4 @@
+import React from 'react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -15,18 +16,41 @@ logEnvironmentInfo()
 // On importe le diffuseur de données (Provider)
 import { AppProvider } from './context/AppContext'
 
+// 🎨 Import du SplashScreen pour le chargement initial
+import SplashScreen from './components/SplashScreen'
+
 // ✅ PWA: Import du service worker
 import * as serviceWorkerRegistration from './serviceWorkerRegistration'
 
 // 🔐 PWA: Persistance du stockage (empêche l'effacement sur mobile)
 import { initStoragePersistence } from './utils/storagePersistence.js' 
 
+// État pour contrôler le SplashScreen
+const AppWithSplash = () => {
+  const [showSplash, setShowSplash] = React.useState(true);
+
+  React.useEffect(() => {
+    // Cacher le SplashScreen après 2 secondes
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <>
+      {showSplash && <SplashScreen />}
+      <App />
+    </>
+  );
+};
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     {/* On enveloppe App pour que tout le projet ait accès aux réglages */}
     <AppProvider>
-      <App />
+      <AppWithSplash />
     </AppProvider>
   </StrictMode>,
 )
