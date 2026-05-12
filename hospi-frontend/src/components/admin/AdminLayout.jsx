@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { AdminProvider } from '../../context/AdminContext';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import DesktopHeader from '../DesktopHeader';
 import { useAdmin } from '../../context/AdminContext';
 
 const AdminLayoutContent = () => {
@@ -23,10 +22,7 @@ const AdminLayoutContent = () => {
       )}
       
       {/* Main content area */}
-      <div className={`flex flex-col flex-1 overflow-hidden transition-all duration-300 pt-10 lg:pt-0`}>
-        {/* Desktop Window Controls Overlay Header */}
-        <DesktopHeader />
-        
+      <div className={`flex flex-col flex-1 overflow-hidden transition-all duration-300`} style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
         {/* Topbar */}
         <Topbar />
         

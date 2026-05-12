@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { AdminProvider, useAdmin } from '../../context/AdminContext'; 
 import DoctorSidebar from './DoctorSidebar';
 import DoctorHeader from './DoctorHeader';
-import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const DoctorLayoutContent = () => {
@@ -26,10 +25,7 @@ const DoctorLayoutContent = () => {
       )}
       
       {/* Zone de contenu principale */}
-      <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300 pt-10 lg:pt-0">
-        
-        {/* Desktop Window Controls Overlay Header */}
-        <DesktopHeader />
+      <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300" style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
         
         {/* Header Spécifique Docteur (avec recherche et notifications) */}
         <DoctorHeader />

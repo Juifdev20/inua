@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { PharmacyProvider, usePharmacy } from '../../context/PharmacyContext';
 import PharmacySidebar from './PharmacySidebar';
 import PharmacyHeader from './PharmacyHeader';
-import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const PharmacyLayoutContent = () => {
@@ -26,10 +25,7 @@ const PharmacyLayoutContent = () => {
       )}
 
       {/* Zone de contenu principale */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300 pt-10 lg:pt-0">
-
-        {/* Desktop Window Controls Overlay Header */}
-        <DesktopHeader />
+      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300" style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
 
         {/* Header Pharmacie — même UI que FinanceHeader */}
         <PharmacyHeader />

@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { AdminProvider, useAdmin } from '../../context/AdminContext'; 
 import Sidebar from './Sidebar'; // Votre Sidebar Réception corrigée
 import ReceptionHeader from './Header'; // Votre Header Réception corrigé
-import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const ReceptionLayoutContent = () => {
@@ -35,12 +34,9 @@ const ReceptionLayoutContent = () => {
           le contenu passe SOUS la sidebar qui est en 'fixed'.
       */}
       <div className={cn(
-        "flex flex-col flex-1 min-h-screen transition-all duration-300 pt-10 lg:pt-0",
+        "flex flex-col flex-1 min-h-screen transition-all duration-300",
         sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
-      )}>
-        
-        {/* Desktop Window Controls Overlay Header */}
-        <DesktopHeader />
+      )} style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
         
         {/* Header Réception : 
             Contient la barre de recherche et les actions. 
