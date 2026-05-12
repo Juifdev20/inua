@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { FinanceProvider, useFinance } from '../../context/FinanceContext';
 import FinanceSidebar from './FinanceSidebar';
 import FinanceHeader from './FinanceHeader';
+import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const FinanceLayoutContent = () => {
@@ -26,7 +27,10 @@ const FinanceLayoutContent = () => {
       )}
 
       {/* Zone de contenu principale */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300">
+      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300 pt-10 lg:pt-0">
+
+        {/* Desktop Window Controls Overlay Header */}
+        <DesktopHeader />
 
         {/* Header Finance — même UI que ReceptionHeader */}
         <FinanceHeader />

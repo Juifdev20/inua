@@ -4,7 +4,7 @@
   "description": "Application mobile de gestion hospitalière moderne",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",

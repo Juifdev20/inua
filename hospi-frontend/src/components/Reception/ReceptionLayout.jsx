@@ -2,7 +2,8 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminProvider, useAdmin } from '../../context/AdminContext'; 
 import Sidebar from './Sidebar'; // Votre Sidebar Réception corrigée
-import ReceptionHeader from './ReceptionHeader'; // Votre Header Réception corrigé
+import ReceptionHeader from './Header'; // Votre Header Réception corrigé
+import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const ReceptionLayoutContent = () => {
@@ -34,9 +35,12 @@ const ReceptionLayoutContent = () => {
           le contenu passe SOUS la sidebar qui est en 'fixed'.
       */}
       <div className={cn(
-        "flex flex-col flex-1 min-h-screen transition-all duration-300",
+        "flex flex-col flex-1 min-h-screen transition-all duration-300 pt-10 lg:pt-0",
         sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
       )}>
+        
+        {/* Desktop Window Controls Overlay Header */}
+        <DesktopHeader />
         
         {/* Header Réception : 
             Contient la barre de recherche et les actions. 
@@ -49,7 +53,7 @@ const ReceptionLayoutContent = () => {
             Le padding (py-6) et les marges (px) sont identiques au docteur.
         */}
         <main className="flex-1 overflow-y-auto bg-muted/10 scrollbar-thin">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:pt-10 animate-in fade-in duration-500">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in duration-500">
             <Outlet />
           </div>
         </main>

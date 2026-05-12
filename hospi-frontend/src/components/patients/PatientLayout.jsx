@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AdminProvider, useAdmin } from '../../context/AdminContext'; // On réutilise le contexte Admin
 import PatientSidebar from './PatientSidebar';
 import PatientHeader from './PatientHeader';
+import DesktopHeader from '../DesktopHeader';
 import { cn } from '../../lib/utils';
 
 const PatientLayoutContent = () => {
@@ -27,14 +28,17 @@ const PatientLayoutContent = () => {
       )}
       
       {/* Zone de contenu principale */}
-      <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
+      <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300 pt-10 lg:pt-0">
+        
+        {/* Desktop Window Controls Overlay Header */}
+        <DesktopHeader />
         
         {/* Header Patient */}
         <PatientHeader />
         
         {/* Contenu de la page */}
         <main className="flex-1 overflow-y-auto bg-surface scrollbar-thin">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:pt-10 animate-fadeIn">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fadeIn">
             {/* L'Outlet rendra tes pages (Appointments, Profile, etc.) */}
             <Outlet />
           </div>
