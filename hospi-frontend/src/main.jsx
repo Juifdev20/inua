@@ -60,14 +60,19 @@ createRoot(document.getElementById('root')).render(
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
     console.log('Nouvelle version disponible!');
-    // Optionnel: afficher une notification à l'utilisateur
+    // Forcer l'activation immédiate du nouveau service worker
+    if (registration && registration.waiting) {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
   },
   onSuccess: (registration) => {
     console.log('Service Worker activé avec succès!');
-    // 🔥 Forcer le contrôle immédiat pour WebAPK
+    // 🔥 CRITIQUE: Forcer le contrôle immédiat pour WebAPK
     if (registration && registration.active) {
       registration.active.postMessage({ type: 'SKIP_WAITING' });
     }
+    // 🔥 CRITIQUE: Forcer le claim des clients pour WebAPK
+    registration.claim();
   }
 });
 
@@ -75,6 +80,8 @@ serviceWorkerRegistration.register({
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then(registration => {
     console.log('✅ SW contrôle la page:', registration.scope);
+    // 🔥 CRITIQUE: Forcer le claim immédiat pour WebAPK
+    registration.claim();
   });
 }
 

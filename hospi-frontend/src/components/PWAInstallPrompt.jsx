@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // Vérifier si l'app est déjà installée
@@ -27,7 +27,6 @@ const PWAInstallPrompt = () => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallPrompt(true);
       console.log('PWA: Événement beforeinstallprompt capturé');
     };
 
@@ -35,7 +34,6 @@ const PWAInstallPrompt = () => {
     const handleAppInstalled = () => {
       console.log('PWA: Application installée avec succès');
       setIsInstalled(true);
-      setShowInstallPrompt(false);
       setDeferredPrompt(null);
       toast.success('InuaAfya installée avec succès !');
     };
@@ -77,7 +75,6 @@ const PWAInstallPrompt = () => {
       
       // Nettoyer le prompt
       setDeferredPrompt(null);
-      setShowInstallPrompt(false);
     } catch (error) {
       console.error('PWA: Erreur lors de l\'installation', error);
       toast.error('Erreur lors de l\'installation');
@@ -85,8 +82,7 @@ const PWAInstallPrompt = () => {
   };
 
   const handleDismiss = () => {
-    setShowInstallPrompt(false);
-    // Ne pas supprimer deferredPrompt pour permettre une nouvelle tentative plus tard
+    setDismissed(true);
   };
 
   const handleManualInstall = () => {
@@ -105,59 +101,60 @@ const PWAInstallPrompt = () => {
     }
   };
 
-  // Ne pas afficher si l'app est déjà installée ou si le prompt n'est pas disponible
-  if (isInstalled || !showInstallPrompt) {
+  // Ne pas afficher si l'app est déjà installée (APK) ou si l'utilisateur a fermé la bannière
+  if (isInstalled || dismissed) {
     return null;
   }
 
+  // Afficher toujours sur version web
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-96">
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
-        <CardContent className="p-4">
+    <div className="fixed top-16 right-4 z-50 max-w-xs">
+      <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 shadow-lg rounded-lg">
+        <CardContent className="p-3">
           <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <Smartphone className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center space-x-2 flex-1">
+              <div className="bg-emerald-100 p-1.5 rounded-full flex-shrink-0">
+                <Smartphone className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-sm">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 text-xs truncate">
                   Installer InuaAfya
                 </h3>
-                <p className="text-xs text-gray-600 mt-1">
-                  Accédez rapidement à votre application hospitalière
+                <p className="text-[10px] text-gray-600">
+                  Installation gratuite
                 </p>
-                <div className="flex items-center space-x-2 mt-2">
-                  {deferredPrompt ? (
-                    <Button
-                      onClick={handleInstallClick}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 h-7"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Installer
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleManualInstall}
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50 text-xs px-3 py-1 h-7"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Comment installer
-                    </Button>
-                  )}
-                </div>
               </div>
             </div>
             <Button
               onClick={handleDismiss}
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+              className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600 ml-2 flex-shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3 h-3" />
             </Button>
+          </div>
+          <div className="flex items-center space-x-2 mt-2">
+            {deferredPrompt ? (
+              <Button
+                onClick={handleInstallClick}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-2 py-1 h-6 flex-1"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Installer
+              </Button>
+            ) : (
+              <Button
+                onClick={handleManualInstall}
+                size="sm"
+                variant="outline"
+                className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 text-[10px] px-2 py-1 h-6 flex-1"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Comment installer
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

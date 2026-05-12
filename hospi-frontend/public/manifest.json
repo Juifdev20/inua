@@ -10,12 +10,10 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "id": "/",
-  "categories": ["health", "medical", "productivity"],
+  "categories": ["healthcare", "medical", "productivity"],
   "lang": "fr",
   "dir": "ltr",
-  "launch_handler": {
-    "client_mode": ["navigate-existing", "auto"]
-  },
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -84,10 +82,6 @@
       "purpose": "any"
     }
   ],
-  "categories": ["healthcare", "medical", "productivity"],
-  "lang": "fr",
-  "dir": "ltr",
-  "prefer_related_applications": false,
   "screenshots": [],
   "shortcuts": [
     {

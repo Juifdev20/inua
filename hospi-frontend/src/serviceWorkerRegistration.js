@@ -56,6 +56,12 @@ function registerValidSW(swUrl, config) {
     .then(registration => {
       console.log('Service Worker enregistré avec succès:', registration);
 
+      // 🔥 CRITIQUE: Forcer le service worker à prendre le contrôle immédiatement pour WebAPK
+      registration.addEventListener('controllerchange', () => {
+        console.log('Service Worker: Nouveau contrôleur actif');
+        window.location.reload();
+      });
+
       // Vérifier les mises à jour
       registration.addEventListener('updatefound', () => {
         const installingWorker = registration.installing;

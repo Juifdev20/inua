@@ -60,7 +60,7 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('Service Worker: Tous les anciens caches ont été nettoyés');
-      // Forcer le claim des clients pour appliquer immédiatement le nouveau SW
+      // 🔥 CRITIQUE: Forcer le claim immédiat des clients pour WebAPK
       return self.clients.claim();
     })
   );
