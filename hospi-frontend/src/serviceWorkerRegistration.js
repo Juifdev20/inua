@@ -22,8 +22,7 @@ const isLocalhost = Boolean(
 
 
 export function register(config) {
-  // Enregistrer le SW en prod ET dev pour tester la PWA sur mobile
-  if ('serviceWorker' in navigator) {
+  if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     // The URL constructor is available in all browsers that support SW.
     // Utiliser l'origine actuelle au lieu de PUBLIC_URL qui peut être undefined
     const currentOrigin = window.location.origin;
@@ -39,7 +38,8 @@ export function register(config) {
         // service worker/PWA documentation.
         navigator.serviceWorker.ready.then(() => {
           console.log(
-            '✅ InuaAfya PWA: Service Worker actif - Prêt pour installation WebAPK'
+            'This web app is being served cache-first by a service ' +
+              'worker. To learn more, visit https://bit.ly/CRA-PWA'
           );
         });
       } else {
