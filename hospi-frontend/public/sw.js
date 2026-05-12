@@ -40,6 +40,8 @@ self.addEventListener('install', (event) => {
         console.error('Service Worker: Erreur lors de la mise en cache', error);
       })
   );
+  // 🔥 CRITIQUE: Forcer l'activation immédiate pour prendre le contrôle de la page
+  self.skipWaiting();
 });
 
 // Activation du service worker
