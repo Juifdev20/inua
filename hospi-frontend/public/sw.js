@@ -1,30 +1,13 @@
 const CACHE_NAME = 'inuaafia-v5';
+// 🔥 OPTIMISATION: Réduire le cache initial pour accélérer l'installation
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  // Icons PWA
-  '/icons/favicon-16x16.png',
-  '/icons/favicon-32x32.png',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
+  // Icônes critiques uniquement
   '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
-  '/icons/apple-touch-icon.png',
-  '/icons/logo.svg',
-  // Pages critiques
-  '/login',
-  '/dashboard',
-  '/appointments',
-  '/patients/profile',
-  // Page offline
-  '/offline.html',
-  // Assets statiques
-  '/vite.svg'
+  '/icons/apple-touch-icon.png'
 ];
 
 // Installation du service worker
@@ -33,7 +16,8 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Mise en cache des ressources');
+        console.log('Service Worker: Mise en cache des ressources critiques');
+        // 🔥 OPTIMISATION: Mise en cache rapide des ressources critiques uniquement
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
