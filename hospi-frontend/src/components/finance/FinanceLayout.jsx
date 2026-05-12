@@ -26,7 +26,7 @@ const FinanceLayoutContent = () => {
       )}
 
       {/* Zone de contenu principale */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300" style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
+      <div className="flex flex-col flex-1 min-w-0 min-h-screen transition-all duration-300">
 
         {/* Header Finance — même UI que ReceptionHeader */}
         <FinanceHeader />

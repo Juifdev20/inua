@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, Globe, ChevronDown, Check, LogOut, Settings, User, ArrowLeft, RotateCw } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, Globe, ChevronDown, Check, LogOut, Settings, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
@@ -107,51 +107,14 @@ const Topbar = () => {
     }
   }, [showLangMenu, showNotifications, showProfile]);
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
   return (
-    <header 
-      className="bg-card border-b border-border fixed top-0 left-0 w-full z-20 transition-colors duration-300"
-      style={{ 
-        height: 'env(titlebar-area-height, 64px)',
-        paddingLeft: 'env(titlebar-area-x, 16px)',
-        WebkitAppRegion: 'drag',
-        cursor: 'default'
-      }}
-    >
-      <div className="flex items-center justify-between h-full gap-4">
-        {/* ── GAUCHE : Back + Refresh + Menu + Recherche ── */}
+    <header className="h-16 bg-card border-b border-border sticky top-0 z-20 transition-colors duration-300">
+      <div className="flex items-center justify-between px-4 md:px-8 h-full gap-4">
+        {/* ── GAUCHE : Menu + Recherche ── */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
-          {/* Bouton Retour */}
-          <button
-            onClick={handleBack}
-            className="hidden lg:block p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-            style={{ WebkitAppRegion: 'no-drag' }}
-            title="Retour"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          {/* Bouton Refresh */}
-          <button
-            onClick={handleRefresh}
-            className="hidden lg:block p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-            style={{ WebkitAppRegion: 'no-drag' }}
-            title="Actualiser"
-          >
-            <RotateCw className="w-5 h-5" />
-          </button>
-
           <button
             onClick={toggleMobileSidebar}
             className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-            style={{ WebkitAppRegion: 'no-drag' }}
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -163,7 +126,6 @@ const Topbar = () => {
                 type="text"
                 placeholder={t('header.searchPlaceholder') || 'Rechercher...'}
                 className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-emerald-500 transition-all text-foreground text-sm"
-                style={{ WebkitAppRegion: 'no-drag' }}
               />
             </div>
           </div>

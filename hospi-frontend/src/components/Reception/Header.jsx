@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, UserPlus, Loader2, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, UserPlus, Loader2, Globe, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -241,49 +241,13 @@ const ReceptionHeader = () => {
     return `${BACKEND_URL}/uploads/avatars/${user.photoUrl}${timestamp}`;
   };
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
   return (
-    <header 
-      className="bg-card border-b border-border fixed top-0 left-0 w-full z-20 transition-colors duration-300"
-      style={{ 
-        height: 'env(titlebar-area-height, 64px)',
-        paddingLeft: 'env(titlebar-area-x, 16px)',
-        WebkitAppRegion: 'drag',
-        cursor: 'default'
-      }}
-    >
-      <div className="flex items-center justify-between h-full gap-4">
+    <header className="h-16 bg-card border-b border-border sticky top-0 z-20 transition-colors duration-300">
+      <div className="flex items-center justify-between px-4 md:px-8 h-full gap-4">
         
-        {/* GAUCHE : Back + Refresh + Menu & Search */}
+        {/* GAUCHE : Menu & Search */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
-          {/* Bouton Retour */}
-          <button
-            onClick={handleBack}
-            className="hidden lg:block p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-            style={{ WebkitAppRegion: 'no-drag' }}
-            title="Retour"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          {/* Bouton Refresh */}
-          <button
-            onClick={handleRefresh}
-            className="hidden lg:block p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
-            style={{ WebkitAppRegion: 'no-drag' }}
-            title="Actualiser"
-          >
-            <RotateCw className="w-5 h-5" />
-          </button>
-
-          <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all" style={{ WebkitAppRegion: 'no-drag' }}>
+          <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
             <Menu className="w-6 h-6" />
           </button>
 
@@ -296,7 +260,6 @@ const ReceptionHeader = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher un patient ou un dossier..."
                 className="w-full pl-10 pr-10 py-2 bg-muted/50 border border-border rounded-xl focus:outline-none focus:border-emerald-500 transition-all text-foreground text-sm"
-                style={{ WebkitAppRegion: 'no-drag' }}
               />
               {isSearching && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-emerald-500" />

@@ -22,7 +22,7 @@ const AdminLayoutContent = () => {
       )}
       
       {/* Main content area */}
-      <div className={`flex flex-col flex-1 overflow-hidden transition-all duration-300`} style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
+      <div className={`flex flex-col flex-1 overflow-hidden transition-all duration-300`}>
         {/* Topbar */}
         <Topbar />
         

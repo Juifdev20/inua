@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminProvider, useAdmin } from '../../context/AdminContext'; 
 import Sidebar from './Sidebar'; // Votre Sidebar Réception corrigée
-import ReceptionHeader from './Header'; // Votre Header Réception corrigé
+import ReceptionHeader from './ReceptionHeader'; // Votre Header Réception corrigé
 import { cn } from '../../lib/utils';
 
 const ReceptionLayoutContent = () => {
@@ -36,7 +36,7 @@ const ReceptionLayoutContent = () => {
       <div className={cn(
         "flex flex-col flex-1 min-h-screen transition-all duration-300",
         sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
-      )} style={{ paddingTop: 'env(titlebar-area-height, 64px)' }}>
+      )}>
         
         {/* Header Réception : 
             Contient la barre de recherche et les actions. 
