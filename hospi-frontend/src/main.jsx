@@ -79,9 +79,11 @@ serviceWorkerRegistration.register({
 // 🔥 S'assurer que le SW contrôle la page pour l'installation PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then(registration => {
-    console.log('✅ SW contrôle la page:', registration.scope);
+    console.log('✅ SW prêt:', registration.scope);
+    console.log('✅ SW actif:', registration.active);
     // 🔥 CRITIQUE: Forcer le claim immédiat pour WebAPK
     registration.claim();
+    console.log('✅ SW claim effectué');
   });
 }
 

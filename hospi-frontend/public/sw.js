@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inuaafya-v6';
+const CACHE_NAME = 'inuaafya-v7';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -17,16 +17,7 @@ const urlsToCache = [
   '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
   '/icons/icon-512x512-maskable.png',
-  '/icons/apple-touch-icon.png',
-  // Pages critiques
-  '/login',
-  '/dashboard',
-  '/appointments',
-  '/patients/profile',
-  // Page offline
-  '/offline.html',
-  // Assets statiques
-  '/vite.svg'
+  '/icons/apple-touch-icon.png'
 ];
 
 // Installation du service worker
@@ -42,26 +33,30 @@ self.addEventListener('install', (event) => {
         console.error('Service Worker: Erreur lors de la mise en cache', error);
       })
   );
+  // 🔥 CRITIQUE: Forcer l'activation immédiate du nouveau SW
+  self.skipWaiting();
 });
 
 // Activation du service worker
 self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activation...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Supprimer tous les anciens caches (inuaafya-v1, v2, etc.)
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Suppression de l\'ancien cache', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('Service Worker: Tous les anciens caches ont été nettoyés');
+    Promise.all([
+      // Nettoyer les anciens caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Service Worker: Suppression de l\'ancien cache', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
       // 🔥 CRITIQUE: Forcer le claim immédiat des clients pour WebAPK
-      return self.clients.claim();
+      self.clients.claim()
+    ]).then(() => {
+      console.log('Service Worker: Activation terminée, clients claimés');
     })
   );
 });
@@ -98,12 +93,10 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Si la ressource est en cache, on la retourne
         if (response) {
-          console.log('Service Worker: Ressource trouvée dans le cache', event.request.url);
           return response;
         }
 
         // Sinon, on fait la requête réseau
-        console.log('Service Worker: Requête réseau', event.request.url);
         return fetch(event.request).then((response) => {
           // Vérifier si la réponse est valide
           if (!response || response.status !== 200 || response.type !== 'basic') {
@@ -113,8 +106,16 @@ self.addEventListener('fetch', (event) => {
           // Cloner la réponse car elle ne peut être utilisée qu'une fois
           const responseToCache = response.clone();
 
-          // Mettre en cache les nouvelles requêtes GET
-          if (event.request.method === 'GET') {
+          // Mettre en cache les nouvelles requêtes GET pour les ressources statiques uniquement
+          if (event.request.method === 'GET' && 
+              (event.request.destination === 'image' || 
+               event.request.destination === 'style' ||
+               event.request.destination === 'script' ||
+               event.request.url.includes('.png') ||
+               event.request.url.includes('.jpg') ||
+               event.request.url.includes('.svg') ||
+               event.request.url.includes('.css') ||
+               event.request.url.includes('.js'))) {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
@@ -125,9 +126,9 @@ self.addEventListener('fetch', (event) => {
         }).catch((error) => {
           console.error('Service Worker: Erreur réseau', error);
           
-          // Pour les requêtes de navigation, retourner la page offline
+          // Pour les requêtes de navigation, retourner index.html (SPA)
           if (event.request.destination === 'document') {
-            return caches.match('/offline.html');
+            return caches.match('/index.html');
           }
         });
       })
