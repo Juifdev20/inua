@@ -1,4 +1,4 @@
-ontinue/**
+/**
  * ★ PWA Detection Utility
  * Détecte si l'application est en mode PWA et sur quel type d'appareil
  *
