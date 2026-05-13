@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, UserPlus, Loader2, Globe, Check } from 'lucide-react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, UserPlus, Loader2, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { useTranslation } from 'react-i18next';
+import '../../styles/pwa-titlebar.css'; // ✅ Import des styles PWA titlebar
 
 /* ── Drapeaux SVG inline ── */
 const FlagFR = ({ className }) => (
@@ -48,6 +49,15 @@ const ReceptionHeader = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef(null);
   const langRef = useRef(null);
+
+  // --- DÉTECTION MODE PWA DESKTOP ---
+  const [isPWA, setIsPWA] = useState(false);
+
+  useEffect(() => {
+    // Détecte si l'app est en mode standalone (PWA installée)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsPWA(isStandalone);
+  }, []);
 
   // --- LANGUE ---
   const { t, i18n } = useTranslation();
@@ -245,6 +255,26 @@ const ReceptionHeader = () => {
     <header className="h-16 bg-card border-b border-border sticky top-0 z-20 transition-colors duration-300">
       <div className="flex items-center justify-between px-4 md:px-8 h-full gap-4">
         
+        {/* ★ PWA DESKTOP NAVIGATION BUTTONS (si mode standalone) ★ */}
+        {isPWA && (
+          <div className="flex items-center gap-1 mr-2 titlebar-no-drag">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+              title="Retour"
+            >
+              <ArrowLeft width="18" height="18" strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+              title="Actualiser"
+            >
+              <RotateCw width="18" height="18" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
+
         {/* GAUCHE : Menu & Search */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
           <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">

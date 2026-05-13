@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Bell, Moon, Sun, Search, Globe, ChevronDown, Check, LogOut, Settings, User } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Search, Globe, ChevronDown, Check, LogOut, Settings, User, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext'; 
 import { useTranslation } from 'react-i18next';
+import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline ── */
 const FlagFR = ({ className }) => (
@@ -50,7 +51,16 @@ const Topbar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const langRef = useRef(null);
-  
+
+  // --- DÉTECTION MODE PWA DESKTOP ---
+  const [isPWA, setIsPWA] = useState(false);
+
+  useEffect(() => {
+    // Détecte si l'app est en mode standalone (PWA installée)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsPWA(isStandalone);
+  }, []);
+
   // 🛡️ SÉCURITÉ LOCALE : Évite l'écran noir si getTimeAgo n'est pas encore prêt
   const getTimeAgo = notificationCtx?.getTimeAgo || ((date) => {
     if (!date) return "À l'instant";
@@ -110,6 +120,26 @@ const Topbar = () => {
   return (
     <header className="h-16 bg-card border-b border-border sticky top-0 z-20 transition-colors duration-300">
       <div className="flex items-center justify-between px-4 md:px-8 h-full gap-4">
+        {/* ★ PWA DESKTOP NAVIGATION BUTTONS (si mode standalone) ★ */}
+        {isPWA && (
+          <div className="flex items-center gap-1 mr-2 titlebar-no-drag">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+              title="Retour"
+            >
+              <ArrowLeft width="18" height="18" strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+              title="Actualiser"
+            >
+              <RotateCw width="18" height="18" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
+
         {/* ── GAUCHE : Menu + Recherche ── */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
           <button

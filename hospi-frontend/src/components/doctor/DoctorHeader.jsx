@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, Globe, Check } from 'lucide-react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { useTranslation } from 'react-i18next';
+import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline ── */
 const FlagFR = ({ className }) => (
@@ -41,6 +42,15 @@ const DoctorHeader = () => {
   const [unreadCount, setUnreadCount] = useState(0);      
   const navigate = useNavigate();
   const langRef = useRef(null);
+
+  // --- DÉTECTION MODE PWA DESKTOP ---
+  const [isPWA, setIsPWA] = useState(false);
+
+  useEffect(() => {
+    // Détecte si l'app est en mode standalone (PWA installée)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsPWA(isStandalone);
+  }, []);
 
   // --- LANGUE ---
   const { t, i18n } = useTranslation();

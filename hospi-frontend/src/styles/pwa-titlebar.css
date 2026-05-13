@@ -1,0 +1,77 @@
+/**
+ * ★ Styles PWA Desktop Titlebar Navigation
+ * Gestion de la drag région pour les boutons de navigation PWA
+ *
+ * IMPORTANT: Ces styles permettent aux boutons de navigation PWA
+ * de rester cliquables dans la zone de titlebar draggable
+ */
+
+/*
+   Conteneur principal des boutons de navigation PWA
+   Empêche Windows/macOS de considérer ces éléments comme la zone de drag
+   Important pour que les clics fonctionnent correctement sur la titlebar
+*/
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/*
+   Assure que les boutons enfants héritent aussi de la propriété no-drag
+   Permet une interaction correcte des clics même dans la zone titlebar
+*/
+.titlebar-no-drag button {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/*
+   Style du hover pour indiquer l'interactivité
+   Améliore l'UX avec un feedback visuel
+*/
+.titlebar-no-drag button:hover {
+  cursor: pointer;
+  transform: scale(1.05);
+}
+
+/*
+   Style du clic/focus pour l'accessibilité
+*/
+.titlebar-no-drag button:active {
+  transform: scale(0.95);
+}
+
+/*
+   Assure que les icônes SVG ne créent pas de drag involontaire
+*/
+.titlebar-no-drag svg {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  pointer-events: none;
+}
+
+/*
+   Responsive: Masquer les boutons sur très petits écrans si nécessaire
+*/
+@media (max-width: 480px) {
+  .titlebar-no-drag {
+    gap: 0.125rem;
+  }
+
+  .titlebar-no-drag button {
+    padding: 0.375rem !important;
+  }
+}
+
+

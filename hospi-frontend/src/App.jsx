@@ -16,7 +16,6 @@ import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import AppLauncher from "./components/AppLauncher";
-import AppTitle from "./components/AppTitle";
 import AuthWrapper from "./components/auth/AuthWrapper";
 import PasswordChangeWrapper from "./components/auth/PasswordChangeWrapper";
 
@@ -187,7 +186,6 @@ function App() {
             <AppLauncher>
               <Toaster position="top-center" richColors className="z-[99999]" />
               <BrowserRouter>
-                <AppTitle />
                 <AuthWrapper>
                 <Routes>
                 {/* 🌍 ROUTES PUBLIQUES */}
