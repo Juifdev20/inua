@@ -208,6 +208,24 @@ const DoctorHeader = () => {
         
         {/* GAUCHE : Menu & Search */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
+          {isPWA && (
+            <div className="flex items-center gap-1 mr-2 titlebar-no-drag">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Retour"
+              >
+                <ArrowLeft width="18" height="18" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Actualiser"
+              >
+                <RotateCw width="18" height="18" strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
           <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
             <Menu className="w-6 h-6" />
           </button>

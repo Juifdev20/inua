@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Globe, Check } from 'lucide-react';
+import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext'; 
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { useTranslation } from 'react-i18next';
+import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline ── */
 const FlagFR = ({ className }) => (
@@ -47,6 +48,13 @@ const Header = () => {
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const activeLang = LANGUAGES.find((l) => l.code === currentLang) || LANGUAGES[0];
   const ActiveFlag = activeLang.Flag;
+
+  // PWA standalone mode detection
+  const [isPWA, setIsPWA] = useState(false);
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsPWA(isStandalone);
+  }, []);
 
   const handleLanguageChange = (langCode) => {
     i18n.changeLanguage(langCode);
@@ -184,6 +192,24 @@ const Header = () => {
         
         {/* GAUCHE : Menu & Search */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
+          {isPWA && (
+            <div className="flex items-center gap-1 mr-2 titlebar-no-drag">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Retour"
+              >
+                <ArrowLeft width="18" height="18" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Actualiser"
+              >
+                <RotateCw width="18" height="18" strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
           <button onClick={toggleMobileSidebar} className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
             <Menu className="w-6 h-6" />
           </button>

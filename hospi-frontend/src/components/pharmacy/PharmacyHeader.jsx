@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut,
   FileText, Info, Settings, Loader2, DollarSign, Receipt, Calendar,
-  Check, Globe, Pill, Package, AlertCircle, Store
+  Check, Globe, Pill, Package, AlertCircle, Store, ArrowLeft, RotateCw
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
+import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline (légers, pas de dépendance externe) ── */
 const FlagFR = ({ className }) => (
@@ -52,6 +53,13 @@ const PharmacyHeader = () => {
 
   // 🔧 Pharmacy logo from settings
   const [pharmacyLogo, setPharmacyLogo] = useState(null);
+
+  // PWA standalone mode detection
+  const [isPWA, setIsPWA] = useState(false);
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    setIsPWA(isStandalone);
+  }, []);
 
   // Load pharmacy logo from localStorage
   useEffect(() => {
@@ -314,6 +322,24 @@ const PharmacyHeader = () => {
 
         {/* ── GAUCHE : Menu + Recherche ── */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
+          {isPWA && (
+            <div className="flex items-center gap-1 mr-2 titlebar-no-drag">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Retour"
+              >
+                <ArrowLeft width="18" height="18" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors titlebar-no-drag"
+                title="Actualiser"
+              >
+                <RotateCw width="18" height="18" strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
           <button
             onClick={toggleMobileSidebar}
             className="lg:hidden p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all"
