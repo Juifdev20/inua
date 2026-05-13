@@ -18,6 +18,7 @@ import {
 import LogoInuaAfya from '../LogoInuaAfya';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
+import { useConfig } from '../../context/ConfigContext';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
@@ -38,6 +39,27 @@ const Sidebar = () => {
 
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
   const { token } = useAuth();
+  const { config } = useConfig();
+
+  // Dynamic Logo Component (same as Finance)
+  const DynamicLogo = ({ className }) => {
+    const [imgError, setImgError] = useState(false);
+    if (config?.logoUrl && !imgError) {
+      let finalUrl = config.logoUrl;
+      if (!finalUrl.startsWith('http')) {
+        const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+        finalUrl = `${API_URL}${cleanPath}`;
+      }
+      return (
+        <img
+          src={finalUrl} alt="Logo"
+          className={cn('object-cover w-full h-full', className)}
+          onError={() => setImgError(true)}
+        />
+      );
+    }
+    return <LogoInuaAfya size={40} className={className} />;
+  };
 
   // Mise à jour de la liste des menus avec "Messagerie"
   const menuItems = [
@@ -94,14 +116,18 @@ const Sidebar = () => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 animate-slideInFromLeft overflow-hidden">
-              <LogoInuaAfya size={40} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+                <DynamicLogo />
+              </div>
               <div className="overflow-hidden">
-                <h1 className="text-lg font-bold text-foreground tracking-tight truncate">INUA AFYA</h1>
+                <h1 className="text-lg font-bold text-foreground tracking-tight truncate">{config?.appName || 'INUA AFYA'}</h1>
                 <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Espace Patient</p>
               </div>
             </div>
           ) : (
-            <LogoInuaAfya size={40} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg mx-auto overflow-hidden shrink-0">
+              <DynamicLogo />
+            </div>
           )}
           
           <Button
@@ -184,7 +210,10 @@ const Sidebar = () => {
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
         <div className="h-16 flex items-center px-6 border-b border-border">
-            <h1 className="text-lg font-bold text-foreground">INUA AFYA</h1>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+              <DynamicLogo />
+            </div>
+            <h1 className="text-lg font-bold text-foreground ml-3">{config?.appName || 'INUA AFYA'}</h1>
         </div>
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <nav className="p-4 space-y-2">
