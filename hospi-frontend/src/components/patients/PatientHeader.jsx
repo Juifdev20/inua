@@ -8,6 +8,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { useTranslation } from 'react-i18next';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline ── */
@@ -49,11 +50,10 @@ const Header = () => {
   const activeLang = LANGUAGES.find((l) => l.code === currentLang) || LANGUAGES[0];
   const ActiveFlag = activeLang.Flag;
 
-  // PWA standalone mode detection
+  // PWA Desktop mode detection - uniquement pour Desktop, PAS mobile
   const [isPWA, setIsPWA] = useState(false);
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    setIsPWA(isDesktopPWA());
   }, []);
 
   const handleLanguageChange = (langCode) => {

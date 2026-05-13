@@ -9,6 +9,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { useTranslation } from 'react-i18next';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css'; // ✅ Import des styles PWA titlebar
 
 /* ── Drapeaux SVG inline ── */
@@ -50,13 +51,12 @@ const ReceptionHeader = () => {
   const searchRef = useRef(null);
   const langRef = useRef(null);
 
-  // --- DÉTECTION MODE PWA DESKTOP ---
+  // --- DÉTECTION MODE PWA DESKTOP (PAS MOBILE) ---
   const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
-    // Détecte si l'app est en mode standalone (PWA installée)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    // Détecte si l'app est en mode Desktop PWA uniquement
+    setIsPWA(isDesktopPWA());
   }, []);
 
   // --- LANGUE ---

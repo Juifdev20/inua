@@ -12,6 +12,7 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline (légers, pas de dépendance externe) ── */
@@ -54,11 +55,10 @@ const PharmacyHeader = () => {
   // 🔧 Pharmacy logo from settings
   const [pharmacyLogo, setPharmacyLogo] = useState(null);
 
-  // PWA standalone mode detection
+  // PWA Desktop mode detection - uniquement pour Desktop, PAS mobile
   const [isPWA, setIsPWA] = useState(false);
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    setIsPWA(isDesktopPWA());
   }, []);
 
   // Load pharmacy logo from localStorage

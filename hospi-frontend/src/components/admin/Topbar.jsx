@@ -5,6 +5,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext'; 
 import { useTranslation } from 'react-i18next';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline ── */
@@ -52,13 +53,12 @@ const Topbar = () => {
   const [showProfile, setShowProfile] = useState(false);
   const langRef = useRef(null);
 
-  // --- DÉTECTION MODE PWA DESKTOP ---
+  // --- DÉTECTION MODE PWA DESKTOP (PAS MOBILE) ---
   const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
-    // Détecte si l'app est en mode standalone (PWA installée)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    // Détecte si l'app est en mode Desktop PWA uniquement
+    setIsPWA(isDesktopPWA());
   }, []);
 
   // 🛡️ SÉCURITÉ LOCALE : Évite l'écran noir si getTimeAgo n'est pas encore prêt

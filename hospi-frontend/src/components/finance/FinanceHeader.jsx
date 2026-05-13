@@ -16,6 +16,7 @@ import { getPendingPaymentsForFinance } from '../../services/pharmacyApi/pharmac
 import financeApi from '../../services/financeApi/financeApi.js';
 import { pharmacieFinanceApi } from '../../services/pharmacieFinanceApi.js';
 import { format } from 'date-fns';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
 /* ── Drapeaux SVG inline (légers, pas de dépendance externe) ── */
@@ -55,11 +56,10 @@ const FinanceHeader = () => {
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   );
 
-  // PWA standalone mode detection
+  // PWA Desktop mode detection - uniquement pour Desktop, PAS mobile
   const [isPWA, setIsPWA] = useState(false);
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    setIsPWA(isDesktopPWA());
   }, []);
 
   // Recherche

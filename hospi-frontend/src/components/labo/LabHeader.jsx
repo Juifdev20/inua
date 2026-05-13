@@ -14,6 +14,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
 import { toast } from 'sonner';
+import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
 /* Drapeaux SVG (comme dans FinanceHeader) */
@@ -53,11 +54,10 @@ const LabHeader = () => {
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   );
 
-  // PWA standalone mode detection
+  // PWA Desktop mode detection - uniquement pour Desktop, PAS mobile
   const [isPWA, setIsPWA] = useState(false);
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    setIsPWA(isStandalone);
+    setIsPWA(isDesktopPWA());
   }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
