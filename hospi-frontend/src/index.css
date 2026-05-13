@@ -193,9 +193,6 @@
     font-family: var(--font-inter);
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-
-    /* FIX CRUCIAL PWA : Pousse l'ensemble du body sous la barre native */
-    padding-top: env(titlebar-area-height, 0px);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -291,21 +288,6 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
-  }
-
-  /* --- 5. UTILITAIRES PWA WINDOW CONTROLS OVERLAY --- */
-  .titlebar-drag-region {
-    -webkit-app-region: drag;
-    user-select: none;
-  }
-
-  .titlebar-no-drag {
-    -webkit-app-region: no-drag;
-  }
-
-  /* Correction automatique pour les hauteurs complètes avec la PWA */
-  .h-screen {
-    height: calc(100vh - env(titlebar-area-height, 0px)) !important;
   }
 }
 

@@ -127,49 +127,6 @@ const LivreCaisse = React.lazy(() => import("./pages/finance/LivreCaisse"));
 const DepensesEnAttente = React.lazy(() => import("./pages/finance/DepensesEnAttente"));
 const AchatMedicament = React.lazy(() => import("./pages/pharmacy/AchatMedicament"));
 
-// --- NOUVEAU COMPOSANT : BARRE DE TITRE PWA (STYLE YOUTUBE) ---
-const DesktopTitleBar = () => {
-  return (
-    <div
-      className="hidden lg:flex fixed top-0 left-0 w-full z-[99999] items-center bg-background border-b border-border/40 titlebar-drag-region"
-      style={{
-        height: 'env(titlebar-area-height, 40px)',
-        paddingLeft: 'env(titlebar-area-x, 16px)',
-        paddingRight: 'env(titlebar-area-width, 150px)',
-      }}
-    >
-      <div className="flex items-center gap-3 h-full">
-        {/* Navigation - Cliquable */}
-        <div className="flex items-center gap-1 titlebar-no-drag">
-          <button
-            onClick={() => window.history.back()}
-            className="p-1.5 rounded-full hover:bg-muted text-foreground/80 hover:text-foreground transition-colors flex items-center justify-center"
-            title="Retour"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="p-1.5 rounded-full hover:bg-muted text-foreground/80 hover:text-foreground transition-colors flex items-center justify-center"
-            title="Actualiser"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          </button>
-        </div>
-
-        {/* Logo et Nom - Cliquable */}
-        <div
-          className="flex items-center gap-2 titlebar-no-drag cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => window.location.href = '/'}
-        >
-          <img src="/icons/favicon-32x32.png" alt="Logo" className="w-5 h-5 object-contain rounded-sm" />
-          <span className="font-bold text-sm tracking-tight text-foreground font-space-grotesk">InuaAfya</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const FinanceLoading = () => (
   <div className="flex items-center justify-center min-h-screen p-8 bg-surface">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -229,9 +186,6 @@ function App() {
             <AppLauncher>
               <Toaster position="top-center" richColors className="z-[99999]" />
               <BrowserRouter>
-                {/* INTÉGRATION GLOBALE DE LA BARRE PWA */}
-                <DesktopTitleBar />
-
                 <AuthWrapper>
                 <Routes>
                 {/* 🌍 ROUTES PUBLIQUES */}
