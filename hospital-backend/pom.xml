@@ -174,10 +174,9 @@
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <propertiesEncoding>UTF-8</propertiesEncoding>
-                    <delimiters>
-                        <delimiter>@</delimiter>
-                    </delimiters>
-                    <useDefaultDelimiters>false</useDefaultDelimiters>
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>properties</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
                 </configuration>
             </plugin>
         </plugins>
