@@ -191,7 +191,8 @@ const AiChatWidget = ({ patientId }) => {
             right: isMobile ? "0" : "24px",
             left: isMobile ? "0" : "auto",
             width: isMobile ? "100%" : (isTablet ? "400px" : "340px"),
-            height: isMobile ? "100%" : (isTablet ? "520px" : "480px"),
+            height: isMobile ? "100dvh" : (isTablet ? "520px" : "480px"),
+            maxHeight: isMobile ? "100dvh" : (isTablet ? "520px" : "480px"),
             borderRadius: isMobile ? "0" : "16px",
             backgroundColor: theme === 'dark' ? "#1f2937" : "#ffffff",
             border: isMobile ? "none" : (theme === 'dark' ? "1px solid #374151" : "1px solid #e5e7eb"),
@@ -260,11 +261,14 @@ const AiChatWidget = ({ patientId }) => {
             style={{
               flex: 1,
               overflowY: "auto",
+              overflowX: "hidden",
               padding: isMobile ? "16px" : "12px",
+              paddingBottom: isMobile ? "8px" : "12px",
               display: "flex",
               flexDirection: "column",
               gap: isMobile ? "12px" : "8px",
               backgroundColor: theme === 'dark' ? "#111827" : "#f9fafb",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {messages.map((msg, i) => (
@@ -314,6 +318,9 @@ const AiChatWidget = ({ patientId }) => {
               display: "flex",
               gap: isMobile ? "12px" : "8px",
               backgroundColor: theme === 'dark' ? "#1f2937" : "#ffffff",
+              flexShrink: 0,
+              position: "relative",
+              zIndex: 10,
             }}
           >
             <input
