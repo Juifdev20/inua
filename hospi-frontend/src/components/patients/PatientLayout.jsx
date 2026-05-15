@@ -4,10 +4,13 @@ import { AdminProvider, useAdmin } from '../../context/AdminContext'; // On réu
 import PatientSidebar from './PatientSidebar';
 import PatientHeader from './PatientHeader';
 import { cn } from '../../lib/utils';
+import AiChatWidget from '../ai/AiChatWidget';
+import { useAuth } from '../../context/AuthContext';
 
 const PatientLayoutContent = () => {
   // On récupère mobileSidebarOpen pour gérer l'overlay comme dans l'admin
   const { mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
+  const { user } = useAuth();
 
   return (
     /* On remplace bg-slate-50 par bg-surface. 
@@ -40,6 +43,11 @@ const PatientLayoutContent = () => {
           </div>
         </main>
       </div>
+
+      {/* Widget IA Inua Afya - Uniquement pour les patients */}
+      {user?.role === 'PATIENT' && user?.patientId && (
+        <AiChatWidget patientId={user.patientId} />
+      )}
     </div>
   );
 };

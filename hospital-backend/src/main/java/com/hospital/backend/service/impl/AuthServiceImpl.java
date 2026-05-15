@@ -279,6 +279,9 @@ public class AuthServiceImpl implements AuthService {
 
         if (dto.getRole().contains("PATIENT")) {
             patientRepository.findByUser(user).ifPresent(patient -> {
+                // Ajouter le patientId pour le système IA
+                dto.setPatientId(patient.getId());
+                
                 if (dto.getBloodType() == null || dto.getBloodType().isEmpty()) {
                     dto.setBloodType(patient.getBloodType());
                 }

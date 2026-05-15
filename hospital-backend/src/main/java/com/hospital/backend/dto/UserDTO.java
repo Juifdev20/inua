@@ -54,6 +54,9 @@ public class UserDTO {
     // ✅ CHANGEMENT DE MOT DE PASSE OBLIGATOIRE
     private Boolean mustChangePassword;
 
+    // ✅ PATIENT ID POUR LE SYSTÈME IA
+    private Long patientId;
+
     // ✅ CREDENTIALS GÉNÉRÉS (pour affichage après création)
     private String generatedPassword; // Temporaire, non persisté
 

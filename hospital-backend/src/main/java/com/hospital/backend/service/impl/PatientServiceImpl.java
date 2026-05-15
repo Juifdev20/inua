@@ -243,6 +243,14 @@ public class PatientServiceImpl implements PatientService {
         return mapToDTO(findPatientByIdentifier(identifier));
     }
 
+    @Override @Transactional(readOnly = true)
+    public Patient getPatientByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec le username: " + username));
+        return patientRepository.findByUser(user)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient non trouvé pour l'utilisateur: " + username));
+    }
+
     @Override @Transactional
     public void delete(Long id) {
         patientRepository.deleteById(id);

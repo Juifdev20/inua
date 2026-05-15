@@ -4,6 +4,7 @@ import com.hospital.backend.dto.PatientDTO;
 import com.hospital.backend.dto.PatientSimpleDTO;
 import com.hospital.backend.dto.PageResponse;
 import com.hospital.backend.dto.ChangePasswordRequest;
+import com.hospital.backend.entity.Patient;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -62,6 +63,12 @@ public interface PatientService {
      * Récupère le profil du patient connecté via son email.
      */
     PatientDTO getByEmail(String email);
+
+    /**
+     * Récupère le patient via son nom d'utilisateur (username).
+     * Utilisé pour le système IA médical.
+     */
+    Patient getPatientByUsername(String username);
 
     /**
      * Liste tous les patients ACTIFS avec pagination.

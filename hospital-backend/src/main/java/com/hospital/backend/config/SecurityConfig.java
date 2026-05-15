@@ -131,6 +131,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/lab-tests/doctor-results", "/api/lab-tests/doctor-alerts/**", "/api/lab-tests/doctor/consultations")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTEUR")
 
+                        // AI Chat
+                        .requestMatchers("/api/ai/**").hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 // ★ Configuration OAuth2 pour Social Login (Google, Facebook)

@@ -49,9 +49,10 @@ export const saveAuthData = (token, user, rememberMe = true, refreshToken = null
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         photoUrl: user.photoUrl || '',
+        patientId: user.patientId || null,
         // Ne pas stocker de données sensibles
       };
-      
+
       safeLocalStorageSet(STORAGE_KEYS.USER, JSON.stringify(userData));
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
     }

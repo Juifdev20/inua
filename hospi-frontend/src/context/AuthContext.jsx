@@ -86,6 +86,8 @@ export const AuthProvider = ({ children }) => {
         address: userFromApi.address || "",
         specialite: userFromApi.specialite || "",
         department: userFromApi.department || userFromApi.service || "",
+        // ✅ CHAMP PATIENT ID POUR LE SYSTÈME IA
+        patientId: userFromApi.patientId || userFromApi.patient?.id || null,
         // ✅ NOUVEAUX CHAMPS POUR LES PRÉFÉRENCES
         notificationEnabled: userFromApi.notificationEnabled !== undefined ? userFromApi.notificationEnabled : true,
         soundEnabled: userFromApi.soundEnabled !== undefined ? userFromApi.soundEnabled : true,
