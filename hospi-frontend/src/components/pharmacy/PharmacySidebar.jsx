@@ -102,7 +102,7 @@ const PharmacySidebar = () => {
         <img src={finalUrl} alt="Logo" className={cn('object-cover w-full h-full', className)} onError={() => setImgError(true)} />
       );
     }
-    return <Pill className={cn('text-white w-6 h-6', className)} strokeWidth={2.5} />;
+    return <LogoInuaAfya size={40} className={className} />;
   };
 
   const BottomNav = ({ isMobile = false }) => (

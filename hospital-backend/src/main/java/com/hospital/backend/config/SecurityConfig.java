@@ -134,6 +134,10 @@ public class SecurityConfig {
                         // AI Chat
                         .requestMatchers("/api/ai/**").hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN")
 
+                        // Account Creation
+                        .requestMatchers("/api/account-creation/staff").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/account-creation/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 // ★ Configuration OAuth2 pour Social Login (Google, Facebook)

@@ -10,7 +10,7 @@ const accountCreationApi = {
    * Retourne les identifiants générés
    */
   createStaffAccount: async (userData) => {
-    const response = await api.post('/account-creation/staff', userData);
+    const response = await api.post('/api/account-creation/staff', userData);
     return response.data;
   },
 
@@ -19,7 +19,7 @@ const accountCreationApi = {
    * @param patientId ID du patient existant
    */
   createPatientAccount: async (patientId) => {
-    const response = await api.post(`/account-creation/patient/${patientId}`);
+    const response = await api.post(`/api/account-creation/patient/${patientId}`);
     return response.data;
   },
 
@@ -27,7 +27,7 @@ const accountCreationApi = {
    * Vérifier si un username existe déjà
    */
   checkUsernameAvailability: async (username) => {
-    const response = await api.get('/account-creation/check-username', {
+    const response = await api.get('/api/account-creation/check-username', {
       params: { username }
     });
     return response.data;
@@ -37,7 +37,7 @@ const accountCreationApi = {
    * Prévisualiser le username qui sera généré
    */
   previewUsername: async (firstName, lastName) => {
-    const response = await api.get('/account-creation/preview-username', {
+    const response = await api.get('/api/account-creation/preview-username', {
       params: { firstName, lastName }
     });
     return response.data;
@@ -47,7 +47,7 @@ const accountCreationApi = {
    * Vérifier si l'utilisateur doit changer son mot de passe
    */
   getMustChangeStatus: async () => {
-    const response = await api.get('/password/must-change-status');
+    const response = await api.get('/api/password/must-change-status');
     return response.data;
   },
 
@@ -55,7 +55,7 @@ const accountCreationApi = {
    * Changer le mot de passe (obligatoire au premier login)
    */
   forcePasswordChange: async (newPassword, confirmPassword) => {
-    const response = await api.post('/password/force-change', {
+    const response = await api.post('/api/password/force-change', {
       newPassword,
       confirmPassword
     });
@@ -66,7 +66,7 @@ const accountCreationApi = {
    * Changer le mot de passe (volontaire)
    */
   changePassword: async (oldPassword, newPassword, confirmPassword) => {
-    const response = await api.post('/password/change', {
+    const response = await api.post('/api/password/change', {
       oldPassword,
       newPassword,
       confirmPassword
@@ -79,7 +79,7 @@ const accountCreationApi = {
    * Envoie un email avec les identifiants de connexion
    */
   sendCredentialsEmail: async (emailData) => {
-    const response = await api.post('/email/send-credentials', emailData);
+    const response = await api.post('/api/email/send-credentials', emailData);
     return response.data;
   },
 
@@ -87,7 +87,7 @@ const accountCreationApi = {
    * ★ TESTER LA CONNEXION EMAIL
    */
   testEmailConnection: async (to) => {
-    const response = await api.post('/email/test', { to });
+    const response = await api.post('/api/email/test', { to });
     return response.data;
   }
 };
