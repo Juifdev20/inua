@@ -461,14 +461,14 @@ const LabHeader = () => {
             >
               <Bell className="w-5 h-5" strokeWidth={1.5} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
-                  {unreadCount}
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
+              <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] sm:w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
                   <h3 className="font-bold text-foreground">Alertes Laboratoire</h3>
                   {unreadCount > 0 && (
@@ -480,7 +480,7 @@ const LabHeader = () => {
                     </button>
                   )}
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-80 max-h-[60vh] overflow-y-auto">
                   {notifications.length > 0 ? (
                     notifications.slice(0, 8).map((notif) => (
                       <div
@@ -490,8 +490,8 @@ const LabHeader = () => {
                           !notif.read ? 'bg-emerald-500/5' : ''
                         }`}
                       >
-                        <div className="mt-1">{getIcon(notif.type)}</div>
-                        <div className="flex-1 text-left">
+                        <div className="mt-1 shrink-0">{getIcon(notif.type)}</div>
+                        <div className="flex-1 text-left min-w-0">
                           <p className={`text-sm ${!notif.read ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
                             {notif.title || notif.message}
                           </p>

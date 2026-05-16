@@ -57,17 +57,9 @@ const SuccessAccountModal = ({ isOpen, onClose, credentials, userType = 'staff' 
             margin-bottom: 30px;
           }
           .logo {
-            width: 60px;
-            height: 60px;
-            background: #059669;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 80px;
+            height: 80px;
             margin: 0 auto 15px;
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
           }
           .title {
             font-size: 22px;
@@ -136,9 +128,8 @@ const SuccessAccountModal = ({ isOpen, onClose, credentials, userType = 'staff' 
       <body>
         <div class="card">
           <div class="header">
-            <div class="logo">IA</div>
+            <img src="/inuaafya-logo-dark.svg" class="logo" alt="Inua Afya Logo" />
             <div class="title">Inua Afya</div>
-            <div class="subtitle">Hôpital Moderne</div>
           </div>
           
           <div style="text-align: center; margin-bottom: 20px;">

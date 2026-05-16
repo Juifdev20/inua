@@ -529,15 +529,14 @@ const FinanceHeader = () => {
               className="relative p-2.5 bg-muted/50 rounded-xl text-muted-foreground hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
             >
               <Bell className="w-5 h-5" strokeWidth={1.5} />
-              {(unreadCount > 0 || pendingCounts.total > 0) && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
-                  {unreadCount > 0 ? unreadCount : pendingCounts.total}
+              {(unreadCount > 0 || pendingCounts.total > 0) && (<span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
+                  {(unreadCount > 0 ? unreadCount : pendingCounts.total) > 99 ? '99+' : (unreadCount > 0 ? unreadCount : pendingCounts.total)}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
+              <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] sm:w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
                   <h3 className="font-bold text-foreground">En attente de traitement</h3>
                   {pendingCounts.total > 0 && (
@@ -546,21 +545,21 @@ const FinanceHeader = () => {
                     </span>
                   )}
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-80 max-h-[60vh] overflow-y-auto">
                   {/* Admissions */}
                   {pendingCounts.admissions > 0 && (
-                    <div 
+                    <div
                       onClick={() => navigate('/finance/caisse-admissions')}
                       className="p-4 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer flex gap-3 bg-emerald-500/5"
                     >
-                      <div className="mt-1"><UserCheck className="w-4 h-4 text-blue-500" /></div>
-                      <div className="flex-1 text-left">
+                      <div className="mt-1 shrink-0"><UserCheck className="w-4 h-4 text-blue-500" /></div>
+                      <div className="flex-1 text-left min-w-0">
                         <p className="text-sm font-bold text-foreground">Caisse Admissions</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {pendingCounts.admissions} patient{pendingCounts.admissions > 1 ? 's' : ''} en attente de paiement
                         </p>
                       </div>
-                      <span className="px-2 py-1 bg-blue-500 text-white text-[10px] rounded-full font-bold">
+                      <span className="px-2 py-1 bg-blue-500 text-white text-[10px] rounded-full font-bold shrink-0">
                         {pendingCounts.admissions}
                       </span>
                     </div>
@@ -568,18 +567,18 @@ const FinanceHeader = () => {
                   
                   {/* Laboratoire */}
                   {pendingCounts.laboratory > 0 && (
-                    <div 
+                    <div
                       onClick={() => navigate('/finance/caisse-laboratoire')}
                       className="p-4 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer flex gap-3 bg-emerald-500/5"
                     >
-                      <div className="mt-1"><Microscope className="w-4 h-4 text-accent" /></div>
-                      <div className="flex-1 text-left">
+                      <div className="mt-1 shrink-0"><Microscope className="w-4 h-4 text-accent" /></div>
+                      <div className="flex-1 text-left min-w-0">
                         <p className="text-sm font-bold text-foreground">Caisse Laboratoire</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {pendingCounts.laboratory} examen{pendingCounts.laboratory > 1 ? 's' : ''} en attente
                         </p>
                       </div>
-                      <span className="px-2 py-1 bg-accent text-white text-[10px] rounded-full font-bold">
+                      <span className="px-2 py-1 bg-accent text-white text-[10px] rounded-full font-bold shrink-0">
                         {pendingCounts.laboratory}
                       </span>
                     </div>
@@ -587,18 +586,18 @@ const FinanceHeader = () => {
                   
                   {/* File Pharmacie (nouveau système) */}
                   {pendingCounts.pharmacyQueue > 0 && (
-                    <div 
+                    <div
                       onClick={() => navigate('/finance/caisse-pharmacy-queue')}
                       className="p-4 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer flex gap-3 bg-emerald-500/5"
                     >
-                      <div className="mt-1"><Pill className="w-4 h-4 text-emerald-600" /></div>
-                      <div className="flex-1 text-left">
+                      <div className="mt-1 shrink-0"><Pill className="w-4 h-4 text-emerald-600" /></div>
+                      <div className="flex-1 text-left min-w-0">
                         <p className="text-sm font-bold text-foreground">File Pharmacie</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {pendingCounts.pharmacyQueue} commande{pendingCounts.pharmacyQueue > 1 ? 's' : ''} en attente de paiement
                         </p>
                       </div>
-                      <span className="px-2 py-1 bg-emerald-500 text-white text-[10px] rounded-full font-bold">
+                      <span className="px-2 py-1 bg-emerald-500 text-white text-[10px] rounded-full font-bold shrink-0">
                         {pendingCounts.pharmacyQueue}
                       </span>
                     </div>
@@ -606,18 +605,18 @@ const FinanceHeader = () => {
                   
                   {/* Dépenses */}
                   {pendingCounts.expenses > 0 && (
-                    <div 
+                    <div
                       onClick={() => navigate('/finance/depenses-en-attente')}
                       className="p-4 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer flex gap-3 bg-emerald-500/5"
                     >
-                      <div className="mt-1"><ClockAlert className="w-4 h-4 text-yellow-600" /></div>
-                      <div className="flex-1 text-left">
+                      <div className="mt-1 shrink-0"><ClockAlert className="w-4 h-4 text-yellow-600" /></div>
+                      <div className="flex-1 text-left min-w-0">
                         <p className="text-sm font-bold text-foreground">Dépenses à Valider</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {pendingCounts.expenses} transaction{pendingCounts.expenses > 1 ? 's' : ''} en attente de validation
                         </p>
                       </div>
-                      <span className="px-2 py-1 bg-yellow-500 text-white text-[10px] rounded-full font-bold">
+                      <span className="px-2 py-1 bg-yellow-500 text-white text-[10px] rounded-full font-bold shrink-0">
                         {pendingCounts.expenses}
                       </span>
                     </div>
@@ -633,8 +632,8 @@ const FinanceHeader = () => {
                           !notif.read ? 'bg-emerald-500/5' : ''
                         }`}
                       >
-                        <div className="mt-1">{getIcon(notif.type)}</div>
-                        <div className="flex-1 text-left">
+                        <div className="mt-1 shrink-0">{getIcon(notif.type)}</div>
+                        <div className="flex-1 text-left min-w-0">
                           <p className={`text-sm ${!notif.read ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
                             {notif.title || notif.message}
                           </p>
