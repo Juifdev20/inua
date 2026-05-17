@@ -244,14 +244,16 @@ const Topbar = () => {
             >
               <Bell className="w-5 h-5" strokeWidth={1.5} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
-                  {unreadCount}
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
+              <>
+                <div className="fixed inset-0 bg-black/50 z-40 sm:hidden" onClick={() => setShowNotifications(false)} />
+                <div className="fixed sm:absolute right-0 sm:right-0 left-0 sm:left-auto top-1/2 sm:top-auto -translate-y-1/2 sm:translate-y-0 sm:mt-3 w-full sm:w-80 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)] bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in fade-in sm:slide-in-from-top-2 z-50">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
                   <h3 className="font-bold text-foreground">Notifications</h3>
                   {unreadCount > 0 && (
@@ -260,7 +262,7 @@ const Topbar = () => {
                     </span>
                   )}
                 </div>
-                <div className="max-h-80 overflow-y-auto p-2">
+                <div className="max-h-80 max-h-[60vh] overflow-y-auto p-2">
                   {notifications.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground text-sm">
                       <Bell className="w-12 h-12 mx-auto mb-3 text-emerald-500/50" />
@@ -275,7 +277,7 @@ const Topbar = () => {
                           notif.unread ? 'bg-emerald-500/5' : ''
                         }`}
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className={`text-sm ${notif.unread ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
                             {notif.message || notif.content}
                           </p>
@@ -302,6 +304,7 @@ const Topbar = () => {
                   </span>
                 </div>
               </div>
+            </>
             )}
           </div>
 

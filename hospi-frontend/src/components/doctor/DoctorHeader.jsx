@@ -318,7 +318,9 @@ const DoctorHeader = () => {
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] sm:w-80 bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in slide-in-from-top-2 z-50">
+              <>
+                <div className="fixed inset-0 bg-black/50 z-40 sm:hidden" onClick={() => setShowNotifications(false)} />
+                <div className="fixed sm:absolute right-0 sm:right-0 left-0 sm:left-auto top-1/2 sm:top-auto -translate-y-1/2 sm:translate-y-0 sm:mt-3 w-full sm:w-80 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)] bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in fade-in sm:slide-in-from-top-2 z-50">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
                   <h3 className="font-bold text-foreground">Alerte Docteur</h3>
                   {unreadCount > 0 && (
@@ -348,6 +350,7 @@ const DoctorHeader = () => {
                   )}
                 </div>
               </div>
+            </>
             )}
           </div>
 
