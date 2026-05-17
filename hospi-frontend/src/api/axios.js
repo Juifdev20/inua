@@ -33,7 +33,21 @@ const showErrorToast = (error, status) => {
   let message = 'Une erreur est survenue';
   let title = 'Erreur';
 
-  if (error.response?.data) {
+  // Gérer les erreurs de réseau (pas de connexion internet)
+  if (!error.response && error.message) {
+    const errorMessage = error.message.toLowerCase();
+    if (errorMessage.includes('network error') || 
+        errorMessage.includes('network') || 
+        errorMessage.includes('connex') ||
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('timeout')) {
+      title = 'Problème de connexion';
+      message = 'Veuillez vérifier votre connexion internet et réessayer.';
+      status = 0; // Code d'erreur réseau
+    } else {
+      message = error.message;
+    }
+  } else if (error.response?.data) {
     const data = error.response.data;
     if (data.message) message = data.message;
     else if (data.error) message = data.error;
@@ -88,6 +102,12 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
+
+    // Gérer les erreurs de réseau (pas de connexion internet)
+    if (!error.response) {
+      showErrorToast(error, 0);
+      return Promise.reject(error);
+    }
 
     // Gérer les erreurs 401 (token expiré)
     if (status === 401) {
