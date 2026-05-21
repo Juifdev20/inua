@@ -265,6 +265,8 @@ const Consultations = () => {
   };
 
   // ✅ CORRIGÉ: Message adapté au nouveau workflow (Caisse, pas Réception/Labo direct)
+  const [isTerminerLoading, setIsTerminerLoading] = useState(false);
+  
   const terminerConsultation = async () => {
     if (!selectedConsultation) return;
     
@@ -273,6 +275,7 @@ const Consultations = () => {
       return;
     }
     
+    setIsTerminerLoading(true);
     try {
       const endpoint = `${API}/consultations/${selectedConsultation.id}/terminer`;
       
@@ -314,6 +317,8 @@ const Consultations = () => {
                           error.response?.data?.error || 
                           'Erreur lors de la terminaison de la consultation';
       toast.error(errorMessage);
+    } finally {
+      setIsTerminerLoading(false);
     }
   };
 
@@ -1110,10 +1115,19 @@ const Consultations = () => {
                 <Button 
                   className="flex-1 bg-gradient-to-r from-[#37f49e] to-[#2bd98b] text-white shadow-md h-12 sm:h-10 rounded-xl text-base sm:text-sm font-medium"
                   onClick={terminerConsultation}
-                  disabled={!isConsultationEditable(selectedConsultation) || activeConsultationData.examList.length === 0}
+                  disabled={!isConsultationEditable(selectedConsultation) || activeConsultationData.examList.length === 0 || isTerminerLoading}
                 >
-                  <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
-                  Terminer → Caisse
+                  {isTerminerLoading ? (
+                    <>
+                      <RefreshCcw className="w-5 h-5 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
+                      Terminer → Caisse
+                    </>
+                  )}
                 </Button>
                 <Button 
                   variant="outline"

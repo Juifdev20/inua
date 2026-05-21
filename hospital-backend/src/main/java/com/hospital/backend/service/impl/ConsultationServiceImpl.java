@@ -1420,50 +1420,40 @@ public class ConsultationServiceImpl implements ConsultationService {
             }
 
             if (examenIds != null && !examenIds.isEmpty()) {
-                foundServices = new HashSet<>(serviceRepository.findAllById(examenIds));
-
-                montantTotal = foundServices.stream()
-                        .map(service -> service.getPrix() != null ? BigDecimal.valueOf(service.getPrix()) : BigDecimal.ZERO)
+                // Fetch examens directly instead of services
+                List<Examen> examens = examenRepository.findAllById(examenIds);
+                
+                // Calculate total amount from examens
+                montantTotal = examens.stream()
+                        .map(examen -> examen.getPrix() != null ? examen.getPrix() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                if (consultation.getServices() == null) {
-                    consultation.setServices(new HashSet<>());
-                }
-                consultation.getServices().clear();
-                consultation.getServices().addAll(foundServices);
-
-                List<PrescribedExam> prescribedExams = foundServices.stream()
-                        .map(service -> {
-                            BigDecimal unitPrice = BigDecimal.valueOf(service.getPrix());
-                            // Récupérer l'examen lié pour les valeurs de référence
-                            Examen examenLie = examenRepository.findByServiceId(service.getId()).orElse(null);
-                            String refMin = null;
-                            String refMax = null;
-                            String refRangeText = null;
-                            String unit = null;
-                            if (examenLie != null) {
-                                refMin = examenLie.getValeurMinReference() != null ? examenLie.getValeurMinReference().toString() : null;
-                                refMax = examenLie.getValeurMaxReference() != null ? examenLie.getValeurMaxReference().toString() : null;
-                                unit = examenLie.getUnite();
-                                if (refMin != null && refMax != null) {
-                                    refRangeText = examenLie.getValeursReferenceFormatees();
-                                }
-                            }
+                // Create prescribed exams from examens
+                List<PrescribedExam> prescribedExams = examens.stream()
+                        .map(examen -> {
+                            BigDecimal unitPrice = examen.getPrix() != null ? examen.getPrix() : BigDecimal.ZERO;
+                            // Use the associated service if available
+                            MedicalService service = examen.getService();
+                            
+                            String serviceName = service != null ? service.getNom() : examen.getNom();
+                            Currency currency = service != null ? service.getCurrency() : Currency.USD;
+                            
                             return PrescribedExam.builder()
                                     .consultation(consultation)
                                     .service(service)
-                                    .serviceName(service.getNom())
+                                    .serviceName(serviceName)
                                     .unitPrice(unitPrice)
                                     .quantity(1)
                                     .totalPrice(unitPrice)
                                     .doctorNote("")
                                     .active(true)
                                     .status(PrescribedExamStatus.PRESCRIBED)
-                                    .examen(examenLie)
-                                    .referenceMin(refMin)
-                                    .referenceMax(refMax)
-                                    .referenceRangeText(refRangeText)
-                                    .unit(unit)
+                                    .examen(examen)
+                                    .referenceMin(examen.getValeurMinReference() != null ? examen.getValeurMinReference().toString() : null)
+                                    .referenceMax(examen.getValeurMaxReference() != null ? examen.getValeurMaxReference().toString() : null)
+                                    .referenceRangeText(examen.getValeursReferenceFormatees())
+                                    .unit(examen.getUnite())
+                                    .currency(currency)
                                     .build();
                         })
                         .collect(Collectors.toList());
