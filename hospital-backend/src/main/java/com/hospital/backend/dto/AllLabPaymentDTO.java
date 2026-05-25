@@ -29,6 +29,13 @@ public class AllLabPaymentDTO {
     private BigDecimal examAmountPaid;      // Montant deja paye
     private BigDecimal remainingAmount;     // Reste a payer
 
+    // ── ABONNÉ : pour calculer le ticket modeste ───────────────────────────────
+    private Boolean isAbonne;               // Patient abonné
+    private Long companyId;                 // ID entreprise
+    private String companyName;            // Nom entreprise
+    private String matricule;              // Matricule employé
+    private BigDecimal coverageRate;        // Taux de couverture (%)
+
     // Examen
     @Data
     @NoArgsConstructor

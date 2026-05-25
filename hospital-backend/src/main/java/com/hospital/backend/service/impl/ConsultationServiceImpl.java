@@ -16,9 +16,11 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 import com.hospital.backend.security.CustomUserDetails;
+import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.PatientDocumentService;
@@ -71,6 +73,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final PatientDocumentService patientDocumentService;
     private final ExamenRepository examenRepository;
     private final com.hospital.backend.repository.CompanyRepository companyRepository;
+    private final CompanyConsumptionService consumptionService;
 
     private final Object ficheNumberLock = new Object();
     private final Object numeroFicheLock = new Object();
@@ -566,6 +569,22 @@ public class ConsultationServiceImpl implements ConsultationService {
             dto.setPatientPhoto("/uploads/default-patient.png");
         }
 
+        // --- Champs financiers depuis l'Admission ---
+        if (c.getAdmission() != null) {
+            Admission adm = c.getAdmission();
+            dto.setAdmissionId(adm.getId());
+            dto.setIsAbonne(adm.getIsAbonne());
+            dto.setCompanyId(adm.getCompany() != null ? adm.getCompany().getId() : null);
+            dto.setCompanyName(adm.getCompany() != null ? adm.getCompany().getName() : null);
+            dto.setMatricule(adm.getMatricule());
+            dto.setTotalAmount(adm.getTotalAmount());
+            dto.setAmountPaid(adm.getAmountPaid());
+            dto.setCompanyCoverage(adm.getCompanyCoverage());
+            dto.setPatientSurplus(adm.getPatientSurplus());
+            dto.setCoverageRate(adm.getCoverageRate());
+            dto.setAdmissionStatus(adm.getStatus() != null ? adm.getStatus().name() : null);
+        }
+
         if (c.getDoctor() != null) {
             try {
                 dto.setDoctorId(c.getDoctor().getId());
@@ -706,6 +725,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         BigDecimal coverageRate = null;
         BigDecimal companyCoverage = BigDecimal.ZERO;
         BigDecimal patientSurplus = BigDecimal.ZERO;
+        BigDecimal totalForConsumption = BigDecimal.ZERO;
 
         if (isAbonne) {
             if (dto.getCompanyId() == null) {
@@ -737,11 +757,14 @@ public class ConsultationServiceImpl implements ConsultationService {
 
         // Pour les abonnés, calculer le surplus/ticket modeste
         if (isAbonne) {
-            BigDecimal total = fichePrice.add(service != null ? BigDecimal.valueOf(service.getPrix()) : BigDecimal.ZERO);
+            BigDecimal ficheForAbonne = hasActiveFile ? BigDecimal.ZERO : fichePrice;
+            double servicePrix = (service != null && service.getPrix() != null) ? service.getPrix() : 0.0;
+            BigDecimal total = ficheForAbonne.add(BigDecimal.valueOf(servicePrix));
+            totalForConsumption = total;
             if (total.compareTo(BigDecimal.ZERO) > 0 && coverageRate.compareTo(new BigDecimal("100")) < 0) {
                 // Ticket modeste : le patient paie le reste
                 companyCoverage = total.multiply(coverageRate)
-                        .divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
+                        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
                 patientSurplus = total.subtract(companyCoverage);
                 totalAmount = patientSurplus.doubleValue();
                 log.info("💳 Ticket modeste - companyCoverage={}, patientSurplus={}", companyCoverage, patientSurplus);
@@ -808,7 +831,18 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return mapToDTO(consultationRepository.save(c));
+        Consultation saved = consultationRepository.save(c);
+
+        // Enregistrer la consommation après le flux CONSULTATION pour les abonnés
+        if (isAbonne && company != null) {
+            consumptionService.record(
+                    company, patient, savedAdmission,
+                    com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.CONSULTATION,
+                    service != null ? service.getNom() : dto.getReasonForVisit(),
+                    totalForConsumption, coverageRate);
+        }
+
+        return mapToDTO(saved);
     }
 
     @Override
@@ -1190,6 +1224,24 @@ public class ConsultationServiceImpl implements ConsultationService {
 
             consultation.setStatus(ConsultationStatus.EXAMENS_PAYES);
             consultation.setStatut("EXAMENS_PAYES");
+
+            // Enregistrer la consommation LABO pour les patients abonnés
+            Admission adm = consultation.getAdmission();
+            if (adm != null && Boolean.TRUE.equals(adm.getIsAbonne()) && adm.getCompany() != null) {
+                try {
+                    String labDesc = "Examens labo (" + exams.size() + " exam" + (exams.size() > 1 ? "s" : "") + ")";
+                    consumptionService.record(
+                            adm.getCompany(),
+                            adm.getPatient(),
+                            adm,
+                            com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.LABO,
+                            labDesc,
+                            totalAmount,
+                            adm.getCoverageRate());
+                } catch (Exception e) {
+                    log.error("❌ Erreur enregistrement consommation LABO: {}", e.getMessage());
+                }
+            }
         } else {
             consultation.setStatus(ConsultationStatus.EXAMENS_PRESCRITS);
             consultation.setStatut("EXAMENS_PRESCRITS");
@@ -1340,11 +1392,40 @@ public class ConsultationServiceImpl implements ConsultationService {
         BigDecimal paidAmount = examAmountPaid != null ? BigDecimal.valueOf(examAmountPaid) : BigDecimal.ZERO;
         BigDecimal totalAmount = calculatePrescriptionTotal(consultationId);
 
+        // ── ABONNÉ : appliquer couverture (ticket modeste) ───────────────────────
+        Admission admission = consultation.getAdmission();
+        BigDecimal companyCoverage = BigDecimal.ZERO;
+        BigDecimal patientSurplus = totalAmount;
+        BigDecimal amountDue = totalAmount;
+
+        if (admission != null && Boolean.TRUE.equals(admission.getIsAbonne()) && admission.getCompany() != null) {
+            BigDecimal coverageRate = admission.getCoverageRate() != null
+                    ? admission.getCoverageRate() : new BigDecimal("100.00");
+
+            if (coverageRate.compareTo(new BigDecimal("100")) < 0) {
+                // Ticket modeste : le patient paie le reste
+                companyCoverage = totalAmount.multiply(coverageRate)
+                        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                patientSurplus = totalAmount.subtract(companyCoverage);
+                amountDue = patientSurplus;
+                log.info("💳 [CAISSE LABO] Abonné - total={}, coverage={}%, companyCoverage={}, patientSurplus={}",
+                        totalAmount, coverageRate, companyCoverage, patientSurplus);
+            } else {
+                // Couverture totale
+                companyCoverage = totalAmount;
+                patientSurplus = BigDecimal.ZERO;
+                amountDue = BigDecimal.ZERO;
+                log.info("💳 [CAISSE LABO] Abonné - couverture 100% - amountDue=0");
+            }
+        } else {
+            log.info("💳 [CAISSE LABO] Patient ordinaire - amountDue={}", amountDue);
+        }
+
         consultation.setExamTotalAmount(totalAmount);
         consultation.setExamAmountPaid(paidAmount);
 
-        if (paidAmount.compareTo(totalAmount) < 0) {
-            throw new RuntimeException("Paiement insuffisant pour envoyer les examens au laboratoire");
+        if (paidAmount.compareTo(amountDue) < 0) {
+            throw new RuntimeException("Paiement insuffisant. Requis: " + amountDue + ", Payé: " + paidAmount);
         }
 
         List<PrescribedExam> exams = prescribedExamRepository.findByConsultationIdAndActiveTrue(consultationId);
@@ -1359,6 +1440,25 @@ public class ConsultationServiceImpl implements ConsultationService {
         consultation.setUpdatedAt(LocalDateTime.now());
 
         Consultation savedConsultation = consultationRepository.save(consultation);
+
+        // ── Enregistrer la consommation LABO pour les abonnés ───────────────────────
+        if (admission != null && Boolean.TRUE.equals(admission.getIsAbonne()) && admission.getCompany() != null) {
+            try {
+                String labDesc = "Examens labo (" + exams.size() + " exam" + (exams.size() > 1 ? "s" : "") + ")";
+                consumptionService.record(
+                        admission.getCompany(),
+                        admission.getPatient(),
+                        admission,
+                        com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.LABO,
+                        labDesc,
+                        totalAmount,
+                        admission.getCoverageRate());
+                log.info("💳 [CAISSE LABO] Consommation LABO enregistrée - total={}, coverage={}",
+                        totalAmount, admission.getCoverageRate());
+            } catch (Exception e) {
+                log.error("❌ [CAISSE LABO] Erreur enregistrement consommation LABO: {}", e.getMessage());
+            }
+        }
 
         // 💰 Créer un revenu avec la source LABORATOIRE
         try {

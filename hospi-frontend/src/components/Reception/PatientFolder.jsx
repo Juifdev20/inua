@@ -445,6 +445,84 @@ const PatientFolder = () => {
                     <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-blue-500">Poids</p><p className="text-xl sm:text-2xl font-black">{fiche.poids || '--'}kg</p></div>
                     <div className="space-y-0.5 sm:space-y-1"><p className="text-[9px] sm:text-[10px] uppercase font-black text-emerald-500">Taille</p><p className="text-xl sm:text-2xl font-black">{fiche.taille || '--'}cm</p></div>
                   </div>
+
+                  {/* ✅ Section Détails Financiers */}
+                  <div className="px-4 sm:px-6 md:px-8 pb-4 sm:pb-6">
+                    <div className={cn(
+                      "rounded-2xl border p-4",
+                      fiche.isAbonne
+                        ? "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800"
+                        : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                    )}>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                          Détails Financiers
+                        </p>
+                        {fiche.isAbonne ? (
+                          <span className="px-3 py-1 bg-purple-600 text-white text-[10px] font-black rounded-full uppercase tracking-wide">
+                            Couvert — {fiche.companyName || 'Entreprise'}
+                            {fiche.coverageRate != null && ` (${fiche.coverageRate}%)`}
+                          </span>
+                        ) : (
+                          (() => {
+                            const total = Number(fiche.totalAmount ?? 0);
+                            const paid = Number(fiche.amountPaid ?? 0);
+                            const isPaid = total === 0 || paid >= total;
+                            return (
+                              <span className={cn(
+                                "px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wide",
+                                isPaid
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-amber-500 text-white"
+                              )}>
+                                {isPaid ? '✓ Payé' : 'En attente'}
+                              </span>
+                            );
+                          })()
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                        {fiche.isAbonne ? (
+                          <>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Matricule</p>
+                              <p className="font-black">{fiche.matricule || '—'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Pris en charge</p>
+                              <p className="font-black text-purple-700 dark:text-purple-300">
+                                ${Number(fiche.companyCoverage ?? 0).toFixed(2)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Ticket modeste</p>
+                              <p className="font-black text-amber-600">
+                                ${Number(fiche.patientSurplus ?? 0).toFixed(2)}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Total</p>
+                              <p className="font-black">${Number(fiche.totalAmount ?? 0).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Payé</p>
+                              <p className="font-black text-emerald-600">${Number(fiche.amountPaid ?? 0).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Solde</p>
+                              <p className={cn("font-black", Number(fiche.totalAmount ?? 0) - Number(fiche.amountPaid ?? 0) > 0 ? "text-red-500" : "text-emerald-600")}>
+                                ${Math.max(0, Number(fiche.totalAmount ?? 0) - Number(fiche.amountPaid ?? 0)).toFixed(2)}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   
                   {/* ✅ NOUVEAU: Section Diagnostic du Médecin */}
                   {(fiche.diagnostic || fiche.traitement || fiche.notesMedicales || (fiche.exams && fiche.exams.length > 0)) && (

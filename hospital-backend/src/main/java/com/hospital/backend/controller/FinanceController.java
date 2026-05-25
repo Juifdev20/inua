@@ -3,6 +3,7 @@ package com.hospital.backend.controller;
 import com.hospital.backend.dto.AllLabPaymentDTO;
 import com.hospital.backend.dto.ApiResponse;
 import com.hospital.backend.dto.PharmacyOrderDTO;
+import com.hospital.backend.entity.Admission;
 import com.hospital.backend.entity.Consultation;
 import com.hospital.backend.entity.ConsultationStatus;
 import com.hospital.backend.entity.PharmacyOrderStatus;
@@ -376,14 +377,29 @@ public class FinanceController {
             .filter(exam -> exam.getActive() != null && exam.getActive())
             .filter(exam -> exam.getStatus() != PrescribedExamStatus.CANCELLED)
             .collect(Collectors.toList());
-        
+
         BigDecimal examTotal = activeExams.stream()
             .map(PrescribedExam::getTotalPrice)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
         BigDecimal examPaid = c.getExamAmountPaid() != null ? c.getExamAmountPaid() : BigDecimal.ZERO;
         BigDecimal remaining = examTotal.subtract(examPaid);
-        
+
+        // ── ABONNÉ : infos depuis admission ───────────────────────────────────────
+        Admission admission = c.getAdmission();
+        Boolean isAbonne = admission != null ? admission.getIsAbonne() : false;
+        Long companyId = null;
+        String companyName = null;
+        String matricule = null;
+        BigDecimal coverageRate = null;
+
+        if (admission != null && Boolean.TRUE.equals(isAbonne) && admission.getCompany() != null) {
+            companyId = admission.getCompany().getId();
+            companyName = admission.getCompany().getName();
+            matricule = admission.getMatricule();
+            coverageRate = admission.getCoverageRate();
+        }
+
         List<AllLabPaymentDTO.PrescribedExamDTO> exams = activeExams.stream()
             .map(exam -> AllLabPaymentDTO.PrescribedExamDTO.builder()
                 .id(exam.getId())
@@ -406,7 +422,7 @@ public class FinanceController {
                 .currency(exam.getCurrency())
                 .build())
             .collect(Collectors.toList());
-        
+
         return AllLabPaymentDTO.builder()
             .id(c.getId())
             .consultationId(c.getId())
@@ -422,6 +438,12 @@ public class FinanceController {
             .remainingAmount(remaining)
             .prescribedExams(exams)
             .doctorName(c.getDoctor() != null ? c.getDoctor().getFirstName() + " " + c.getDoctor().getLastName() : null)
+            // ── ABONNÉ ─────────────────────────────────────────────────────────────
+            .isAbonne(isAbonne)
+            .companyId(companyId)
+            .companyName(companyName)
+            .matricule(matricule)
+            .coverageRate(coverageRate)
             .build();
     }
 
@@ -606,18 +628,31 @@ public class FinanceController {
                 ));
             }
 
-            // Appeler le service de paiement qui crée aussi le revenu
-            consultationService.updateExamPaymentAndSendToLab(consultationId, totalAmount.doubleValue());
+            // ── Montant payé : depuis le frontend (ticket modeste pour abonnés) ─────────
+            Double amountPaid = null;
+            if (paymentData != null && paymentData.containsKey("amountPaid")) {
+                Object amountObj = paymentData.get("amountPaid");
+                if (amountObj != null) {
+                    amountPaid = Double.valueOf(amountObj.toString());
+                }
+            }
+            // Fallback : utiliser totalAmount si non fourni (patient ordinaire)
+            if (amountPaid == null) {
+                amountPaid = totalAmount.doubleValue();
+            }
+
+            // Appeler le service de paiement qui applique la couverture abonné
+            consultationService.updateExamPaymentAndSendToLab(consultationId, amountPaid);
 
             // 🔔 Notifier le laboratoire du paiement confirmé
             try {
                 Consultation consultation = consultationRepository.findById(consultationId)
                     .orElseThrow(() -> new RuntimeException("Consultation non trouvée"));
-                
+
                 String patientName = consultation.getPatient().getFirstName() + " " + consultation.getPatient().getLastName();
                 String patientCode = consultation.getPatient().getPatientCode();
-                
-                labAlertService.notifyPaymentConfirmed(patientName, patientCode, totalAmount.toString());
+
+                labAlertService.notifyPaymentConfirmed(patientName, patientCode, amountPaid.toString());
                 log.info("🔔 [FINANCE CTRL] Notification envoyée au labo - Paiement confirmé pour {}", patientName);
             } catch (Exception notifyError) {
                 log.error("❌ [FINANCE CTRL] Erreur notification labo: {}", notifyError.getMessage());
@@ -625,13 +660,13 @@ public class FinanceController {
             }
 
             log.info("✅ [FINANCE CTRL] Paiement examens laboratoire réussi - Consultation ID: {}, Montant: {}",
-                    consultationId, totalAmount);
+                    consultationId, amountPaid);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Paiement des examens laboratoire effectué avec succès",
                 "consultationId", consultationId,
-                "amountPaid", totalAmount
+                "amountPaid", amountPaid
             ));
 
         } catch (Exception e) {

@@ -70,6 +70,15 @@ export const admissionService = {
         payload.status = admissionData.status;
       }
 
+      // ★ Abonné : inclure si patient est abonné
+      payload.isAbonne = admissionData.isAbonne === true;
+      if (admissionData.companyId) {
+        payload.companyId = parseInt(admissionData.companyId, 10);
+      }
+      if (admissionData.matricule) {
+        payload.matricule = admissionData.matricule;
+      }
+
       console.log('📡 createAdmission payload:', JSON.stringify(payload, null, 2));
 
       const response = await api.post('/v1/consultations', payload);
@@ -246,7 +255,19 @@ export const admissionService = {
         temperature: c.temperature || "--",
         tension: c.tensionArterielle || "--/--",
         motif: c.reasonForVisit || "--",
-        status: c.status
+        status: c.status,
+        // Financier
+        totalAmount: c.totalAmount ?? 0,
+        amountPaid: c.amountPaid ?? 0,
+        admissionStatus: c.admissionStatus,
+        // Abonnement
+        isAbonne: c.isAbonne === true,
+        companyName: c.companyName || null,
+        companyId: c.companyId || null,
+        matricule: c.matricule || null,
+        coverageRate: c.coverageRate ?? null,
+        companyCoverage: c.companyCoverage ?? 0,
+        patientSurplus: c.patientSurplus ?? 0,
       }));
     } catch (error) {
       console.error("Erreur historique:", error);

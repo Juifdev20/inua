@@ -5,15 +5,20 @@ import com.hospital.backend.dto.CompanyEmployeeResponse;
 import com.hospital.backend.dto.CompanyRequest;
 import com.hospital.backend.dto.CompanyResponse;
 import com.hospital.backend.dto.CompanyStatsDTO;
+import com.hospital.backend.dto.ConsumptionRecordDTO;
+import com.hospital.backend.dto.PatientConsumptionSummaryDTO;
 import com.hospital.backend.entity.Admission;
 import com.hospital.backend.entity.Company;
+import com.hospital.backend.entity.CompanyConsumptionRecord;
 import com.hospital.backend.entity.CompanyEmployee;
 import com.hospital.backend.entity.Patient;
+import com.hospital.backend.entity.HospitalConfig;
 import com.hospital.backend.entity.SubscriptionStatus;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.AdmissionRepository;
 import com.hospital.backend.repository.CompanyEmployeeRepository;
 import com.hospital.backend.repository.CompanyRepository;
+import com.hospital.backend.repository.HospitalConfigRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.service.CompanyService;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +44,9 @@ public class CompanyServiceImpl implements CompanyService {
     private final CompanyRepository companyRepository;
     private final CompanyEmployeeRepository employeeRepository;
     private final PatientRepository patientRepository;
+    private final com.hospital.backend.repository.CompanyConsumptionRecordRepository consumptionRecordRepository;
     private final AdmissionRepository admissionRepository;
+    private final HospitalConfigRepository hospitalConfigRepository;
 
     // ============================== COMPANY ==============================
 
@@ -260,84 +267,273 @@ public class CompanyServiceImpl implements CompanyService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Entreprise introuvable: " + companyId));
 
-        LocalDate startDate = LocalDate.parse(yearMonth + "-01");
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-        LocalDateTime start = startDate.atStartOfDay();
-        LocalDateTime end = endDate.atTime(23, 59, 59);
+        // ── Même source que l'écran : admission.companyCoverage pour la consultation ──
+        List<PatientConsumptionSummaryDTO> summaries = getPatientConsumptionSummaries(companyId, yearMonth);
 
-        List<Admission> admissions = admissionRepository.findByCompanyIdAndAdmissionDateBetween(companyId, start, end);
+        HospitalConfig cfg = hospitalConfigRepository.findFirstByOrderByIdAsc().orElse(null);
+
+        // ── Couleurs depuis la config ──────────────────────────────────────────
+        java.awt.Color primaryColor   = parseHexColor(cfg != null ? cfg.getPrimaryColor()   : null, new java.awt.Color(30, 64, 175));
+        java.awt.Color secondaryColor = parseHexColor(cfg != null ? cfg.getSecondaryColor() : null, new java.awt.Color(239, 246, 255));
+        java.awt.Color lightGray      = new java.awt.Color(245, 245, 245);
+        java.awt.Color borderGray     = new java.awt.Color(200, 200, 200);
+        java.awt.Color darkText       = new java.awt.Color(30, 30, 30);
+        java.awt.Color mutedText      = new java.awt.Color(100, 100, 100);
+
+        // ── Symbole de devise ─────────────────────────────────────────────────
+        String sym = (cfg != null && cfg.getCurrencySymbol() != null
+                && !cfg.getCurrencySymbol().isBlank()) ? cfg.getCurrencySymbol() : "$";
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            com.lowagie.text.Document doc = new com.lowagie.text.Document(com.lowagie.text.PageSize.A4);
-            com.lowagie.text.pdf.PdfWriter.getInstance(doc, baos);
+            com.lowagie.text.Document doc = new com.lowagie.text.Document(
+                    com.lowagie.text.PageSize.A4, 40, 40, 45, 45);
+            com.lowagie.text.pdf.PdfWriter writer =
+                    com.lowagie.text.pdf.PdfWriter.getInstance(doc, baos);
             doc.open();
 
-            // Titre
-            com.lowagie.text.Font titleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 18, com.lowagie.text.Font.BOLD);
-            com.lowagie.text.Font subtitleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 12, com.lowagie.text.Font.NORMAL);
-            com.lowagie.text.Font boldFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 10, com.lowagie.text.Font.BOLD);
-            com.lowagie.text.Font normalFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 9, com.lowagie.text.Font.NORMAL);
+            // ── Polices ────────────────────────────────────────────────────────
+            com.lowagie.text.Font fTitle    = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 15, com.lowagie.text.Font.BOLD,   darkText);
+            com.lowagie.text.Font fHospName = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 11, com.lowagie.text.Font.BOLD,   primaryColor);
+            com.lowagie.text.Font fHospInfo = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  8, com.lowagie.text.Font.NORMAL, mutedText);
+            com.lowagie.text.Font fInfo     = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 10, com.lowagie.text.Font.NORMAL, darkText);
+            com.lowagie.text.Font fNormal   = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  8, com.lowagie.text.Font.NORMAL, darkText);
+            com.lowagie.text.Font fHeader   = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  9, com.lowagie.text.Font.BOLD,   java.awt.Color.WHITE);
+            com.lowagie.text.Font fTotal    = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  9, com.lowagie.text.Font.BOLD,   darkText);
+            com.lowagie.text.Font fFooter   = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  8, com.lowagie.text.Font.ITALIC, mutedText);
+            com.lowagie.text.Font fSig      = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA,  8, com.lowagie.text.Font.NORMAL, mutedText);
 
-            doc.add(new com.lowagie.text.Paragraph("FEUILLE DE CONSOMMATION MENSUELLE", titleFont));
-            doc.add(new com.lowagie.text.Paragraph("Entreprise : " + company.getName(), subtitleFont));
-            doc.add(new com.lowagie.text.Paragraph("Période : " + yearMonth, subtitleFont));
-            doc.add(new com.lowagie.text.Paragraph("Contrat : " + (company.getContractNumber() != null ? company.getContractNumber() : "—"), subtitleFont));
+            // ══════════════════════════════════════════════════════════════════
+            // EN-TÊTE HÔPITAL (logo gauche | infos droite)
+            // ══════════════════════════════════════════════════════════════════
+            com.lowagie.text.pdf.PdfPTable headerTbl = new com.lowagie.text.pdf.PdfPTable(2);
+            headerTbl.setWidthPercentage(100);
+            headerTbl.setWidths(new float[]{1.3f, 4f});
+            headerTbl.setSpacingAfter(6f);
+
+            // Cellule logo
+            com.lowagie.text.pdf.PdfPCell logoCell = new com.lowagie.text.pdf.PdfPCell();
+            logoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            logoCell.setPadding(2f);
+            boolean logoAdded = false;
+            if (cfg != null && Boolean.TRUE.equals(cfg.getEnableLogoOnDocuments())
+                    && cfg.getHospitalLogoUrl() != null && !cfg.getHospitalLogoUrl().isBlank()) {
+                try {
+                    com.lowagie.text.Image logo = com.lowagie.text.Image.getInstance(cfg.getHospitalLogoUrl());
+                    logo.scaleToFit(80f, 80f);
+                    logoCell.addElement(logo);
+                    logoAdded = true;
+                } catch (Exception ex) {
+                    log.warn("Impossible de charger le logo hôpital: {}", ex.getMessage());
+                }
+            }
+            if (!logoAdded) logoCell.addElement(new com.lowagie.text.Phrase(""));
+            headerTbl.addCell(logoCell);
+
+            // Cellule infos hôpital
+            com.lowagie.text.pdf.PdfPCell hospCell = new com.lowagie.text.pdf.PdfPCell();
+            hospCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            hospCell.setPadding(2f);
+            hospCell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
+            String hospName = (cfg != null && cfg.getHospitalName() != null)
+                    ? cfg.getHospitalName() : "ÉTABLISSEMENT";
+            hospCell.addElement(new com.lowagie.text.Paragraph(hospName.toUpperCase(), fHospName));
+            if (cfg != null) {
+                if (cfg.getMinistryName()   != null && !cfg.getMinistryName().isBlank())
+                    hospCell.addElement(new com.lowagie.text.Paragraph(cfg.getMinistryName(), fHospInfo));
+                if (cfg.getDepartmentName() != null && !cfg.getDepartmentName().isBlank())
+                    hospCell.addElement(new com.lowagie.text.Paragraph(cfg.getDepartmentName(), fHospInfo));
+                if (cfg.getZoneName()       != null && !cfg.getZoneName().isBlank())
+                    hospCell.addElement(new com.lowagie.text.Paragraph(cfg.getZoneName(), fHospInfo));
+                if (cfg.getAddress()        != null && !cfg.getAddress().isBlank())
+                    hospCell.addElement(new com.lowagie.text.Paragraph(cfg.getAddress(), fHospInfo));
+                // Contacts sur une ligne
+                StringBuilder contact = new StringBuilder();
+                if (cfg.getPhoneNumber() != null && !cfg.getPhoneNumber().isBlank())
+                    contact.append(cfg.getPhoneNumber());
+                if (cfg.getEmail() != null && !cfg.getEmail().isBlank()) {
+                    if (contact.length() > 0) contact.append("  |  ");
+                    contact.append(cfg.getEmail());
+                }
+                if (contact.length() > 0)
+                    hospCell.addElement(new com.lowagie.text.Paragraph(contact.toString(), fHospInfo));
+            }
+            headerTbl.addCell(hospCell);
+            doc.add(headerTbl);
+
+            // Barre de séparation couleur primaire
+            com.lowagie.text.pdf.PdfPTable divBar = new com.lowagie.text.pdf.PdfPTable(1);
+            divBar.setWidthPercentage(100);
+            divBar.setSpacingAfter(10f);
+            com.lowagie.text.pdf.PdfPCell divCell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(" "));
+            divCell.setBackgroundColor(primaryColor);
+            divCell.setFixedHeight(3f);
+            divCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            divBar.addCell(divCell);
+            doc.add(divBar);
+
+            // ══════════════════════════════════════════════════════════════════
+            // TITRE + INFORMATIONS ENTREPRISE
+            // ══════════════════════════════════════════════════════════════════
+            com.lowagie.text.Paragraph titlePar = new com.lowagie.text.Paragraph(
+                    "FEUILLE DE CONSOMMATION MENSUELLE", fTitle);
+            titlePar.setSpacingAfter(8f);
+            doc.add(titlePar);
+
+            doc.add(new com.lowagie.text.Paragraph("Entreprise          : " + company.getName(), fInfo));
+            doc.add(new com.lowagie.text.Paragraph("Période             : " + yearMonth, fInfo));
+            doc.add(new com.lowagie.text.Paragraph("Contrat             : " +
+                    (company.getContractNumber() != null ? company.getContractNumber() : "—"), fInfo));
+            doc.add(new com.lowagie.text.Paragraph("Taux de couverture  : " +
+                    (company.getCoverageRate() != null
+                            ? company.getCoverageRate().setScale(2, RoundingMode.HALF_UP).toPlainString()
+                            : "100.00") + "%", fInfo));
             doc.add(new com.lowagie.text.Paragraph(" "));
 
-            // Tableau
-            com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(7);
+            // ══════════════════════════════════════════════════════════════════
+            // TABLEAU : Date | Patient | Matricule | Flux | Service | Total | Prise en charge | Ticket modeste
+            // ══════════════════════════════════════════════════════════════════
+            com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(8);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{2.5f, 3.5f, 2f, 2f, 2f, 2f, 2f});
+            table.setWidths(new float[]{1.8f, 3f, 1.8f, 2f, 2.2f, 1.8f, 2.2f, 2.2f});
+            table.setSpacingAfter(6f);
 
-            String[] headers = {"Date", "Patient", "Matricule", "Service", "Total", "Prise en charge", "Ticket modeste"};
-            for (String h : headers) {
-                com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(h, boldFont));
-                cell.setBackgroundColor(new java.awt.Color(230, 230, 230));
-                table.addCell(cell);
+            // Ligne d'en-têtes
+            String[] colHeaders = {"Date", "Patient", "Matricule", "Flux", "Service",
+                                   "Total", "Prise en charge", "Ticket modeste"};
+            for (String h : colHeaders) {
+                com.lowagie.text.pdf.PdfPCell hCell =
+                        new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(h, fHeader));
+                hCell.setBackgroundColor(primaryColor);
+                hCell.setPadding(5f);
+                hCell.setBorderColor(borderGray);
+                table.addCell(hCell);
             }
 
-            BigDecimal totalTotal = BigDecimal.ZERO;
-            BigDecimal totalCoverage = BigDecimal.ZERO;
-            BigDecimal totalSurplus = BigDecimal.ZERO;
-            DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            // Lignes de données (une ligne par flux non-nul, par patient)
+            BigDecimal sumTotal    = BigDecimal.ZERO;
+            BigDecimal sumCoverage = BigDecimal.ZERO;
+            BigDecimal sumSurplus  = BigDecimal.ZERO;
+            DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            boolean alt = false;
+            int fluxCount = 0;
 
-            for (Admission adm : admissions) {
-                table.addCell(new com.lowagie.text.Phrase(adm.getAdmissionDate() != null ? adm.getAdmissionDate().format(df) : "—", normalFont));
-                String patientName = adm.getPatient() != null
-                        ? (adm.getPatient().getFirstName() + " " + adm.getPatient().getLastName()) : "—";
-                table.addCell(new com.lowagie.text.Phrase(patientName, normalFont));
-                table.addCell(new com.lowagie.text.Phrase(adm.getMatricule() != null ? adm.getMatricule() : "—", normalFont));
-                table.addCell(new com.lowagie.text.Phrase(adm.getReasonForVisit() != null ? adm.getReasonForVisit() : "—", normalFont));
+            for (PatientConsumptionSummaryDTO s : summaries) {
+                String dateStr   = s.getAdmissionDate() != null ? s.getAdmissionDate().format(dateFmt) : "—";
+                String patNom    = s.getPatientName()   != null ? s.getPatientName()   : "—";
+                String matricule = s.getMatricule()     != null ? s.getMatricule()     : "—";
+                String[] fluxLabels   = {"Consultation", "Labo", "Pharmacie"};
+                String[] serviceNames = {"Consultation", "Laboratoire", "Pharmacie"};
 
-                BigDecimal total = adm.getTotalAmount() != null ? adm.getTotalAmount() : BigDecimal.ZERO;
-                BigDecimal cov = adm.getCompanyCoverage() != null ? adm.getCompanyCoverage() : BigDecimal.ZERO;
-                BigDecimal sur = adm.getPatientSurplus() != null ? adm.getPatientSurplus() : BigDecimal.ZERO;
+                for (int i = 0; i < 3; i++) {
+                    BigDecimal rTotal = i == 0 ? nvl(s.getConsultationAmount())
+                                      : i == 1 ? nvl(s.getLaboAmount())
+                                      :           nvl(s.getPharmacieAmount());
+                    BigDecimal rCov   = i == 0 ? nvl(s.getConsultationCoverage())
+                                      : i == 1 ? nvl(s.getLaboCoverage())
+                                      :           nvl(s.getPharmacieCoverage());
+                    BigDecimal rSur   = i == 0 ? nvl(s.getConsultationSurplus())
+                                      : i == 1 ? nvl(s.getLaboSurplus())
+                                      :           nvl(s.getPharmacieSurplus());
 
-                table.addCell(new com.lowagie.text.Phrase(total.setScale(2, RoundingMode.HALF_UP).toString() + " $", normalFont));
-                table.addCell(new com.lowagie.text.Phrase(cov.setScale(2, RoundingMode.HALF_UP).toString() + " $", normalFont));
-                table.addCell(new com.lowagie.text.Phrase(sur.setScale(2, RoundingMode.HALF_UP).toString() + " $", normalFont));
+                    if (rTotal.compareTo(BigDecimal.ZERO) == 0) continue; // ignorer les flux vides
 
-                totalTotal = totalTotal.add(total);
-                totalCoverage = totalCoverage.add(cov);
-                totalSurplus = totalSurplus.add(sur);
+                    java.awt.Color rowBg = alt ? lightGray : java.awt.Color.WHITE;
+                    alt = !alt;
+
+                    String[] vals = {
+                        dateStr, patNom, matricule,
+                        fluxLabels[i], serviceNames[i],
+                        pdfAmt(rTotal, sym), pdfAmt(rCov, sym), pdfAmt(rSur, sym)
+                    };
+                    for (String v : vals) {
+                        com.lowagie.text.pdf.PdfPCell c =
+                                new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(v, fNormal));
+                        c.setBackgroundColor(rowBg);
+                        c.setPadding(4f);
+                        c.setBorderColor(borderGray);
+                        table.addCell(c);
+                    }
+                    sumTotal    = sumTotal.add(rTotal);
+                    sumCoverage = sumCoverage.add(rCov);
+                    sumSurplus  = sumSurplus.add(rSur);
+                    fluxCount++;
+                }
             }
 
-            // Ligne totaux
-            com.lowagie.text.pdf.PdfPCell totalLabel = new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase("TOTAL", boldFont));
-            totalLabel.setColspan(4);
-            table.addCell(totalLabel);
-            table.addCell(new com.lowagie.text.Phrase(totalTotal.setScale(2, RoundingMode.HALF_UP).toString() + " $", boldFont));
-            table.addCell(new com.lowagie.text.Phrase(totalCoverage.setScale(2, RoundingMode.HALF_UP).toString() + " $", boldFont));
-            table.addCell(new com.lowagie.text.Phrase(totalSurplus.setScale(2, RoundingMode.HALF_UP).toString() + " $", boldFont));
+            // Ligne TOTAL
+            com.lowagie.text.pdf.PdfPCell totLabelCell =
+                    new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase("TOTAL", fTotal));
+            totLabelCell.setColspan(5);
+            totLabelCell.setBackgroundColor(secondaryColor);
+            totLabelCell.setPadding(5f);
+            totLabelCell.setBorderColor(borderGray);
+            table.addCell(totLabelCell);
 
+            for (String v : new String[]{pdfAmt(sumTotal, sym), pdfAmt(sumCoverage, sym), pdfAmt(sumSurplus, sym)}) {
+                com.lowagie.text.pdf.PdfPCell c =
+                        new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(v, fTotal));
+                c.setBackgroundColor(secondaryColor);
+                c.setPadding(5f);
+                c.setBorderColor(borderGray);
+                table.addCell(c);
+            }
             doc.add(table);
-            doc.add(new com.lowagie.text.Paragraph(" "));
 
-            doc.add(new com.lowagie.text.Paragraph("Nombre d'admissions : " + admissions.size(), subtitleFont));
-            doc.add(new com.lowagie.text.Paragraph("Taux de couverture : " + (company.getCoverageRate() != null ? company.getCoverageRate().toString() : "100") + "%", subtitleFont));
+            // ══════════════════════════════════════════════════════════════════
+            // PIED DE PAGE
+            // ══════════════════════════════════════════════════════════════════
+            doc.add(new com.lowagie.text.Paragraph("Nombre de flux : " + fluxCount, fInfo));
+
+            if (cfg != null && cfg.getFooterText() != null && !cfg.getFooterText().isBlank()) {
+                doc.add(new com.lowagie.text.Paragraph(" "));
+                doc.add(new com.lowagie.text.Paragraph(cfg.getFooterText(), fFooter));
+            }
+
+            // Ligne de signature (si activée dans la config)
+            if (cfg != null && Boolean.TRUE.equals(cfg.getEnableSignature())) {
+                doc.add(new com.lowagie.text.Paragraph(" "));
+                doc.add(new com.lowagie.text.Paragraph(" "));
+                com.lowagie.text.pdf.PdfPTable sigTbl = new com.lowagie.text.pdf.PdfPTable(2);
+                sigTbl.setWidthPercentage(85);
+                sigTbl.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+                for (String label : new String[]{"Responsable Entreprise", "Directeur Médical"}) {
+                    com.lowagie.text.pdf.PdfPCell sc = new com.lowagie.text.pdf.PdfPCell();
+                    sc.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+                    sc.setPaddingTop(18f);
+                    sc.addElement(new com.lowagie.text.Paragraph("Signature : " + label, fSig));
+                    sc.addElement(new com.lowagie.text.Paragraph("_______________________________", fSig));
+                    sigTbl.addCell(sc);
+                }
+                doc.add(sigTbl);
+            }
+
+            // Filigrane (si activé)
+            if (cfg != null && Boolean.TRUE.equals(cfg.getEnableWatermark())
+                    && cfg.getDocumentWatermark() != null && !cfg.getDocumentWatermark().isBlank()) {
+                try {
+                    com.lowagie.text.pdf.PdfContentByte cb = writer.getDirectContentUnder();
+                    com.lowagie.text.pdf.BaseFont wFont = com.lowagie.text.pdf.BaseFont.createFont(
+                            com.lowagie.text.pdf.BaseFont.HELVETICA,
+                            com.lowagie.text.pdf.BaseFont.CP1252, false);
+                    cb.saveState();
+                    cb.beginText();
+                    cb.setFontAndSize(wFont, 55);
+                    cb.setColorFill(new java.awt.Color(210, 210, 210));
+                    cb.showTextAligned(com.lowagie.text.Element.ALIGN_CENTER,
+                            cfg.getDocumentWatermark(),
+                            doc.getPageSize().getWidth() / 2f,
+                            doc.getPageSize().getHeight() / 2f,
+                            45f);
+                    cb.endText();
+                    cb.restoreState();
+                } catch (Exception wex) {
+                    log.warn("Impossible d'appliquer le filigrane: {}", wex.getMessage());
+                }
+            }
 
             doc.close();
-            log.info("📄 Feuille de consommation générée - entreprise={}, période={}, admissions={}", company.getName(), yearMonth, admissions.size());
+            log.info("📄 PDF feuille de consommation - entreprise={}, période={}, flux={}",
+                    company.getName(), yearMonth, fluxCount);
             return baos.toByteArray();
         } catch (Exception e) {
             log.error("Erreur génération PDF feuille de consommation", e);
@@ -368,35 +564,187 @@ public class CompanyServiceImpl implements CompanyService {
 
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime now = LocalDateTime.now();
-        List<Admission> currentMonth = admissionRepository.findByCompanyIdAndAdmissionDateBetween(companyId, startOfMonth, now);
 
-        BigDecimal totalCoverageCurrentMonth = currentMonth.stream()
-                .map(a -> a.getCompanyCoverage() != null ? a.getCompanyCoverage() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalSurplusCurrentMonth = currentMonth.stream()
-                .map(a -> a.getPatientSurplus() != null ? a.getPatientSurplus() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long admissionCount = consumptionRecordRepository.countByCompanyIdAndConsumedAtBetween(companyId, startOfMonth, now);
+        BigDecimal totalCoverageCurrentMonth = consumptionRecordRepository
+                .sumCompanyCoverageByCompanyAndPeriod(companyId, startOfMonth, now);
+        BigDecimal totalSurplusCurrentMonth = consumptionRecordRepository
+                .sumPatientSurplusByCompanyAndPeriod(companyId, startOfMonth, now);
 
-        List<Admission> allTime = admissionRepository.findByCompanyIdAndAdmissionDateBetween(companyId,
-                LocalDateTime.of(2000, 1, 1, 0, 0), now);
-        BigDecimal totalCoverageAllTime = allTime.stream()
-                .map(a -> a.getCompanyCoverage() != null ? a.getCompanyCoverage() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalSurplusAllTime = allTime.stream()
-                .map(a -> a.getPatientSurplus() != null ? a.getPatientSurplus() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDateTime allTimeStart = LocalDateTime.of(2000, 1, 1, 0, 0);
+        BigDecimal totalCoverageAllTime = consumptionRecordRepository
+                .sumCompanyCoverageByCompanyAndPeriod(companyId, allTimeStart, now);
+        BigDecimal totalSurplusAllTime = consumptionRecordRepository
+                .sumPatientSurplusByCompanyAndPeriod(companyId, allTimeStart, now);
 
         return CompanyStatsDTO.builder()
+                // Identité
+                .id(company.getId())
+                .name(company.getName())
+                .contactPerson(company.getContactPerson())
+                .subscriptionStatus(company.getSubscriptionStatus())
+                .coverageRate(company.getCoverageRate())
+                // Employés
+                .employeeCount((long) employees.size())
+                .activeEmployeeCount(activeEmployees)
+                // Flux mois courant
+                .admissionCount(admissionCount)
+                .totalCompanyCoverage(totalCoverageCurrentMonth)
+                .totalPatientSurplus(totalSurplusCurrentMonth)
+                // Historique
+                .totalCompanyCoverageAllTime(totalCoverageAllTime)
+                .totalPatientSurplusAllTime(totalSurplusAllTime)
+                // Legacy
                 .companyId(company.getId())
                 .companyName(company.getName())
                 .totalEmployees((long) employees.size())
                 .activeEmployees(activeEmployees)
-                .totalAdmissionsCurrentMonth((long) currentMonth.size())
+                .totalAdmissionsCurrentMonth(admissionCount)
                 .totalCompanyCoverageCurrentMonth(totalCoverageCurrentMonth)
                 .totalPatientSurplusCurrentMonth(totalSurplusCurrentMonth)
-                .totalCompanyCoverageAllTime(totalCoverageAllTime)
-                .totalPatientSurplusAllTime(totalSurplusAllTime)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConsumptionRecordDTO> getConsumptionRecords(Long companyId, String yearMonth) {
+        companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Entreprise introuvable: " + companyId));
+
+        LocalDate startDate = LocalDate.parse(yearMonth + "-01");
+        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(23, 59, 59);
+
+        return consumptionRecordRepository
+                .findByCompanyIdAndConsumedAtBetweenOrderByConsumedAtDesc(companyId, start, end)
+                .stream()
+                .map(r -> ConsumptionRecordDTO.builder()
+                        .id(r.getId())
+                        .patientId(r.getPatient() != null ? r.getPatient().getId() : null)
+                        .patientName(r.getPatient() != null
+                                ? r.getPatient().getFirstName() + " " + r.getPatient().getLastName() : "—")
+                        .matricule(r.getMatricule())
+                        .fluxType(r.getFluxType() != null ? r.getFluxType().name() : null)
+                        .description(r.getDescription())
+                        .totalAmount(r.getTotalAmount())
+                        .companyCoverage(r.getCompanyCoverage())
+                        .patientSurplus(r.getPatientSurplus())
+                        .coverageRate(r.getCoverageRate())
+                        .consumedAt(r.getConsumedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PatientConsumptionSummaryDTO> getPatientConsumptionSummaries(Long companyId, String yearMonth) {
+        companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Entreprise introuvable: " + companyId));
+
+        LocalDate startDate = LocalDate.parse(yearMonth + "-01");
+        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(23, 59, 59);
+
+        List<Admission> admissions = admissionRepository
+                .findByCompanyIdAndAdmissionDateBetween(companyId, start, end);
+
+        return admissions.stream().map(adm -> {
+            Long patientId = adm.getPatient() != null ? adm.getPatient().getId() : null;
+
+            // ── CONSULTATION : lire directement depuis l'admission ─────────────
+            // Ces champs sont calculés à la création et sont toujours fiables.
+            BigDecimal consultationCoverage = adm.getCompanyCoverage() != null
+                    ? adm.getCompanyCoverage() : BigDecimal.ZERO;
+            BigDecimal consultationSurplus  = adm.getPatientSurplus()  != null
+                    ? adm.getPatientSurplus()  : BigDecimal.ZERO;
+            BigDecimal consultationAmount   = consultationCoverage.add(consultationSurplus);
+
+            // ── LABO : records liés à l'admission (admission_id toujours renseigné pour les labos) ──
+            BigDecimal laboAmount   = BigDecimal.ZERO;
+            BigDecimal laboCoverage = BigDecimal.ZERO;
+            BigDecimal laboSurplus  = BigDecimal.ZERO;
+
+            List<CompanyConsumptionRecord> laboRecs =
+                    consumptionRecordRepository.findByAdmissionId(adm.getId());
+            for (CompanyConsumptionRecord r : laboRecs) {
+                if (r.getFluxType() != CompanyConsumptionRecord.FluxType.LABO) continue;
+                laboAmount   = laboAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
+                laboCoverage = laboCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                laboSurplus  = laboSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
+            }
+
+            // ── PHARMACIE : records par patient+entreprise+mois (admission_id = null en pharmacie) ──
+            BigDecimal pharmacieAmount   = BigDecimal.ZERO;
+            BigDecimal pharmacieCoverage = BigDecimal.ZERO;
+            BigDecimal pharmacieSurplus  = BigDecimal.ZERO;
+
+            if (patientId != null) {
+                List<CompanyConsumptionRecord> pharmRecs =
+                        consumptionRecordRepository
+                                .findByCompanyIdAndPatientIdAndFluxTypeAndConsumedAtBetween(
+                                        companyId, patientId,
+                                        CompanyConsumptionRecord.FluxType.PHARMACIE,
+                                        start, end);
+                for (CompanyConsumptionRecord r : pharmRecs) {
+                    pharmacieAmount   = pharmacieAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
+                    pharmacieCoverage = pharmacieCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                    pharmacieSurplus  = pharmacieSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
+                }
+            }
+
+            BigDecimal totalAmount   = consultationAmount.add(laboAmount).add(pharmacieAmount);
+            BigDecimal totalCoverage = consultationCoverage.add(laboCoverage).add(pharmacieCoverage);
+            BigDecimal totalSurplus  = consultationSurplus.add(laboSurplus).add(pharmacieSurplus);
+
+            String patientName = adm.getPatient() != null
+                    ? adm.getPatient().getFirstName() + " " + adm.getPatient().getLastName() : "—";
+
+            return PatientConsumptionSummaryDTO.builder()
+                    .admissionId(adm.getId())
+                    .patientId(patientId)
+                    .patientName(patientName)
+                    .matricule(adm.getMatricule())
+                    .admissionDate(adm.getAdmissionDate())
+                    .admissionStatus(adm.getStatus() != null ? adm.getStatus().name() : null)
+                    .coverageRate(adm.getCoverageRate())
+                    .consultationAmount(consultationAmount)
+                    .laboAmount(laboAmount)
+                    .pharmacieAmount(pharmacieAmount)
+                    .consultationCoverage(consultationCoverage)
+                    .laboCoverage(laboCoverage)
+                    .pharmacieCoverage(pharmacieCoverage)
+                    .consultationSurplus(consultationSurplus)
+                    .laboSurplus(laboSurplus)
+                    .pharmacieSurplus(pharmacieSurplus)
+                    .totalAmount(totalAmount)
+                    .totalCoverage(totalCoverage)
+                    .totalSurplus(totalSurplus)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    private BigDecimal nvl(BigDecimal v) {
+        return v != null ? v : BigDecimal.ZERO;
+    }
+
+    private String pdfAmt(BigDecimal amount, String currency) {
+        String val = (amount != null ? amount.setScale(2, RoundingMode.HALF_UP).toPlainString() : "0.00");
+        return val + " " + (currency != null ? currency : "$");
+    }
+
+    private java.awt.Color parseHexColor(String hex, java.awt.Color fallback) {
+        if (hex == null || hex.isBlank()) return fallback;
+        try {
+            String h = hex.startsWith("#") ? hex.substring(1) : hex;
+            int r = Integer.parseInt(h.substring(0, 2), 16);
+            int g = Integer.parseInt(h.substring(2, 4), 16);
+            int b = Integer.parseInt(h.substring(4, 6), 16);
+            return new java.awt.Color(r, g, b);
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 
     private static String blankToNull(String s) {

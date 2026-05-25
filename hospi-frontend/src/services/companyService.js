@@ -96,6 +96,16 @@ export const companyService = {
     const resp = await api.get('/companies/stats/all');
     return unwrap(resp);
   },
+
+  getConsumptionRecords: async (companyId, month) => {
+    const resp = await api.get(`/companies/${companyId}/consumption-records`, { params: { month } });
+    return unwrap(resp) || [];
+  },
+
+  getPatientSummaries: async (companyId, month) => {
+    const resp = await api.get(`/companies/${companyId}/patient-summaries`, { params: { month } });
+    return unwrap(resp) || [];
+  },
 };
 
 export default companyService;

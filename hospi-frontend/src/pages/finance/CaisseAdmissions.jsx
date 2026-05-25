@@ -116,6 +116,7 @@ const CaisseAdmissions = () => {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
 
+  const [abonneModalStep, setAbonneModalStep] = useState(0);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [admissionToArchive, setAdmissionToArchive] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -395,6 +396,8 @@ const CaisseAdmissions = () => {
     if (!selectedAdmission) return;
     setAmountReceived('');
     setPaymentMethod('ESPECES');
+    setAbonneModalStep(0);
+    setSelectedDoctor(null);
     setShowPaymentModal(true);
   };
 
@@ -488,13 +491,14 @@ const CaisseAdmissions = () => {
 
   const getStatusConfig = (status) => STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
 
-  const canSendToDoctor =
-    selectedAdmission &&
-    selectedAdmission.status === 'PAYEE' &&
-    selectedDoctor !== null;
-
   const isAlreadyWithDoctor = (status) =>
     ['SENT_TO_DOCTOR', 'WITH_DOCTOR', 'EN_COURS'].includes(status);
+
+  const canSendToDoctor =
+    selectedAdmission &&
+    (selectedAdmission.status === 'PAYEE' ||
+      (selectedAdmission.isAbonne && !isAlreadyWithDoctor(selectedAdmission.status))) &&
+    selectedDoctor !== null;
 
   if (loading) {
     return (
@@ -1367,36 +1371,89 @@ const CaisseAdmissions = () => {
                 </div>
               </div>
 
+              {/* ── ÉTAPE 2 : Sélection du médecin (abonné) ── */}
+              {abonneModalStep === 1 && (
+                <div className="px-6 pb-2 space-y-3">
+                  <p className="text-xs font-black uppercase tracking-wider text-muted-foreground mb-1">Choisir le médecin</p>
+                  {loadingDoctors ? (
+                    <div className="py-4 flex items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Chargement...
+                    </div>
+                  ) : availableDoctors.length === 0 ? (
+                    <div className="py-4 text-center">
+                      <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-amber-600">Aucun médecin disponible</p>
+                      <Button variant="outline" size="sm" onClick={loadAvailableDoctors} className="mt-3 rounded-xl text-xs gap-1.5">
+                        <RefreshCw className="w-3 h-3" /> Réessayer
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                      {availableDoctors.map((doctor) => {
+                        const isSelected = selectedDoctor?.id === doctor.id;
+                        const doctorName = doctor.fullName || `${doctor.prenom} ${doctor.nom}`.trim();
+                        return (
+                          <button
+                            key={doctor.id}
+                            onClick={() => setSelectedDoctor(isSelected ? null : doctor)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border-2 ${
+                              isSelected
+                                ? 'border-purple-500 bg-purple-500/10'
+                                : 'border-transparent bg-muted/40 hover:bg-muted/60'
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${
+                              isSelected ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white' : 'bg-muted text-foreground'
+                            }`}>
+                              {(doctor.prenom || doctor.nom || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate">Dr {doctorName}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{doctor.specialite}</p>
+                            </div>
+                            {isSelected && <CheckCircle2 className="w-5 h-5 text-purple-500 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <DialogFooter className="p-6 pt-0 gap-4 border-t border-border/40 mt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowPaymentModal(false)}
+                  onClick={() => abonneModalStep === 1 ? setAbonneModalStep(0) : setShowPaymentModal(false)}
                   className="rounded-xl font-bold border-2 h-14 flex-1 text-sm hover:bg-muted/50 transition-all"
                 >
-                  Annuler
+                  {abonneModalStep === 1 ? 'Retour' : 'Annuler'}
                 </Button>
                 {selectedAdmission?.patientSurplus === 0 ? (
-                  <Button
-                    onClick={() => {
-                      setShowPaymentModal(false);
-                      setSelectedDoctor(doctors[0] || null);
-                      if (doctors.length > 0) {
-                        handleSendToDoctor();
-                      } else {
-                        toast.error('Aucun médecin disponible');
-                      }
-                    }}
-                    disabled={processing}
-                    className="rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/25 hover:shadow-purple-500/40"
-                  >
-                    {processing ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
+                  abonneModalStep === 0 ? (
+                    <Button
+                      onClick={() => setAbonneModalStep(1)}
+                      className="rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/25"
+                    >
                       <Stethoscope className="w-5 h-5" />
-                    )}
-                    Envoyer au docteur
-                  </Button>
+                      Envoyer au docteur
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={async () => { await handleSendToDoctor(); setShowPaymentModal(false); }}
+                      disabled={!selectedDoctor || processing}
+                      className={`rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm ${
+                        selectedDoctor
+                          ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/25'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                    >
+                      {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                      {selectedDoctor
+                        ? `Confirmer — Dr ${selectedDoctor.fullName || `${selectedDoctor.prenom} ${selectedDoctor.nom}`.trim()}`
+                        : 'Sélectionnez un médecin'}
+                    </Button>
+                  )
                 ) : (
                   <Button
                     onClick={() => {

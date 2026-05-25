@@ -194,6 +194,25 @@ public class ConsultationDTO {
     @JsonProperty("matricule")
     private String matricule;
 
+    // --- MONTANTS FINANCIERS (depuis Admission) ---
+    @JsonProperty("totalAmount")
+    private BigDecimal totalAmount;
+
+    @JsonProperty("amountPaid")
+    private BigDecimal amountPaid;
+
+    @JsonProperty("companyCoverage")
+    private BigDecimal companyCoverage;
+
+    @JsonProperty("patientSurplus")
+    private BigDecimal patientSurplus;
+
+    @JsonProperty("coverageRate")
+    private BigDecimal coverageRate;
+
+    @JsonProperty("admissionStatus")
+    private String admissionStatus;
+
     // --- GETTERS/SETTERS POUR ADMISSION ---
     public Long getAdmissionId() { 
         return admissionId; 

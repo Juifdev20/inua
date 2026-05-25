@@ -4,6 +4,7 @@ import com.hospital.backend.dto.*;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.RevenueService;
@@ -43,6 +44,8 @@ public class PharmacyServiceImpl implements PharmacyService {
     private final ExpenseService expenseService;
     private final RevenueService revenueService;
     private final NotificationService notificationService;
+    private final CompanyConsumptionService consumptionService;
+    private final CompanyEmployeeRepository companyEmployeeRepository;
 
     // ══════════════════════════════════════════════════════════════════
     // ORDER MANAGEMENT
@@ -323,7 +326,31 @@ public class PharmacyServiceImpl implements PharmacyService {
         }
         
         log.info("✅ [FINANCE] Paiement confirmé pour commande {}. Statut: PAYEE", orderId);
-        
+
+        // Enregistrer la consommation PHARMACIE pour les patients abonnés
+        try {
+            Patient patient = updatedOrder.getPatient();
+            if (patient != null) {
+                companyEmployeeRepository.findFirstByPatientIdAndIsActiveTrue(patient.getId())
+                        .ifPresent(emp -> {
+                            com.hospital.backend.entity.Company company = emp.getCompany();
+                            if (company != null && company.getSubscriptionStatus() ==
+                                    com.hospital.backend.entity.SubscriptionStatus.ACTIVE) {
+                                BigDecimal total = updatedOrder.getTotalAmount() != null
+                                        ? updatedOrder.getTotalAmount() : BigDecimal.ZERO;
+                                consumptionService.record(
+                                        company, patient, null,
+                                        com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.PHARMACIE,
+                                        "Pharmacie - " + updatedOrder.getOrderCode(),
+                                        total,
+                                        company.getCoverageRate());
+                            }
+                        });
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur enregistrement consommation PHARMACIE: {}", e.getMessage());
+        }
+
         return mapToDTO(updatedOrder);
     }
     

@@ -5,6 +5,8 @@ import com.hospital.backend.dto.CompanyEmployeeResponse;
 import com.hospital.backend.dto.CompanyRequest;
 import com.hospital.backend.dto.CompanyResponse;
 import com.hospital.backend.dto.CompanyStatsDTO;
+import com.hospital.backend.dto.ConsumptionRecordDTO;
+import com.hospital.backend.dto.PatientConsumptionSummaryDTO;
 import com.hospital.backend.entity.SubscriptionStatus;
 
 import java.util.List;
@@ -57,4 +59,19 @@ public interface CompanyService {
      * Statistiques de toutes les entreprises abonnées.
      */
     List<CompanyStatsDTO> getAllCompaniesStats();
+
+    /**
+     * Liste détaillée des enregistrements de consommation pour un mois donné.
+     *
+     * @param companyId ID de l'entreprise
+     * @param yearMonth format "yyyy-MM"
+     */
+    List<ConsumptionRecordDTO> getConsumptionRecords(Long companyId, String yearMonth);
+
+    /**
+     * Résumé de consommation par patient (base = admissions) pour un mois donné.
+     * Chaque ligne représente une admission avec les montants CONSULTATION/LABO/PHARMACIE.
+     * Les flux non encore consommés apparaissent avec 0.
+     */
+    List<PatientConsumptionSummaryDTO> getPatientConsumptionSummaries(Long companyId, String yearMonth);
 }

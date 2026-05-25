@@ -6,6 +6,8 @@ import com.hospital.backend.dto.CompanyEmployeeResponse;
 import com.hospital.backend.dto.CompanyRequest;
 import com.hospital.backend.dto.CompanyResponse;
 import com.hospital.backend.dto.CompanyStatsDTO;
+import com.hospital.backend.dto.ConsumptionRecordDTO;
+import com.hospital.backend.dto.PatientConsumptionSummaryDTO;
 import com.hospital.backend.entity.SubscriptionStatus;
 import com.hospital.backend.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -134,6 +136,26 @@ public class CompanyController {
                 .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    @GetMapping(value = "/{id}/consumption-records", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_FINANCE')")
+    @Operation(summary = "Liste détaillée des enregistrements de consommation pour un mois")
+    public ResponseEntity<ApiResponse<List<ConsumptionRecordDTO>>> getConsumptionRecords(
+            @PathVariable Long id,
+            @RequestParam("month") String month) {
+        return ResponseEntity.ok(ApiResponse.success(
+                companyService.getConsumptionRecords(id, month)));
+    }
+
+    @GetMapping(value = "/{id}/patient-summaries", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_FINANCE')")
+    @Operation(summary = "Résumé de consommation par patient (admissions + flux CONSULTATION/LABO/PHARMACIE)")
+    public ResponseEntity<ApiResponse<List<PatientConsumptionSummaryDTO>>> getPatientSummaries(
+            @PathVariable Long id,
+            @RequestParam("month") String month) {
+        return ResponseEntity.ok(ApiResponse.success(
+                companyService.getPatientConsumptionSummaries(id, month)));
     }
 
     @GetMapping(value = "/{id}/stats", produces = MediaType.APPLICATION_JSON_VALUE)

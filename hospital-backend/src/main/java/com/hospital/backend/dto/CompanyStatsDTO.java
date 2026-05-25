@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.hospital.backend.entity.SubscriptionStatus;
 import java.math.BigDecimal;
 
 /**
@@ -16,6 +17,27 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CompanyStatsDTO {
 
+    // Identité
+    private Long id;
+    private String name;
+    private String contactPerson;
+    private SubscriptionStatus subscriptionStatus;
+    private BigDecimal coverageRate;
+
+    // Employés
+    private Long employeeCount;
+    private Long activeEmployeeCount;
+
+    // Admissions mois courant
+    private Long admissionCount;
+    private BigDecimal totalCompanyCoverage;
+    private BigDecimal totalPatientSurplus;
+
+    // Totaux historiques
+    private BigDecimal totalCompanyCoverageAllTime;
+    private BigDecimal totalPatientSurplusAllTime;
+
+    // Champs legacy (compatibilité)
     private Long companyId;
     private String companyName;
     private Long totalEmployees;
@@ -23,6 +45,4 @@ public class CompanyStatsDTO {
     private Long totalAdmissionsCurrentMonth;
     private BigDecimal totalCompanyCoverageCurrentMonth;
     private BigDecimal totalPatientSurplusCurrentMonth;
-    private BigDecimal totalCompanyCoverageAllTime;
-    private BigDecimal totalPatientSurplusAllTime;
 }
