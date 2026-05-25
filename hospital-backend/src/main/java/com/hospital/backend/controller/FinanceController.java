@@ -2,6 +2,7 @@ package com.hospital.backend.controller;
 
 import com.hospital.backend.dto.AllLabPaymentDTO;
 import com.hospital.backend.dto.ApiResponse;
+import com.hospital.backend.dto.ConsultationDTO;
 import com.hospital.backend.dto.PharmacyOrderDTO;
 import com.hospital.backend.entity.Admission;
 import com.hospital.backend.entity.Consultation;
@@ -674,6 +675,40 @@ public class FinanceController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Erreur lors du paiement des examens: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 🏥 FLUX LABO POUR ABONNÉS : Envoi direct sans paiement (couverture 100%)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * POST /api/finance/send-lab-subscriber/{consultationId}
+     * Envoie les examens au labo pour un abonné avec couverture 100% (sans paiement)
+     */
+    @PostMapping("/send-lab-subscriber/{consultationId}")
+    @PreAuthorize("hasAnyRole('FINANCE', 'ADMIN')")
+    @Operation(summary = "Envoyer examens labo pour abonné couverture 100%")
+    public ResponseEntity<Map<String, Object>> sendExamsToLabForSubscriber(
+            @PathVariable Long consultationId) {
+        try {
+            log.info("🏥 [FINANCE] Envoi direct examens labo pour abonné couverture 100% - consultation ID: {}", consultationId);
+
+            ConsultationDTO consultationDTO = consultationService.sendExamsToLabForSubscriber(consultationId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Examens envoyés au laboratoire avec succès (couverture 100%)");
+            response.put("consultation", consultationDTO);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("❌ [FINANCE] ERREUR envoi examens labo abonné: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Erreur lors de l'envoi des examens: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }

@@ -1475,6 +1475,76 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     @Transactional
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_FINANCE')")
+    public ConsultationDTO sendExamsToLabForSubscriber(Long consultationId) {
+        log.info("🏥 [LABO] Envoi direct examens pour abonné couverture 100% - consultation ID: {}", consultationId);
+
+        Consultation consultation = consultationRepository.findById(consultationId)
+                .orElseThrow(() -> new RuntimeException("Consultation non trouvée: " + consultationId));
+
+        // Vérifier que c'est un abonné avec couverture 100%
+        Admission admission = consultation.getAdmission();
+        if (admission == null || !Boolean.TRUE.equals(admission.getIsAbonne()) || admission.getCompany() == null) {
+            throw new RuntimeException("Cette consultation n'est pas pour un patient abonné");
+        }
+
+        BigDecimal coverageRate = admission.getCoverageRate() != null
+                ? admission.getCoverageRate() : new BigDecimal("100.00");
+
+        if (coverageRate.compareTo(new BigDecimal("100")) < 0) {
+            throw new RuntimeException("Ce patient abonné n'a pas une couverture à 100%. Taux: " + coverageRate + "%");
+        }
+
+        BigDecimal totalAmount = calculatePrescriptionTotal(consultationId);
+        BigDecimal companyCoverage = totalAmount; // 100% couvert
+        BigDecimal patientSurplus = BigDecimal.ZERO;
+
+        consultation.setExamTotalAmount(totalAmount);
+        consultation.setExamAmountPaid(BigDecimal.ZERO); // Pas de paiement patient
+
+        List<PrescribedExam> exams = prescribedExamRepository.findByConsultationIdAndActiveTrue(consultationId);
+
+        for (PrescribedExam exam : exams) {
+            exam.setStatus(PrescribedExamStatus.PAID_PENDING_LAB);
+        }
+        prescribedExamRepository.saveAll(exams);
+
+        consultation.setStatus(ConsultationStatus.AU_LABO);
+        consultation.setStatut("AU_LABO");
+        consultation.setUpdatedAt(LocalDateTime.now());
+
+        Consultation savedConsultation = consultationRepository.save(consultation);
+
+        // ── Enregistrer la consommation LABO pour l'abonné ───────────────────────
+        try {
+            String labDesc = "Examens labo (" + exams.size() + " exam" + (exams.size() > 1 ? "s" : "") + ") - Couverture 100%";
+            consumptionService.record(
+                    admission.getCompany(),
+                    admission.getPatient(),
+                    admission,
+                    com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.LABO,
+                    labDesc,
+                    totalAmount,
+                    admission.getCoverageRate());
+            log.info("💳 [LABO] Consommation LABO enregistrée - total={}, coverage=100%", totalAmount);
+        } catch (Exception e) {
+            log.error("❌ [LABO] Erreur enregistrement consommation LABO: {}", e.getMessage());
+        }
+
+        // 💰 Créer un revenu avec la source LABORATOIRE (montant = 0 pour le patient)
+        try {
+            Long userId = getCurrentUserId();
+            createLabRevenue(savedConsultation, BigDecimal.ZERO, userId);
+            log.info("💰 [LABO] Revenu LABORATOIRE créé pour consultation ID: {} (montant patient = 0)", consultationId);
+        } catch (Exception e) {
+            log.error("❌ [LABO] Erreur lors de la création du revenu LABORATOIRE: {}", e.getMessage(), e);
+        }
+
+        return mapToDTO(savedConsultation);
+    }
+
+    @Override
+    @Transactional
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTION')")
     public ConsultationDTO updateConsultationPayment(Long consultationId, Double consulAmountPaid) {
         log.info("💰 [CAISSE] Paiement consultation ID: {} - Montant: {}", consultationId, consulAmountPaid);

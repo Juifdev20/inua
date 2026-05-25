@@ -22,6 +22,21 @@ ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL
 ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS finance_transaction_id BIGINT;
 
 -- ============================================
+-- Ajouter les colonnes manquantes dans admissions (abonnés)
+-- ============================================
+
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS is_abonne BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS company_id BIGINT;
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS matricule VARCHAR(80);
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS coverage_rate DECIMAL(5,2);
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS company_coverage DECIMAL(19,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS patient_surplus DECIMAL(19,2) NOT NULL DEFAULT 0.00;
+
+-- Ajouter la contrainte de clé étrangère pour company_id
+ALTER TABLE admissions ADD CONSTRAINT fk_admission_company 
+    FOREIGN KEY (company_id) REFERENCES companies(id);
+
+-- ============================================
 -- Créer la table companies (entreprises abonnées)
 -- ============================================
 
@@ -57,6 +72,29 @@ CREATE TABLE IF NOT EXISTS company_employees (
     CONSTRAINT fk_employee_company FOREIGN KEY (company_id) REFERENCES companies(id),
     CONSTRAINT fk_employee_patient FOREIGN KEY (patient_id) REFERENCES patients(id),
     CONSTRAINT fk_employee_dependant FOREIGN KEY (dependant_of_id) REFERENCES company_employees(id)
+);
+
+-- ============================================
+-- Créer la table company_consumption_records
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS company_consumption_records (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL,
+    patient_id BIGINT NOT NULL,
+    admission_id BIGINT,
+    matricule VARCHAR(80),
+    flux_type VARCHAR(30) NOT NULL,
+    description VARCHAR(255),
+    total_amount DECIMAL(19,2) NOT NULL DEFAULT 0.00,
+    company_coverage DECIMAL(19,2) NOT NULL DEFAULT 0.00,
+    patient_surplus DECIMAL(19,2) NOT NULL DEFAULT 0.00,
+    coverage_rate DECIMAL(5,2),
+    consumed_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT fk_ccr_company FOREIGN KEY (company_id) REFERENCES companies(id),
+    CONSTRAINT fk_ccr_patient FOREIGN KEY (patient_id) REFERENCES patients(id),
+    CONSTRAINT fk_ccr_admission FOREIGN KEY (admission_id) REFERENCES admissions(id)
 );
 
 -- ============================================
@@ -106,6 +144,9 @@ CREATE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
 CREATE INDEX IF NOT EXISTS idx_employee_company ON company_employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_employee_patient ON company_employees(patient_id);
 CREATE INDEX IF NOT EXISTS idx_employee_matricule ON company_employees(matricule);
+CREATE INDEX IF NOT EXISTS idx_ccr_company_date ON company_consumption_records(company_id, consumed_at);
+CREATE INDEX IF NOT EXISTS idx_ccr_patient ON company_consumption_records(patient_id);
+CREATE INDEX IF NOT EXISTS idx_ccr_admission ON company_consumption_records(admission_id);
 CREATE INDEX IF NOT EXISTS idx_inventaires_date ON inventaires_pharmacie(date DESC);
 CREATE INDEX IF NOT EXISTS idx_inventaires_statut ON inventaires_pharmacie(statut);
 CREATE INDEX IF NOT EXISTS idx_lignes_inventaire_medication ON lignes_inventaire_pharmacie(id_medicament);

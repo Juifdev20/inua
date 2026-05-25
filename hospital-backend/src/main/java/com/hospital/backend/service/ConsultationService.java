@@ -221,6 +221,11 @@ public interface ConsultationService {
     ConsultationDTO sendToPharmacy(Long id);
 
     /**
+     * Envoie les examens au labo pour un abonné avec couverture 100% (sans paiement)
+     */
+    ConsultationDTO sendExamsToLabForSubscriber(Long consultationId);
+
+    /**
      * Crée ou lie une admission existante à une consultation
      */
     ConsultationDTO linkOrCreateAdmission(Long consultationId, AdmissionDTO admissionDTO);
