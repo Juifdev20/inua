@@ -32,8 +32,8 @@ RUN mvn clean package -DskipTests -B -Dproject.build.sourceEncoding=UTF-8 -Dproj
 # ============================================
 FROM eclipse-temurin:21-jre-alpine
 
-# Forcer l'encodage UTF-8 au runtime
-ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8"
+# Ajustement de la mémoire pour les conteneurs (75% de la RAM disponible sur Render)
+ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Installer curl pour healthcheck (optionnel mais utile)
@@ -46,7 +46,6 @@ RUN addgroup -S hospital && adduser -S hospital -G hospital
 WORKDIR /app
 
 # Copier le JAR depuis l'étape de build
-# Le nom du JAR correspond à artifactId-version dans pom.xml
 COPY --from=builder /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 
 # Changer le propriétaire des fichiers
@@ -62,6 +61,6 @@ EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:10000/actuator/health || exit 1
 
-# Commande de démarrage - Render fournit $PORT (utilise shell pour expanse la variable)
+# Commande de démarrage - Ajout de $JAVA_OPTS pour une flexibilité totale depuis Render
 ENV PORT=10000
-ENTRYPOINT ["sh", "-c", "java -jar -Dserver.port=$PORT app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar -Dserver.port=$PORT app.jar"]
