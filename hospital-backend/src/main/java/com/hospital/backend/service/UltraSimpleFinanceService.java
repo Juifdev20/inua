@@ -273,21 +273,25 @@ public class UltraSimpleFinanceService {
     @Transactional(readOnly = true)
     public Map<String, Object> getAdmissionsQueue(String date) {
         log.info("📋 [ULTRA-SIMPLE] Récupération des admissions - Date: {}", date);
-        
+
         try {
-            // Récupérer toutes les admissions
-            List<Admission> allAdmissions = admissionRepository.findAll();
-            log.info("📋 [ULTRA-SIMPLE] Total admissions en base: {}", allAdmissions.size());
-            
-            // Log des statuts pour debug
-            allAdmissions.forEach(a -> 
-                log.info("🔍 [ULTRA-SIMPLE] Admission ID: {} | Status: {} | Date: {} | Patient: {}",
-                    a.getId(), a.getStatus(), a.getAdmissionDate(),
-                    a.getPatient() != null ? a.getPatient().getFirstName() : "null")
-            );
-            
+            // ── Optimisation : utiliser une requête filtrée au lieu de findAll() ─────────
+            List<Admission> admissions;
+            if (date != null && !date.isEmpty()) {
+                java.time.LocalDate targetDate = java.time.LocalDate.parse(date);
+                LocalDateTime startOfDay = targetDate.atStartOfDay();
+                LocalDateTime endOfDay = targetDate.atTime(23, 59, 59);
+                admissions = admissionRepository.findByAdmissionDateBetween(startOfDay, endOfDay);
+                log.info("📅 [ULTRA-SIMPLE] Filtre date {}: {} admissions trouvées", date, admissions.size());
+            } else {
+                // Sans date : limiter aux 30 derniers jours pour éviter OOM
+                LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+                admissions = admissionRepository.findByAdmissionDateAfter(thirtyDaysAgo);
+                log.info("📋 [ULTRA-SIMPLE] 30 derniers jours : {} admissions trouvées", admissions.size());
+            }
+
             // Filtrer pour exclure les admissions déjà complètement payées ET les annulées
-            List<Admission> admissions = allAdmissions.stream()
+            List<Admission> filteredAdmissions = admissions.stream()
                 .filter(a -> {
                     // ✅ Exclure les admissions annulées
                     if (a.getStatus() == Admission.AdmissionStatus.ANNULE) {
@@ -303,23 +307,12 @@ public class UltraSimpleFinanceService {
                     return paid.compareTo(total) < 0;
                 })
                 .collect(Collectors.toList());
-            
+
             log.info("📋 [ULTRA-SIMPLE] Admissions non payées: {}/{} (après filtre paiement)",
-                admissions.size(), allAdmissions.size());
-            
-            // Filtrer par date si spécifiée
-            if (date != null && !date.isEmpty()) {
-                java.time.LocalDate targetDate = java.time.LocalDate.parse(date);
-                admissions = admissions.stream()
-                    .filter(a -> a.getAdmissionDate() != null &&
-                                 a.getAdmissionDate().toLocalDate().equals(targetDate))
-                    .collect(Collectors.toList());
-                log.info("📅 [ULTRA-SIMPLE] Filtre date {}: {}/{} admissions trouvées",
-                    date, admissions.size(), allAdmissions.size());
-            }
+                filteredAdmissions.size(), admissions.size());
 
             // Mapper en DTOs en utilisant les montants stockés dans l'admission (registrationFee, serviceFee, totalAmount)
-            List<AdmissionDTO> admissionDTOs = admissions.stream()
+            List<AdmissionDTO> admissionDTOs = filteredAdmissions.stream()
                 .map(admission -> {
                     // Utiliser directement les montants stockés dans l'admission
                     BigDecimal registrationFee = admission.getRegistrationFee() != null

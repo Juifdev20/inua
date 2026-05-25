@@ -552,7 +552,9 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional(readOnly = true)
     public List<CompanyStatsDTO> getAllCompaniesStats() {
-        return companyRepository.findAllByOrderByNameAsc().stream()
+        // ── Optimisation : ne charger que les entreprises actives pour éviter OOM ─────────
+        return companyRepository.findBySubscriptionStatusOrderByCreatedAtDesc(
+                Company.SubscriptionStatus.ACTIVE).stream()
                 .map(this::buildStats)
                 .collect(Collectors.toList());
     }

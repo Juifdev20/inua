@@ -15,6 +15,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     List<Company> findAllByOrderByNameAsc();
 
+    // ── Optimisation pour éviter OOM dans getAllCompaniesStats ─────────────────────
+    List<Company> findBySubscriptionStatusOrderByCreatedAtDesc(SubscriptionStatus status);
+
     Optional<Company> findByContractNumber(String contractNumber);
 
     boolean existsByContractNumber(String contractNumber);
