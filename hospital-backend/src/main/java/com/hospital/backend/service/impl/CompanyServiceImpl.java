@@ -554,7 +554,7 @@ public class CompanyServiceImpl implements CompanyService {
     public List<CompanyStatsDTO> getAllCompaniesStats() {
         // ── Optimisation : ne charger que les entreprises actives pour éviter OOM ─────────
         return companyRepository.findBySubscriptionStatusOrderByCreatedAtDesc(
-                Company.SubscriptionStatus.ACTIVE).stream()
+                SubscriptionStatus.ACTIVE).stream()
                 .map(this::buildStats)
                 .collect(Collectors.toList());
     }
