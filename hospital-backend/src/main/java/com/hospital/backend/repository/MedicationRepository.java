@@ -1,5 +1,6 @@
 package com.hospital.backend.repository;
 
+import com.hospital.backend.entity.CategorieAbc;
 import com.hospital.backend.entity.Medication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,4 +37,8 @@ public interface MedicationRepository extends JpaRepository<Medication, Long> {
     
     @Query("SELECT m FROM Medication m WHERE m.expiryDate <= CURRENT_TIMESTAMP AND m.isActive = true")
     List<Medication> findExpiredMedications();
+
+    List<Medication> findByIsActiveTrueAndCategorieAbc(CategorieAbc categorieAbc);
+
+    List<Medication> findByIsActiveTrueAndCategorieAbcIn(List<CategorieAbc> categories);
 }

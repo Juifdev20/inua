@@ -77,6 +77,32 @@ public class Admission {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+    // --- ABONNÉS (Slice 1 - module entreprises) ---
+    @Builder.Default
+    @Column(name = "is_abonne", nullable = false)
+    private Boolean isAbonne = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
+
+    @Column(name = "matricule", length = 80)
+    private String matricule;
+
+    /** Taux de couverture copié depuis l'entreprise au moment de l'admission (pour historique). */
+    @Column(name = "coverage_rate", precision = 5, scale = 2)
+    private java.math.BigDecimal coverageRate;
+
+    /** Montant couvert par l'entreprise (pour facturation mensuelle). */
+    @Column(name = "company_coverage", precision = 19, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal companyCoverage = java.math.BigDecimal.ZERO;
+
+    /** Ticket modeste / surplus à charge du patient. */
+    @Column(name = "patient_surplus", precision = 19, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal patientSurplus = java.math.BigDecimal.ZERO;
+
     @Column(name = "created_at")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

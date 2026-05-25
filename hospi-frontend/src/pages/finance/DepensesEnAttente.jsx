@@ -632,13 +632,18 @@ const DepensesEnAttente = () => {
                           }}
                         >
                           <option value="">Choisir une caisse...</option>
-                          {caisses
-                            .filter(c => c.devise === selectedTransaction.devise)
-                            .map((c) => (
+                          {(() => {
+                            const txDevise = String(selectedTransaction.devise || '').toUpperCase();
+                            const filtered = txDevise
+                              ? caisses.filter(c => String(c.devise || '').toUpperCase() === txDevise)
+                              : caisses;
+                            const list = filtered.length > 0 ? filtered : caisses;
+                            return list.map((c) => (
                               <option key={c.id} value={c.id}>
                                 {c.id < 0 ? '💰' : '🏦'} {c.nom} — {formatCurrency(c.solde, c.devise)}
                               </option>
-                            ))}
+                            ));
+                          })()}
                         </select>
                       </div>
                       <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">

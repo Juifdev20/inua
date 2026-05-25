@@ -181,6 +181,19 @@ public class ConsultationDTO {
     private Long admissionId;
     private List<java.util.Map<String, Object>> prescribedExams;  // ✅ NOUVEAU: Examens prescrits
 
+    // --- ABONNÉS (Slice 1) ---
+    @JsonProperty("isAbonne")
+    private Boolean isAbonne;
+
+    @JsonProperty("companyId")
+    private Long companyId;
+
+    @JsonProperty("companyName")
+    private String companyName;
+
+    @JsonProperty("matricule")
+    private String matricule;
+
     // --- GETTERS/SETTERS POUR ADMISSION ---
     public Long getAdmissionId() { 
         return admissionId; 

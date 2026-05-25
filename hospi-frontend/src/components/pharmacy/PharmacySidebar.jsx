@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Menu,
   History,
-  BrainCircuit
+  BrainCircuit,
+  ClipboardCheck
   // ShoppingCart - ℹ️ Plus utilisé (fusionné avec Stock & Inventaire)
 } from 'lucide-react';
 import LogoInuaAfya from '../LogoInuaAfya';
@@ -78,6 +79,7 @@ const PharmacySidebar = () => {
     { nameKey: 'pharmacy.salesPOS',       path: '/pharmacy/sales',              icon: DollarSign,      color: 'text-accent' },
     { nameKey: 'pharmacy.salesHistory',   path: '/pharmacy/sales/history',      icon: History,         color: 'text-primary' },
     { nameKey: 'pharmacy.stockInventory', path: '/pharmacy/inventory',          icon: Package,         color: 'text-primary' },
+    { nameKey: 'pharmacy.inventaireCount', path: '/pharmacy/inventaire',        icon: ClipboardCheck,  color: 'text-emerald-600 dark:text-emerald-400' },
     { nameKey: 'pharmacy.stockAlerts',    path: '/pharmacy/alerts',             icon: AlertTriangle,   color: 'text-warning' },
     { nameKey: 'pharmacy.predictions',   path: '/pharmacy/predictions',        icon: BrainCircuit,    color: 'text-info' },
     { nameKey: 'pharmacy.reports',         path: '/pharmacy/reports',            icon: TrendingUp,      color: 'text-primary' },

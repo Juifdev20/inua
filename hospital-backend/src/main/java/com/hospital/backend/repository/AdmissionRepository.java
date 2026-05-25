@@ -21,4 +21,6 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findByStatus(Admission.AdmissionStatus status);
     
     boolean existsByPatientId(Long patientId);
+
+    List<Admission> findByCompanyIdAndAdmissionDateBetween(Long companyId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

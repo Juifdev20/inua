@@ -24,10 +24,13 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
     stockQuantity: '',
     minimumStock: '10', // Seuil d'alerte par défaut
     price: '', // Prix d'achat (fournisseur)
+    purchaseCurrency: 'CDF', // Devise d'achat
     unitPrice: '', // Prix de vente (patient)
     form: '',
     strength: '',
     purchaseDate: '',
+    expiryDate: '',
+    joursAvantAlerte: '30',
     supplier: '',
     manufacturer: '',
     category: '',
@@ -53,6 +56,7 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
         stockQuantity: medication.stockQuantity || medication.currentStock || medication.stock_quantity || '',
         minimumStock: medication.minimumStock || medication.minimum_stock || medication.stockAlert || '10',
         price: medication.price || '',
+        purchaseCurrency: medication.purchaseCurrency || medication.devise || 'CDF',
         unitPrice: medication.unitPrice || medication.unit_price || '',
         // Recherche étendue pour le formulaire (forme du médicament)
         form: medication.form || medication.medicationForm || medication.medication_form || medication.dosage_form || '',
@@ -60,6 +64,9 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
         strength: medication.strength || medication.dosage || medication.concentration || medication.strength_dosage || '',
         // Recherche étendue pour la date d'achat
         purchaseDate: medication.purchaseDate || medication.purchase_date || medication.date_added || '',
+        // Date de péremption
+        expiryDate: medication.expiryDate || medication.expiry_date || '',
+        joursAvantAlerte: medication.joursAvantAlerte || medication.jours_avant_alerte || '30',
         // Recherche étendue pour le fournisseur
         supplier: medication.supplier || medication.supplier_name || medication.vendor || medication.provider || '',
         // Recherche étendue pour le fabricant
@@ -90,10 +97,13 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
         stockQuantity: '',
         minimumStock: '10',
         price: '',
+        purchaseCurrency: 'CDF',
         unitPrice: '',
         form: '',
         strength: '',
         purchaseDate: '',
+        expiryDate: '',
+        joursAvantAlerte: '30',
         supplier: '',
         manufacturer: '',
         category: '',
@@ -146,9 +156,6 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
       newErrors.name = 'Le nom du médicament est obligatoire';
     }
     
-    if (!formData.medicationCode.trim()) {
-      newErrors.medicationCode = 'Le code du médicament est obligatoire';
-    }
     
     if (!formData.stockQuantity || formData.stockQuantity <= 0) {
       newErrors.stockQuantity = 'La quantité doit être supérieure à 0';
@@ -168,6 +175,10 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
     
     if (!formData.purchaseDate) {
       newErrors.purchaseDate = 'La date d\'achat est obligatoire';
+    }
+
+    if (!formData.expiryDate) {
+      newErrors.expiryDate = 'La date de péremption est obligatoire';
     }
     
     if (!formData.supplier.trim()) {
@@ -224,10 +235,13 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
           stockQuantity: '',
           minimumStock: '10',
           price: '',
+          purchaseCurrency: 'CDF',
           unitPrice: '',
           form: '',
           strength: '',
           purchaseDate: '',
+          expiryDate: '',
+          joursAvantAlerte: '30',
           supplier: '',
           manufacturer: '',
           category: '',
@@ -333,19 +347,21 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
                 <div className="relative">
                   <label className="flex items-center gap-1.5 text-sm font-medium text-foreground mb-1.5">
                     <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-                    Code médicament *
+                    Code médicament
+                    <span className="text-[10px] text-muted-foreground font-normal ml-1">(optionnel)</span>
                   </label>
                   <input
                     type="text"
                     name="medicationCode"
                     value={formData.medicationCode}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2.5 bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
-                      errors.medicationCode ? 'border-red-500' : 'border-input'
-                    }`}
+                    className="w-full px-3 py-2.5 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     placeholder="ex: MED-001"
                   />
-                  {errors.medicationCode && <p className="text-red-500 text-xs mt-1">{errors.medicationCode}</p>}
+                  <p className="text-[11px] mt-1 flex items-center gap-1 text-muted-foreground">
+                    <span className="text-amber-500">⚡</span>
+                    Si vide, un code unique sera généré automatiquement
+                  </p>
                 </div>
               </div>
             </div>
@@ -433,9 +449,36 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
                       placeholder="500.00"
                       min="0.01"
                     />
-                    <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">$</span>
+                    <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">
+                      {formData.purchaseCurrency === 'USD' ? '$' : 'FC'}
+                    </span>
                   </div>
                   {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                  {/* Devise d'achat */}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(p => ({ ...p, purchaseCurrency: 'USD' }))}
+                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all border ${
+                        formData.purchaseCurrency === 'USD'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                      }`}
+                    >
+                      💵 USD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(p => ({ ...p, purchaseCurrency: 'CDF' }))}
+                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all border ${
+                        formData.purchaseCurrency === 'CDF'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                      }`}
+                    >
+                      💰 CDF
+                    </button>
+                  </div>
                 </div>
 
                 {/* Prix de vente */}
@@ -563,6 +606,45 @@ const MedicationForm = ({ onMedicationAdded, onClose, medication }) => {
                     }`}
                   />
                   {errors.purchaseDate && <p className="text-red-500 text-xs mt-1">{errors.purchaseDate}</p>}
+                </div>
+
+                {/* Date de péremption */}
+                <div className="relative">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-foreground mb-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                    Date de péremption *
+                  </label>
+                  <input
+                    type="date"
+                    name="expiryDate"
+                    value={formData.expiryDate}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2.5 bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
+                      errors.expiryDate ? 'border-red-500' : 'border-input'
+                    }`}
+                  />
+                  {errors.expiryDate && <p className="text-red-500 text-xs mt-1">{errors.expiryDate}</p>}
+                </div>
+
+                {/* Alerte péremption (jours avant) */}
+                <div className="relative">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-foreground mb-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    Alerte avant expiration (jours)
+                  </label>
+                  <input
+                    type="number"
+                    name="joursAvantAlerte"
+                    value={formData.joursAvantAlerte}
+                    onChange={handleChange}
+                    min="1"
+                    max="365"
+                    className="w-full px-3 py-2.5 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    placeholder="30"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Alerte déclenchée {formData.joursAvantAlerte || 30} jour(s) avant l'expiration
+                  </p>
                 </div>
 
                 {/* Maison fournisseur */}

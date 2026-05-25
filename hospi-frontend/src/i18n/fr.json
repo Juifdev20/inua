@@ -10,6 +10,7 @@
     "expenseManagement": "Gestion des Dépenses",
     "entryManagement": "Gestion des Entrées",
     "cashbook": "Livre de Caisse",
+    "companyConsumption": "Feuilles de Consommation",
     "priceGrid": "Grille Tarifaire",
     "services": "Services & Prix",
     "invoices": "Gestion des Factures",
@@ -81,8 +82,9 @@
     "prescriptions": "Prescriptions",
     "salesPOS": "Ventes / POS",
     "salesHistory": "Historique Ventes",
-    "stockInventory": "Stock & Inventaire",
+    "stockInventory": "Stock",
     "stockAlerts": "Alertes Stock",
+    "inventaireCount": "Inventaire Comptage",
     "predictions": "Réappro Prédictif",
     "reports": "Rapports"
   },

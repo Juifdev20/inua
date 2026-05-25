@@ -47,7 +47,8 @@ import {
   RotateCcw,
   Inbox,
   Filter,
-  Calendar
+  Calendar,
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -897,9 +898,22 @@ const CaisseAdmissions = () => {
                         onClick={() => { setSelectedAdmission(admission); setSelectedDoctor(null); }}
                         className="text-right shrink-0"
                       >
-                        <p className={cn("text-sm font-black", paid ? "text-emerald-600" : "text-foreground")}>
-                          {formatCurrency(admission.totalAmount || admission.amount)}
-                        </p>
+                        {admission.isAbonne ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                              {admission.patientSurplus === 0 ? 'Couvert 100%' : 'Ticket modeste'}
+                            </span>
+                            {admission.patientSurplus > 0 && (
+                              <p className="text-sm font-black text-amber-600">
+                                {formatCurrency(admission.patientSurplus)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className={cn("text-sm font-black", paid ? "text-emerald-600" : "text-foreground")}>
+                            {formatCurrency(admission.totalAmount || admission.amount)}
+                          </p>
+                        )}
                       </button>
 
                       {/* Actions */}
@@ -1281,139 +1295,266 @@ const CaisseAdmissions = () => {
       {/* ══════ MODAL PAIEMENT ══════ */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="max-w-2xl rounded-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
-                <Wallet className="w-6 h-6" />
-                Encaisser le paiement
-              </DialogTitle>
-              <DialogDescription className="text-emerald-50">
-                Enregistrer le paiement pour cette admission
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="p-6 space-y-5 flex-1 overflow-y-auto">
-            <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-border/50">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-black text-lg shadow-md">
-                {(selectedAdmission?.patientName || '?').charAt(0)}
+          {selectedAdmission?.isAbonne ? (
+            // === WORKFLOW ABONNÉ ===
+            <>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+                    <Shield className="w-6 h-6" />
+                    Patient Abonné
+                  </DialogTitle>
+                  <DialogDescription className="text-purple-50">
+                    Ce patient est couvert par l'entreprise {selectedAdmission?.companyName || 'partenaire'}
+                  </DialogDescription>
+                </DialogHeader>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-foreground truncate">{selectedAdmission?.patientName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedAdmission?.consultationType || 'Consultation'}
-                </p>
-              </div>
-              <p className="font-black text-emerald-600 text-xl">
-                {formatCurrency(getRequiredAmount())}
-              </p>
-            </div>
 
-            <div className="space-y-3">
-              <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                Méthode de paiement
-              </Label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {PAYMENT_METHODS.map(method => {
-                  const Icon = method.icon;
-                  const isActive = paymentMethod === method.value;
-                  return (
-                    <button
-                      key={method.value}
-                      onClick={() => setPaymentMethod(method.value)}
+              <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-border/50">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-md">
+                    {(selectedAdmission?.patientName || '?').charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground truncate">{selectedAdmission?.patientName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedAdmission?.consultationType || 'Consultation'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                      {selectedAdmission?.patientSurplus === 0 ? 'Couvert 100%' : 'Ticket modeste'}
+                    </span>
+                    {selectedAdmission?.patientSurplus > 0 && (
+                      <p className="text-sm font-black text-amber-600 mt-1">
+                        {formatCurrency(selectedAdmission.patientSurplus)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedAdmission?.patientSurplus === 0 ? (
+                  <div className="flex items-center gap-3 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-600">
+                        Couverture complète par l'entreprise
+                      </p>
+                      <p className="text-xs text-emerald-600/70 mt-1">
+                        Aucun paiement requis à la caisse
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    <Wallet className="w-6 h-6 text-amber-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-600">
+                        Ticket modeste à payer
+                      </p>
+                      <p className="text-xs text-amber-600/70 mt-1">
+                        Le patient doit payer {formatCurrency(selectedAdmission.patientSurplus)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border/40">
+                  <Building2 className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Entreprise : {selectedAdmission?.companyName || 'Non spécifiée'} | Matricule : {selectedAdmission?.matricule || 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="p-6 pt-0 gap-4 border-t border-border/40 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="rounded-xl font-bold border-2 h-14 flex-1 text-sm hover:bg-muted/50 transition-all"
+                >
+                  Annuler
+                </Button>
+                {selectedAdmission?.patientSurplus === 0 ? (
+                  <Button
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setSelectedDoctor(doctors[0] || null);
+                      if (doctors.length > 0) {
+                        handleSendToDoctor();
+                      } else {
+                        toast.error('Aucun médecin disponible');
+                      }
+                    }}
+                    disabled={processing}
+                    className="rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/25 hover:shadow-purple-500/40"
+                  >
+                    {processing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Stethoscope className="w-5 h-5" />
+                    )}
+                    Envoyer au docteur
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      // Pour ticket modeste, on garde le workflow normal de paiement
+                      setAmountReceived(selectedAdmission.patientSurplus.toString());
+                      handlePayment();
+                    }}
+                    disabled={processing}
+                    className="rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-amber-500/25 hover:shadow-amber-500/40"
+                  >
+                    {processing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5" />
+                    )}
+                    Encaisser {formatCurrency(selectedAdmission.patientSurplus)}
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          ) : (
+            // === WORKFLOW NORMAL ===
+            <>
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+                    <Wallet className="w-6 h-6" />
+                    Encaisser le paiement
+                  </DialogTitle>
+                  <DialogDescription className="text-emerald-50">
+                    Enregistrer le paiement pour cette admission
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-border/50">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-black text-lg shadow-md">
+                    {(selectedAdmission?.patientName || '?').charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground truncate">{selectedAdmission?.patientName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedAdmission?.consultationType || 'Consultation'}
+                    </p>
+                  </div>
+                  <p className="font-black text-emerald-600 text-xl">
+                    {formatCurrency(getRequiredAmount())}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                    Méthode de paiement
+                  </Label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                    {PAYMENT_METHODS.map(method => {
+                      const Icon = method.icon;
+                      const isActive = paymentMethod === method.value;
+                      return (
+                        <button
+                          key={method.value}
+                          onClick={() => setPaymentMethod(method.value)}
+                          className={cn(
+                            "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-xs font-bold",
+                            isActive
+                              ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 shadow-sm"
+                              : "border-border/60 text-muted-foreground hover:border-emerald-500/30 hover:bg-muted/30"
+                          )}
+                        >
+                          <Icon className="w-6 h-6" style={{ color: isActive ? method.color : undefined }} />
+                          <span className="text-center leading-tight">{method.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                    Montant reçu (USD)
+                  </Label>
+                  <div className="relative max-w-sm mx-auto">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={amountReceived}
+                      onChange={(e) => setAmountReceived(e.target.value)}
+                      placeholder={getRequiredAmount().toString()}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-xs font-bold",
-                        isActive
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 shadow-sm"
-                          : "border-border/60 text-muted-foreground hover:border-emerald-500/30 hover:bg-muted/30"
+                        "rounded-xl text-3xl font-black h-18 text-center pl-12 pr-4 transition-all",
+                        amountReceived && !isExactAmount()
+                          ? "border-red-500 focus-visible:ring-red-500 bg-red-500/5"
+                          : amountReceived && isExactAmount()
+                            ? "border-emerald-500 focus-visible:ring-emerald-500 bg-emerald-500/5"
+                            : "border-border/60"
                       )}
-                    >
-                      <Icon className="w-6 h-6" style={{ color: isActive ? method.color : undefined }} />
-                      <span className="text-center leading-tight">{method.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      autoFocus
+                    />
+                  </div>
 
-            <div className="space-y-3">
-              <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                Montant reçu (USD)
-              </Label>
-              <div className="relative max-w-sm mx-auto">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  step="1"
-                  value={amountReceived}
-                  onChange={(e) => setAmountReceived(e.target.value)}
-                  placeholder={getRequiredAmount().toString()}
-                  className={cn(
-                    "rounded-xl text-3xl font-black h-18 text-center pl-12 pr-4 transition-all",
-                    amountReceived && !isExactAmount()
-                      ? "border-red-500 focus-visible:ring-red-500 bg-red-500/5"
-                      : amountReceived && isExactAmount()
-                        ? "border-emerald-500 focus-visible:ring-emerald-500 bg-emerald-500/5"
-                        : "border-border/60"
+                  {amountReceived && !isExactAmount() && (
+                    <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-xl border border-red-500/20">
+                      <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                      <p className="text-sm font-bold text-red-600">
+                        Montant exact requis: {formatCurrency(getRequiredAmount())}
+                      </p>
+                    </div>
                   )}
-                  autoFocus
-                />
+
+                  {amountReceived && isExactAmount() && (
+                    <div className="flex items-center gap-3 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <p className="text-sm font-bold text-emerald-600">
+                        Montant exact — prêt pour l'encaissement
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border/40">
+                  <Shield className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Transaction sécurisée et traçable dans le système financier
+                  </p>
+                </div>
               </div>
 
-              {amountReceived && !isExactAmount() && (
-                <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-xl border border-red-500/20">
-                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                  <p className="text-sm font-bold text-red-600">
-                    Montant exact requis: {formatCurrency(getRequiredAmount())}
-                  </p>
-                </div>
-              )}
-
-              {amountReceived && isExactAmount() && (
-                <div className="flex items-center gap-3 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                  <p className="text-sm font-bold text-emerald-600">
-                    Montant exact — prêt pour l'encaissement
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border/40">
-              <Shield className="w-5 h-5 text-muted-foreground shrink-0" />
-              <p className="text-xs text-muted-foreground font-medium">
-                Transaction sécurisée et traçable dans le système financier
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter className="p-6 pt-0 gap-4 border-t border-border/40 mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowPaymentModal(false)}
-              className="rounded-xl font-bold border-2 h-14 flex-1 text-sm hover:bg-muted/50 transition-all"
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handlePayment}
-              disabled={processing || !amountReceived || !isExactAmount()}
-              className={cn(
-                "rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm",
-                isExactAmount()
-                  ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              {processing ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-5 h-5" />
-              )}
-              Confirmer
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="p-6 pt-0 gap-4 border-t border-border/40 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="rounded-xl font-bold border-2 h-14 flex-1 text-sm hover:bg-muted/50 transition-all"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handlePayment}
+                  disabled={processing || !amountReceived || !isExactAmount()}
+                  className={cn(
+                    "rounded-xl font-black gap-2 h-14 flex-1 shadow-lg transition-all text-sm",
+                    isExactAmount()
+                      ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                >
+                  {processing ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                  )}
+                  Confirmer
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -66,7 +66,7 @@ public class Medication {
     private Integer minimumStock;
     
     @Column(name = "expiry_date")
-    private LocalDateTime expiryDate;
+    private LocalDate expiryDate;
     
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
@@ -78,6 +78,15 @@ public class Medication {
     @Builder.Default
     @Column(name = "requires_prescription")
     private Boolean requiresPrescription = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categorie_abc", length = 1)
+    @Builder.Default
+    private CategorieAbc categorieAbc = CategorieAbc.C;
+
+    @Builder.Default
+    @Column(name = "jours_avant_alerte")
+    private Integer joursAvantAlerte = 30;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;

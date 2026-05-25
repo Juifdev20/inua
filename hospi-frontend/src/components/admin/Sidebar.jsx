@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   HeartPulse,
   Cog,
-  Activity
+  Activity,
+  TrendingUp
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext'; 
@@ -71,6 +72,8 @@ const Sidebar = () => {
     { nameKey: 'admin.roles', path: '/admin/roles', icon: Shield, color: 'text-accent' },
     { nameKey: 'admin.services', path: '/admin/services', icon: Stethoscope, color: 'text-primary' },
     { nameKey: 'admin.departments', path: '/admin/departements', icon: Building2, color: 'text-secondary' },
+    { name: 'Abonnés', path: '/admin/companies', icon: HeartPulse, color: 'text-pink-500' },
+    { name: 'Rapports', path: '/admin/subscription-reports', icon: TrendingUp, color: 'text-indigo-500' },
     { nameKey: 'admin.configuration', path: '/admin/hospital-settings', icon: Cog, color: 'text-emerald-500' },
     { nameKey: 'common.settings', path: '/admin/parametres', icon: Settings, color: 'text-muted-foreground' },
     { nameKey: 'admin.audit', path: '/admin/audit', icon: FileText, color: 'text-warning' },
@@ -130,7 +133,7 @@ const Sidebar = () => {
                 }
               >
                 <item.icon className={cn("w-5 h-5 flex-shrink-0", item.color)} />
-                {!sidebarCollapsed && <span className="flex-1">{t(item.nameKey)}</span>}
+                {!sidebarCollapsed && <span className="flex-1">{item.nameKey ? t(item.nameKey) : item.name}</span>}
               </NavLink>
             ))}
           </nav>
@@ -256,7 +259,7 @@ const Sidebar = () => {
                 }
               >
                 <item.icon className={cn("w-5 h-5 flex-shrink-0", item.color)} />
-                <span>{t(item.nameKey)}</span>
+                <span>{item.nameKey ? t(item.nameKey) : item.name}</span>
               </NavLink>
             ))}
           </nav>

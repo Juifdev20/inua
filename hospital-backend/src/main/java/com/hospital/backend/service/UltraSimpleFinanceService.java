@@ -293,6 +293,10 @@ public class UltraSimpleFinanceService {
                     if (a.getStatus() == Admission.AdmissionStatus.ANNULE) {
                         return false;
                     }
+                    // ✅ Inclure les abonnés même si totalAmount=0 (pour tracking)
+                    if (Boolean.TRUE.equals(a.getIsAbonne())) {
+                        return true;
+                    }
                     BigDecimal paid = a.getAmountPaid() != null ? a.getAmountPaid() : BigDecimal.ZERO;
                     BigDecimal total = a.getTotalAmount() != null ? a.getTotalAmount() : BigDecimal.ZERO;
                     // Garder seulement si montant payé < montant total (non payée ou partiellement)
@@ -365,7 +369,16 @@ public class UltraSimpleFinanceService {
             doctorName = admission.getDoctor().getFirstName() + " " + admission.getDoctor().getLastName();
             doctorId = admission.getDoctor().getId();
         }
-        
+
+        // Champs abonnés
+        String companyName = null;
+        if (admission.getCompany() != null) {
+            companyName = admission.getCompany().getName();
+        }
+
+        log.info("🔍 [DEBUG] Admission {} - isAbonne={}, companyName={}, patientSurplus={}, totalAmount={}",
+            admission.getId(), admission.getIsAbonne(), companyName, admission.getPatientSurplus(), totalAmount);
+
         return AdmissionDTO.builder()
             .id(admission.getId())
             .patientId(patientId)
@@ -379,6 +392,14 @@ public class UltraSimpleFinanceService {
             .serviceFee(serviceFee)
             .totalAmount(totalAmount)
             .createdAt(admission.getCreatedAt())
+            // Champs abonnés
+            .isAbonne(admission.getIsAbonne())
+            .companyId(admission.getCompany() != null ? admission.getCompany().getId() : null)
+            .companyName(companyName)
+            .matricule(admission.getMatricule())
+            .coverageRate(admission.getCoverageRate())
+            .companyCoverage(admission.getCompanyCoverage())
+            .patientSurplus(admission.getPatientSurplus())
             .build();
     }
 

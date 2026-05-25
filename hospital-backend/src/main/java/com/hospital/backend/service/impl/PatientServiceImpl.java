@@ -54,8 +54,23 @@ public class PatientServiceImpl implements PatientService {
     @Transactional(readOnly = true)
     public List<PatientSimpleDTO> searchSimple(String query) {
         log.info("Recherche simplifiée pour le triage : {}", query);
-        return patientRepository.searchActivePatientsList(query).stream()
+        String q = query.trim().toLowerCase();
+        // Recherche en mémoire sur tous les patients actifs (évite le filtre ROLE_PATIENT du repo)
+        return patientRepository.findAll().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                .filter(p -> {
+                    String fn = p.getFirstName() != null ? p.getFirstName().toLowerCase() : "";
+                    String ln = p.getLastName() != null ? p.getLastName().toLowerCase() : "";
+                    String full1 = fn + " " + ln;
+                    String full2 = ln + " " + fn;
+                    String full3 = fn + "-" + ln;
+                    String full4 = ln + "-" + fn;
+                    String code = p.getPatientCode() != null ? p.getPatientCode().toLowerCase() : "";
+                    return fn.contains(q) || ln.contains(q) || full1.contains(q) || full2.contains(q)
+                            || full3.contains(q) || full4.contains(q) || code.contains(q);
+                })
                 .map(patientMapper::toSimpleDTO)
+                .limit(20)
                 .collect(Collectors.toList());
     }
 

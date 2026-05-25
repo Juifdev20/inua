@@ -20,7 +20,6 @@ import java.time.LocalDate;
 public class MedicationDTO {
     private Long id;
     
-    @NotBlank(message = "Le code du médicament est obligatoire")
     private String medicationCode;
     
     @NotBlank(message = "Le nom du médicament est obligatoire")
@@ -52,7 +51,8 @@ public class MedicationDTO {
     private Integer stockQuantity;
     
     private Integer minimumStock;
-    private LocalDateTime expiryDate;
+    private Integer joursAvantAlerte;
+    private LocalDate expiryDate;
     private LocalDate purchaseDate;
     private Currency devise;  // Gardé pour compatibilité (déprécié, utiliser purchaseCurrency)
     private Boolean isActive;

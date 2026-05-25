@@ -34,9 +34,13 @@ import {
   ArrowRight,
   Banknote,
   Trash2,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { companyService } from '@/services/companyService';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 const SUGGESTED_PROFESSIONS = [
   "Etudiant(e)", "Cultivateur/trice)", "Enseignant(e)",
@@ -107,6 +111,14 @@ export const Admissions = () => {
     city: '',
     healthArea: ''
   });
+
+  // --- ABONNÉS (Slice 1) ---
+  const [isAbonne, setIsAbonne] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [matricule, setMatricule] = useState('');
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [employeeInfo, setEmployeeInfo] = useState(null);
 
   const DEFAULT_FICHE_AMOUNT = 5;
 
@@ -207,13 +219,16 @@ export const Admissions = () => {
     }
   };
 
-  // ★ CORRIGÉ : Charger médecins + services ensemble
+  // ★ CORRIGÉ : Charger médecins + services + entreprises actives
   const loadReferences = async () => {
     try {
-      const [docsResp, svcsResp] = await Promise.all([
+      setLoadingCompanies(true);
+      const [docsResp, svcsResp, compsResp] = await Promise.all([
         admissionService.getDoctorsOnDuty(),
-        admissionService.getAvailableServices()
+        admissionService.getAvailableServices(),
+        companyService.getActive().catch(() => [])
       ]);
+      setCompanies(Array.isArray(compsResp) ? compsResp : []);
 
       const doctorsList = Array.isArray(docsResp?.data || docsResp)
         ? (docsResp?.data || docsResp)
@@ -229,6 +244,8 @@ export const Admissions = () => {
     } catch (e) {
       console.error("Erreur chargement références:", e);
       toast.error("Erreur de chargement des services");
+    } finally {
+      setLoadingCompanies(false);
     }
   };
 
@@ -247,9 +264,32 @@ export const Admissions = () => {
   // ═══════════════════════════════════════
   // HANDLERS
   // ═══════════════════════════════════════
-  const handlePatientSelect = (patient) => {
+  const handlePatientSelect = async (patient) => {
     setSelectedPatient(patient);
     setPricingDetails(null);
+
+    // 🔍 Vérifier si ce patient est un agent d'une entreprise active
+    try {
+      setIsAbonne(false);
+      setSelectedCompanyId('');
+      setMatricule('');
+      setEmployeeInfo(null);
+      const emp = await companyService.findEmployeeByPatient(patient.id);
+      if (emp && emp.companyId) {
+        setIsAbonne(true);
+        setSelectedCompanyId(String(emp.companyId));
+        setMatricule(emp.matricule || '');
+        setEmployeeInfo(emp);
+        toast.info(
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <span>Patient abonné détecté ({emp.companyName})</span>
+          </div>
+        );
+      }
+    } catch {
+      // Patient non abonné : pas de souci
+    }
 
     const formatDateForInput = (dateInput) => {
       if (!dateInput) return '';
@@ -335,6 +375,11 @@ export const Admissions = () => {
         return;
       }
 
+      // 3b) Préparer le payload abonné
+      const abonnePayload = isAbonne && selectedCompanyId
+        ? { isAbonne: true, companyId: Number(selectedCompanyId), matricule: matricule || null }
+        : { isAbonne: false, companyId: null, matricule: null };
+
       // 4️⃣ Créer l'admission
       // Le backend calcule registrationFee (frais de dossier) basé sur l'historique du patient
       // On envoie totalAmount = montant du service/consultation
@@ -360,15 +405,19 @@ export const Admissions = () => {
         healthArea: triageData.healthArea,
         // Montant du service/consultation (le backend calcule registrationFee automatiquement)
         totalAmount: finalConsulAmount,
+        // --- ABONNÉ ---
+        ...abonnePayload,
       });
 
       toast.success(
         <div className="flex flex-col gap-1">
           <span className="font-bold">
-            {selectedPatient.displayName} envoyé(e) en caisse
+            {selectedPatient.displayName} {isAbonne ? 'enregistré(e) (ABONNÉ)' : 'envoyé(e) en caisse'}
           </span>
           <span className="text-xs opacity-80">
-            Montant à payer : {formatCurrency(finalTotal)}
+            {isAbonne
+              ? 'Couvert par abonnement — aucun paiement caisse'
+              : `Montant à payer : ${formatCurrency(finalTotal)}`}
           </span>
         </div>
       );
@@ -454,6 +503,10 @@ export const Admissions = () => {
       address: '', profession: '', birthDate: '', birthPlace: '',
       maritalStatus: '', religion: '', city: '', healthArea: ''
     });
+    setIsAbonne(false);
+    setSelectedCompanyId('');
+    setMatricule('');
+    setEmployeeInfo(null);
   };
 
   const getStatusDisplay = (status) => {
@@ -574,7 +627,14 @@ export const Admissions = () => {
                         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs", isWithDoctor(adm.status) ? "bg-blue-500" : isDone(adm.status) ? "bg-emerald-500" : "bg-amber-500")}>
                           {(adm.patientName || '?').charAt(0)}
                         </div>
-                        <p className="font-medium text-foreground text-sm">{adm.patientName || 'Patient'}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium text-foreground text-sm">{adm.patientName || 'Patient'}</p>
+                          {adm.isAbonne && (
+                            <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20 text-[10px] px-1.5 py-0">
+                              <ShieldCheck className="w-3 h-3 mr-0.5" />ABONNÉ
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -729,6 +789,63 @@ export const Admissions = () => {
                     </div>
                   </div>
 
+                  {/* --- ABONNÉ --- */}
+                  <div className="p-3 bg-purple-500/5 border border-purple-500/15 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-foreground">Patient abonné</span>
+                      </div>
+                      <Switch
+                        checked={isAbonne}
+                        onCheckedChange={(v) => {
+                          setIsAbonne(v);
+                          if (!v) { setSelectedCompanyId(''); setMatricule(''); setEmployeeInfo(null); }
+                        }}
+                      />
+                    </div>
+                    {isAbonne && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Entreprise *</label>
+                          {loadingCompanies ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Chargement...
+                            </div>
+                          ) : (
+                            <select
+                              value={selectedCompanyId}
+                              onChange={(e) => setSelectedCompanyId(e.target.value)}
+                              className="w-full p-2 border border-border rounded-xl bg-background text-sm focus:border-emerald-500 focus:outline-none"
+                              required={isAbonne}
+                            >
+                              <option value="">Sélectionner...</option>
+                              {companies.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Matricule</label>
+                          <input
+                            value={matricule}
+                            onChange={(e) => setMatricule(e.target.value)}
+                            placeholder="Ex: AGT-001"
+                            className="w-full h-9 px-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {employeeInfo && (
+                      <div className="text-xs text-muted-foreground">
+                        Agent détecté automatiquement :
+                        <span className="font-medium text-foreground ml-1">{employeeInfo.patientFullName}</span>
+                        {employeeInfo.matricule && <span className="text-muted-foreground"> — {employeeInfo.matricule}</span>}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Service */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Service *</label>
@@ -741,7 +858,7 @@ export const Admissions = () => {
                   </div>
 
                   {/* Prix */}
-                  {selectedService && (
+                  {selectedService && !isAbonne && (
                     <div className="space-y-2">
                       {isCalculating ? (
                         <div className="p-4 bg-blue-500/10 rounded-xl flex items-center justify-center gap-2">
@@ -786,6 +903,50 @@ export const Admissions = () => {
                       )}
                     </div>
                   )}
+
+                  {selectedService && isAbonne && (() => {
+                    const comp = companies.find(c => String(c.id) === String(selectedCompanyId));
+                    const covRate = comp?.coverageRate ?? 100;
+                    const total = pricingDetails?.totalAmount || totalAmount || 0;
+                    const patientPart = covRate < 100
+                      ? Math.round(total * (100 - covRate) / 100)
+                      : 0;
+                    const companyPart = total - patientPart;
+                    return (
+                      <div className="space-y-2">
+                        <div className="p-3 bg-purple-500/10 rounded-xl flex justify-between items-center border border-purple-200">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-purple-600" />
+                            <div>
+                              <p className="font-bold text-foreground">
+                                {covRate === 100 ? 'Couvert à 100%' : `Couvert à ${covRate}%`}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {patientPart > 0
+                                  ? 'Ticket modeste à payer en caisse'
+                                  : 'Aucun paiement en caisse — facturation mensuelle entreprise'}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-2xl font-bold text-purple-600">
+                            {patientPart > 0 ? `${patientPart} $` : '0 $'}
+                          </p>
+                        </div>
+                        {patientPart > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 bg-purple-500/5 rounded-lg border border-purple-500/10 text-center">
+                              <p className="text-[10px] text-muted-foreground">Entreprise</p>
+                              <p className="text-sm font-bold text-purple-600">{companyPart} $</p>
+                            </div>
+                            <div className="p-2 bg-amber-500/5 rounded-lg border border-amber-500/10 text-center">
+                              <p className="text-[10px] text-muted-foreground">Patient</p>
+                              <p className="text-sm font-bold text-amber-600">{patientPart} $</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Signes vitaux */}
                   <div className="bg-muted/30 p-4 rounded-xl space-y-3">

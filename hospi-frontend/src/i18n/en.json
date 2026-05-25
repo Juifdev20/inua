@@ -81,8 +81,9 @@
     "prescriptions": "Prescriptions",
     "salesPOS": "Sales / POS",
     "salesHistory": "Sales History",
-    "stockInventory": "Stock & Inventory",
+    "stockInventory": "Stock",
     "stockAlerts": "Stock Alerts",
+    "inventaireCount": "Inventory Count",
     "predictions": "Predictive Restock",
     "reports": "Reports"
   },

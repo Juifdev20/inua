@@ -3,11 +3,14 @@ package com.hospital.backend.service.impl;
 import com.hospital.backend.dto.AdmissionDTO;
 import com.hospital.backend.dto.InvoiceDTO;
 import com.hospital.backend.entity.Admission;
+import com.hospital.backend.entity.Company;
 import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Patient;
+import com.hospital.backend.entity.SubscriptionStatus;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.AdmissionRepository;
+import com.hospital.backend.repository.CompanyRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.AdmissionService;
@@ -38,6 +41,7 @@ public class AdmissionServiceImpl implements AdmissionService {
     private final UserRepository userRepository;
     private final PricingService pricingService;
     private final InvoiceService invoiceService;
+    private final CompanyRepository companyRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,25 +75,74 @@ public class AdmissionServiceImpl implements AdmissionService {
         User doctor = userRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Docteur introuvable avec l'ID: " + dto.getDoctorId()));
 
-        // Vérifier si c'est la première admission du patient (frais de dossier une seule fois)
+        // Vérifier si le patient a une fiche active (payée dans les 12 derniers mois)
+        // Même logique que ConsultationServiceImpl pour harmonisation
         Long patientId = patient.getId();
-        boolean isFirstAdmission = !admissionRepository.existsByPatientId(patientId);
+        boolean hasActiveFiche = hasActiveFiche(patientId);
 
         // Calculer les montants pour l'admission
         BigDecimal registrationFee = BigDecimal.ZERO;
-        if (isFirstAdmission) {
-            // Seulement lors de la première admission, récupérer le montant de la fiche
+        if (!hasActiveFiche) {
+            // Seulement si pas de fiche active, récupérer le montant de la fiche
             registrationFee = pricingService.getFicheAmount(patientId);
         }
 
         // Montant du service/consultation
         BigDecimal serviceFee = dto.getTotalAmount() != null ? dto.getTotalAmount() : BigDecimal.ZERO;
 
+        // ===================== ABONNÉ =====================
+        boolean isAbonne = Boolean.TRUE.equals(dto.getIsAbonne());
+        Company company = null;
+        BigDecimal coverageRate = null;
+        BigDecimal companyCoverage = BigDecimal.ZERO;
+        BigDecimal patientSurplus = BigDecimal.ZERO;
+
+        if (isAbonne) {
+            if (dto.getCompanyId() == null) {
+                throw new IllegalArgumentException("companyId est obligatoire pour un patient abonné");
+            }
+            company = companyRepository.findById(dto.getCompanyId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Entreprise introuvable: " + dto.getCompanyId()));
+            if (company.getSubscriptionStatus() != SubscriptionStatus.ACTIVE) {
+                throw new IllegalStateException(
+                        "L'abonnement de l'entreprise " + company.getName() + " n'est pas ACTIF");
+            }
+
+            coverageRate = company.getCoverageRate() != null
+                    ? company.getCoverageRate() : new BigDecimal("100.00");
+
+            // Calculer les parts
+            BigDecimal total = registrationFee.add(serviceFee);
+            if (total.compareTo(BigDecimal.ZERO) > 0 && coverageRate.compareTo(new BigDecimal("100")) < 0) {
+                // Ticket modeste : le patient paie le reste
+                companyCoverage = total.multiply(coverageRate)
+                        .divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
+                patientSurplus = total.subtract(companyCoverage);
+                log.info("💳 Admission ABONNÉ - entreprise={}, matricule={}, coverage={}%, company={}, patient={}",
+                        company.getName(), dto.getMatricule(), coverageRate, companyCoverage, patientSurplus);
+            } else if (total.compareTo(BigDecimal.ZERO) > 0) {
+                // Couverture totale
+                companyCoverage = total;
+                patientSurplus = BigDecimal.ZERO;
+                log.info("💳 Admission ABONNÉ (100%) - entreprise={}, matricule={}",
+                        company.getName(), dto.getMatricule());
+            } else {
+                // Montants déjà à zéro
+                registrationFee = BigDecimal.ZERO;
+                serviceFee = BigDecimal.ZERO;
+            }
+        }
+
         // Calculer le montant total (registration_fee + service_fee)
         BigDecimal totalAmount = registrationFee.add(serviceFee);
 
-        log.info("💰 Montants admission - Registration: {} USD, Service: {} USD, Total: {} USD",
-            registrationFee, serviceFee, totalAmount);
+        // Pour un patient abonné, le montant à percevoir à la caisse = surplus patient uniquement
+        // (la part entreprise est facturée à l'entreprise, pas à la caisse)
+        BigDecimal billedToPatient = isAbonne ? patientSurplus : totalAmount;
+
+        log.info("💰 Montants admission - Registration: {} USD, Service: {} USD, Total: {} USD, BilledToPatient: {} USD (abonné={})",
+            registrationFee, serviceFee, totalAmount, billedToPatient, isAbonne);
 
         Admission admission = Admission.builder()
                 .patient(patient)
@@ -102,14 +155,38 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .reasonForVisit(dto.getReasonForVisit())
                 .symptoms(dto.getSymptoms())
                 .notes(dto.getNotes())
+                // Abonné 100% couvert : totalAmount=0, filtre caisse (paid<total) l'exclut automatiquement
                 .status(dto.getStatus() != null ? dto.getStatus() : Admission.AdmissionStatus.EN_ATTENTE)
                 .registrationFee(registrationFee)
                 .serviceFee(serviceFee)
-                .totalAmount(totalAmount.compareTo(java.math.BigDecimal.ZERO) > 0 ? totalAmount : java.math.BigDecimal.ZERO)
+                .totalAmount(billedToPatient)
+                .isAbonne(isAbonne)
+                .company(company)
+                .matricule(isAbonne ? dto.getMatricule() : null)
+                .coverageRate(coverageRate)
+                .companyCoverage(companyCoverage)
+                .patientSurplus(patientSurplus)
                 .build();
 
         Admission saved = admissionRepository.save(admission);
         log.info("Admission créée avec succès ID: {}, Total: {}", saved.getId(), saved.getTotalAmount());
+
+        // ⛔ Patient ABONNÉ 100% : aucune facture caisse n'est créée.
+        //    Ticket modeste : une facture caisse est créée pour le surplus patient.
+        if (isAbonne && patientSurplus.compareTo(BigDecimal.ZERO) == 0) {
+            log.info("💳 Patient ABONNÉ 100% - aucune transaction caisse (admission ID={})", saved.getId());
+            return mapToDTO(saved);
+        } else if (isAbonne) {
+            log.info("💳 Patient ABONNÉ ticket modeste - facture caisse créée pour {} USD (admission ID={})",
+                    patientSurplus, saved.getId());
+            // Créer une facture pour le surplus uniquement
+            InvoiceDTO invoice = invoiceService.createAdmissionInvoice(
+                    patientId, null, BigDecimal.ZERO, patientSurplus,
+                    dto.getReasonForVisit(), doctor
+            );
+            log.info("✅ Facture ticket modeste créée - ID: {}, Surplus: {} USD", invoice.getId(), patientSurplus);
+            return mapToDTO(saved);
+        }
 
         // Log des frais de fiche
         if (registrationFee.compareTo(BigDecimal.ZERO) > 0) {
@@ -186,9 +263,36 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .registrationFee(admission.getRegistrationFee())
                 .serviceFee(admission.getServiceFee())
                 .totalAmount(admission.getTotalAmount())
+                .isAbonne(Boolean.TRUE.equals(admission.getIsAbonne()))
+                .companyId(admission.getCompany() != null ? admission.getCompany().getId() : null)
+                .companyName(admission.getCompany() != null ? admission.getCompany().getName() : null)
+                .matricule(admission.getMatricule())
+                .coverageRate(admission.getCoverageRate())
+                .companyCoverage(admission.getCompanyCoverage())
+                .patientSurplus(admission.getPatientSurplus())
                 .createdAt(admission.getCreatedAt())
                 .updatedAt(admission.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Vérifie si le patient a une fiche active (payée dans les 12 derniers mois)
+     * Même logique que ConsultationServiceImpl pour harmonisation
+     */
+    private boolean hasActiveFiche(Long patientId) {
+        LocalDateTime twelveMonthsAgo = LocalDateTime.now().minusMonths(12);
+        
+        List<Admission> admissions = admissionRepository.findByPatientId(patientId);
+        
+        for (Admission a : admissions) {
+            if (a.getAdmissionDate() != null && a.getAdmissionDate().isAfter(twelveMonthsAgo)) {
+                // Vérifier si le montant de la fiche a été payé
+                if (a.getAmountPaid() != null && a.getAmountPaid().compareTo(BigDecimal.ZERO) > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

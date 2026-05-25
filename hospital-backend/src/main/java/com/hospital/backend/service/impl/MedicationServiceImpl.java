@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -156,6 +157,7 @@ public class MedicationServiceImpl implements MedicationService {
             .minimumStock(dto.getMinimumStock() != null ? dto.getMinimumStock() : 10)
             .expiryDate(dto.getExpiryDate())
             .purchaseDate(dto.getPurchaseDate())
+            .joursAvantAlerte(dto.getJoursAvantAlerte() != null ? dto.getJoursAvantAlerte() : 30)
             .isActive(true)
             .requiresPrescription(dto.getRequiresPrescription() != null ? dto.getRequiresPrescription() : true)
             .build();
@@ -183,6 +185,7 @@ public class MedicationServiceImpl implements MedicationService {
         if (dto.getExpiryDate() != null) medication.setExpiryDate(dto.getExpiryDate());
         if (dto.getPurchaseDate() != null) medication.setPurchaseDate(dto.getPurchaseDate());
         if (dto.getRequiresPrescription() != null) medication.setRequiresPrescription(dto.getRequiresPrescription());
+        if (dto.getJoursAvantAlerte() != null) medication.setJoursAvantAlerte(dto.getJoursAvantAlerte());
     }
     
     private MedicationDTO mapToDTO(Medication m) {
@@ -209,6 +212,7 @@ public class MedicationServiceImpl implements MedicationService {
             .saleCurrency(m.getSaleCurrency())
             .stockQuantity(m.getStockQuantity())
             .minimumStock(m.getMinimumStock())
+            .joursAvantAlerte(m.getJoursAvantAlerte())
             .expiryDate(m.getExpiryDate())
             .purchaseDate(m.getPurchaseDate())
             .devise(m.getPurchaseCurrency())  // Pour compatibilité
@@ -242,10 +246,16 @@ public class MedicationServiceImpl implements MedicationService {
         if (medicationDTO.getName() == null || medicationDTO.getName().trim().isEmpty()) {
             throw new BadRequestException("Le nom du médicament est obligatoire");
         }
+        // Générer un code automatique si non fourni
         if (medicationDTO.getMedicationCode() == null || medicationDTO.getMedicationCode().trim().isEmpty()) {
-            throw new BadRequestException("Le code du médicament est obligatoire");
+            String autoCode;
+            do {
+                autoCode = "MED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            } while (medicationRepository.findByMedicationCode(autoCode).isPresent());
+            medicationDTO.setMedicationCode(autoCode);
+            log.info("🔑 Code médicament auto-généré: {}", autoCode);
         }
-        
+
         // Vérifier si le médicament existe déjà par code
         if (medicationRepository.findByMedicationCode(medicationDTO.getMedicationCode()).isPresent()) {
             throw new BadRequestException("Un médicament avec ce code existe déjà");
@@ -369,6 +379,7 @@ public class MedicationServiceImpl implements MedicationService {
         if (dto.getSupplier() != null) medication.setSupplier(dto.getSupplier());
         if (dto.getPurchaseDate() != null) medication.setPurchaseDate(dto.getPurchaseDate());
         if (dto.getExpiryDate() != null) medication.setExpiryDate(dto.getExpiryDate());
+        if (dto.getJoursAvantAlerte() != null) medication.setJoursAvantAlerte(dto.getJoursAvantAlerte());
         if (dto.getLotNumber() != null) {
             // Le numéro de lot peut être stocké dans les notes ou créer une nouvelle entité Lot si nécessaire
         }

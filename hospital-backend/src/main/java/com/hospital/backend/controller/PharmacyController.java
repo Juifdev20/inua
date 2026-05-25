@@ -3,6 +3,7 @@ package com.hospital.backend.controller;
 import com.hospital.backend.dto.*;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.service.PharmacieFinanceIntegrationService;
+import com.hospital.backend.repository.MedicationRepository;
 import com.hospital.backend.repository.StockMovementRepository;
 import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.PrescriptionService;
@@ -27,6 +28,7 @@ import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ public class PharmacyController {
     private final StockMovementRepository stockMovementRepository;
     private final PasswordEncoder passwordEncoder;
     private final PharmacieFinanceIntegrationService pharmacieFinanceIntegrationService;
+    private final MedicationRepository medicationRepository;
 
     // ══════════════════════════════════════════════════════════════════
     // SALES HISTORY
@@ -990,19 +993,87 @@ public class PharmacyController {
     // ══════════════════════════════════════════════════════════════════
 
     @GetMapping("/inventory/expiry-alerts")
-    @PreAuthorize("hasAnyRole('PHARMACY', 'PHARMACIE', 'ADMIN')")
-    @Operation(summary = "Alertes de péremption")
-    public ResponseEntity<?> getExpiryAlerts(@RequestParam(defaultValue = "30") int days) {
+    @PreAuthorize("hasAnyRole('PHARMACY', 'PHARMACIE', 'ADMIN', 'PHARMACIST')")
+    @Operation(summary = "Alertes de péremption basées sur le seuil individuel de chaque médicament")
+    public ResponseEntity<?> getExpiryAlerts() {
         try {
-            log.info("📅 [PHARMACY] Récupération des alertes de péremption ({} jours)", days);
-            
-            // Pour l'instant, retourner une liste vide - l'implémentation complète
-            // nécessiterait une table d'inventaire avec dates d'expiration
-            List<Map<String, Object>> alerts = List.of(); // Empty list as placeholder
-            
+            log.info("📅 [PHARMACY] Récupération des alertes de péremption par seuil individuel");
+
+            LocalDate today = LocalDate.now();
+
+            List<Map<String, Object>> alerts = medicationRepository.findByIsActiveTrue().stream()
+                .filter(m -> m.getExpiryDate() != null)
+                .filter(m -> {
+                    int seuil = m.getJoursAvantAlerte() != null ? m.getJoursAvantAlerte() : 30;
+                    LocalDate alertDate = m.getExpiryDate().minusDays(seuil);
+                    return !today.isBefore(alertDate);
+                })
+                .map(m -> {
+                    long joursRestants = ChronoUnit.DAYS.between(today, m.getExpiryDate());
+                    boolean expired = today.isAfter(m.getExpiryDate());
+                    Map<String, Object> alert = new HashMap<>();
+                    alert.put("id", m.getId());
+                    alert.put("name", m.getName());
+                    alert.put("medicationCode", m.getMedicationCode());
+                    alert.put("expiryDate", m.getExpiryDate());
+                    alert.put("joursAvantAlerte", m.getJoursAvantAlerte() != null ? m.getJoursAvantAlerte() : 30);
+                    alert.put("joursRestants", joursRestants);
+                    alert.put("expired", expired);
+                    alert.put("stockQuantity", m.getStockQuantity());
+                    return alert;
+                })
+                .sorted((a, b) -> Long.compare((Long) a.get("joursRestants"), (Long) b.get("joursRestants")))
+                .collect(Collectors.toList());
+
+            log.info("📅 {} alerte(s) de péremption trouvée(s)", alerts.size());
             return ResponseEntity.ok(alerts);
         } catch (Exception e) {
             log.error("❌ [PHARMACY] Erreur alertes péremption: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/inventory/{id}/sortir-perime")
+    @PreAuthorize("hasAnyRole('PHARMACY', 'PHARMACIE', 'ADMIN', 'PHARMACIST')")
+    @Operation(summary = "Sortir du stock un médicament périmé (destruction physique)")
+    public ResponseEntity<?> sortirPerime(@PathVariable Long id) {
+        try {
+            Medication medication = medicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Médicament introuvable"));
+
+            if (medication.getExpiryDate() == null || !LocalDate.now().isAfter(medication.getExpiryDate())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Ce médicament n'est pas encore périmé"));
+            }
+
+            int previousStock = medication.getStockQuantity() != null ? medication.getStockQuantity() : 0;
+            if (previousStock == 0) {
+                return ResponseEntity.ok(Map.of("message", "Stock déjà à zéro", "medicationId", id));
+            }
+
+            StockMovement movement = StockMovement.builder()
+                .medication(medication)
+                .quantityChange(-previousStock)
+                .previousStock(previousStock)
+                .newStock(0)
+                .movementType(StockMovement.MovementType.SORTIE_MANUELLE)
+                .notes("Destruction médicament périmé — expiration: " + medication.getExpiryDate())
+                .status(StockMovement.MovementStatus.VALIDE)
+                .build();
+            stockMovementRepository.save(movement);
+
+            medication.setStockQuantity(0);
+            medicationRepository.save(medication);
+
+            log.info("✅ [PHARMACY] Médicament {} sorti du stock (périmé) — {} unités détruites", medication.getName(), previousStock);
+            return ResponseEntity.ok(Map.of(
+                "message", "Stock soldé — médicament retiré avec succès",
+                "medicationId", id,
+                "quantiteDetruite", previousStock
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ [PHARMACY] Erreur sortie stock périmé {}: {}", id, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

@@ -275,6 +275,15 @@ const PharmacySales = () => {
 
   // Add to cart
   const addToCart = (medication) => {
+    if (medication.expiryDate) {
+      const expiry = new Date(medication.expiryDate);
+      expiry.setHours(23, 59, 59);
+      if (expiry < new Date()) {
+        toast.error(`${medication.name} est périmé et ne peut pas être vendu`);
+        return;
+      }
+    }
+
     const existingItem = cart.find(item => item.medicationId === medication.id);
     
     if (existingItem) {

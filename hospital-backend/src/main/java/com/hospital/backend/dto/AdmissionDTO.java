@@ -55,6 +55,29 @@ public class AdmissionDTO {
 
     private BigDecimal totalAmount;
 
+    // --- ABONNÉS (Slice 1) ---
+    @JsonProperty("isAbonne")
+    private Boolean isAbonne;
+
+    @JsonProperty("companyId")
+    private Long companyId;
+
+    @JsonProperty("companyName")
+    private String companyName;
+
+    @JsonProperty("matricule")
+    private String matricule;
+
+    // --- SURPLUS / TICKET MODESTE (Slice 2) ---
+    @JsonProperty("coverageRate")
+    private BigDecimal coverageRate;
+
+    @JsonProperty("companyCoverage")
+    private BigDecimal companyCoverage;
+
+    @JsonProperty("patientSurplus")
+    private BigDecimal patientSurplus;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 

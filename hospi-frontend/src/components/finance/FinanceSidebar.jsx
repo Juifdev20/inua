@@ -17,7 +17,8 @@ import {
   SlidersHorizontal,
   TrendingUp,
   BookOpen,
-  ClockAlert
+  ClockAlert,
+  Building2
 } from 'lucide-react';
 import LogoInuaAfya from '../LogoInuaAfya';
 import { useFinance } from '../../context/FinanceContext';
@@ -194,6 +195,7 @@ const FinanceSidebar = () => {
     { nameKey: 'finance.expenseManagement', path: '/finance/depenses',         icon: DollarSign,      color: 'text-warning' },
     { nameKey: 'finance.entryManagement',  path: '/finance/entrees',            icon: TrendingUp,      color: 'text-emerald-500' },
     { nameKey: 'finance.cashbook',         path: '/finance/livre-caisse',       icon: BookOpen,        color: 'text-blue-600' },
+    { nameKey: 'finance.companyConsumption', path: '/finance/company-consumption', icon: Building2,    color: 'text-purple-600' },
     { nameKey: 'finance.priceGrid',        path: '/finance/tarifs',             icon: Settings,        color: 'text-muted-foreground' },
   ];
 

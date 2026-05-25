@@ -11,7 +11,10 @@ public class PatientMapper {
         if (patient == null) return null;
         return PatientSimpleDTO.builder()
                 .id(patient.getId())
+                .firstName(patient.getFirstName())
+                .lastName(patient.getLastName())
                 .fullName(patient.getFirstName() + " " + patient.getLastName())
+                .patientCode(patient.getPatientCode())
                 .build();
     }
 }

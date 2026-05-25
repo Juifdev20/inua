@@ -43,6 +43,9 @@ import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Profile from "./pages/admin/Profile";
 import HospitalSettings from "./pages/admin/HospitalSettings";
+import CompaniesPage from "./pages/admin/CompaniesPage";
+import CompanyDetailPage from "./pages/admin/CompanyDetailPage";
+import SubscriptionReportsPage from "./pages/admin/SubscriptionReportsPage";
 
 /* 👤 Patient layout + pages */
 import PatientLayout from "./components/patients/PatientLayout";
@@ -94,6 +97,7 @@ import CaissePharmacie from "./pages/finance/CaissePharmacie";
 import CaissePharmacyQueue from "./pages/finance/CaissePharmacyQueue";
 import { Settings as FinanceSettings } from "./pages/finance/Settings";
 import FinanceNotifications from "./pages/finance/Notifications";
+import CompanyConsumptionPage from "./pages/finance/CompanyConsumptionPage";
 
 /* 🧪 Labo */
 import LabLayout from "./pages/labo/LabLayout";
@@ -117,6 +121,8 @@ import PharmacyReports from "./pages/pharmacy/PharmacyReports";
 import PharmacyStockAlerts from "./pages/pharmacy/PharmacyStockAlerts";
 import PharmacySettings from "./pages/pharmacy/PharmacySettings";
 import PredictiveRestock from "./pages/pharmacy/PredictiveRestock";
+import InventairePharmacieList from "./pages/pharmacy/InventairePharmacieList";
+import InventairePharmacieDetail from "./pages/pharmacy/InventairePharmacieDetail";
 
 const Expenses = React.lazy(() => import("./pages/finance/Expenses"));
 const Revenues = React.lazy(() => import("./pages/finance/Revenues"));
@@ -346,6 +352,7 @@ function App() {
                   />
                   <Route path="settings" element={<FinanceSettings />} />
                   <Route path="notifications" element={<FinanceNotifications />} />
+                  <Route path="company-consumption" element={<CompanyConsumptionPage />} />
                 </Route>
 
                 {/* 🧪 ROUTES LABORATOIRE (protégé) */}
@@ -396,6 +403,8 @@ function App() {
                   <Route path="orders/:id" element={<PharmacyOrders />} />
                   <Route path="inventory" element={<PharmacyInventory />} />
                   <Route path="inventory/:id" element={<PharmacyInventory />} />
+                  <Route path="inventaire" element={<InventairePharmacieList />} />
+                  <Route path="inventaire/:id" element={<InventairePharmacieDetail />} />
                   <Route path="suppliers" element={<div className="p-6"><h1 className="text-2xl font-bold">Fournisseurs - À implémenter</h1></div>} />
                   <Route path="sales" element={<PharmacySales />} />
                   <Route path="sales/history" element={<PharmacySalesHistory />} />
@@ -434,6 +443,9 @@ function App() {
                   <Route path="departements" element={<Departments />} />
                   <Route path="parametres" element={<Settings />} />
                   <Route path="hospital-settings" element={<HospitalSettings />} />
+                  <Route path="companies" element={<CompaniesPage />} />
+                  <Route path="companies/:id" element={<CompanyDetailPage />} />
+                  <Route path="subscription-reports" element={<SubscriptionReportsPage />} />
                   <Route path="audit" element={<AuditLogs />} />
                   <Route path="profil" element={<Profile />} />
                 </Route>

@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { getStockAlerts, getExpiryAlerts } from '../../services/pharmacyApi/pharmacyApi.js';
+import { getStockAlerts, getExpiryAlerts, sortirPerime } from '../../services/pharmacyApi/pharmacyApi.js';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PHARMACY STOCK ALERTS - Page des alertes de stock
@@ -245,6 +245,7 @@ const PharmacyStockAlerts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState('ALL');
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [destroying, setDestroying] = useState(null);
   
   // Load alerts data
   const loadAlerts = useCallback(async () => {
@@ -308,6 +309,21 @@ const PharmacyStockAlerts = () => {
   const totalAlertsCount = alerts.length + expiryAlerts.length;
   
   // Handlers
+  const handleSortirStock = async (alert) => {
+    if (!window.confirm(`Confirmer la destruction de ${alert.stockQuantity ?? 0} unité(s) de "${alert.name}" périmé(es) ?`)) return;
+    setDestroying(alert.id);
+    try {
+      const res = await sortirPerime(alert.id);
+      const qty = res?.data?.quantiteDetruite ?? alert.stockQuantity ?? 0;
+      toast.success(`${alert.name} : ${qty} unité(s) retirée(s) du stock`);
+      loadAlerts();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erreur lors de la sortie du stock');
+    } finally {
+      setDestroying(null);
+    }
+  };
+
   const handleDismiss = (medicationId) => {
     // In a real app, this would archive the alert
     toast.success('Alerte archivée');
@@ -520,7 +536,7 @@ const PharmacyStockAlerts = () => {
             <div className="divide-y divide-border/50">
               {filteredAlerts.map((alert) => (
                 alert.type === 'expiry' ? (
-                  <div key={`expiry-${alert.medicationId}`} className="border-b border-border/50 last:border-0">
+                  <div key={`expiry-${alert.id}`} className="border-b border-border/50 last:border-0">
                     <div className="py-4 px-4 md:px-6 hover:bg-muted/30 transition-colors">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">
@@ -528,7 +544,7 @@ const PharmacyStockAlerts = () => {
                             <Calendar className="w-5 h-5" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-foreground truncate">{alert.medicationName}</h4>
+                            <h4 className="font-bold text-foreground truncate">{alert.name || alert.medicationName}</h4>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
                               <Badge className="bg-purple-100 text-purple-700 border-purple-200 font-bold">
                                 <AlertOctagon className="w-3 h-3 mr-1" />
@@ -549,14 +565,36 @@ const PharmacyStockAlerts = () => {
                           </div>
                           <div className="text-right hidden sm:block">
                             <p className="text-xs text-muted-foreground">Jours restants</p>
-                            <p className="text-lg font-black text-foreground">
-                              {alert.daysUntilExpiry || '?'}
+                            <p className={`text-lg font-black ${
+                              alert.joursRestants != null && alert.joursRestants <= 0
+                                ? 'text-red-600'
+                                : alert.joursRestants != null && alert.joursRestants <= 7
+                                ? 'text-orange-500'
+                                : 'text-foreground'
+                            }`}>
+                              {alert.joursRestants != null
+                                ? (alert.joursRestants <= 0 ? 'EXPIRÉ' : `${alert.joursRestants}j`)
+                                : (alert.daysUntilExpiry != null ? `${alert.daysUntilExpiry}j` : '?')}
                             </p>
                           </div>
                           <div className="text-right hidden md:block">
                             <p className="text-xs text-muted-foreground">Stock</p>
-                            <p className="text-lg font-black text-purple-600">{alert.currentStock || 0}</p>
+                            <p className="text-lg font-black text-purple-600">{alert.stockQuantity ?? alert.currentStock ?? 0}</p>
                           </div>
+                          {alert.expired && (alert.stockQuantity ?? 0) > 0 && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={destroying === alert.id}
+                              onClick={() => handleSortirStock(alert)}
+                              className="shrink-0 rounded-lg text-xs font-bold"
+                            >
+                              {destroying === alert.id
+                                ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1" />
+                                : <Archive className="w-3 h-3 mr-1" />}
+                              Sortir du stock
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

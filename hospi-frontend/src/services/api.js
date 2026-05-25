@@ -154,6 +154,16 @@ export const authAPI = {
   login: (data) => api.post("/auth/login", data),
 };
 
+// 5. Inventaire Pharmacie API
+export const inventairePharmaAPI = {
+  lister:    ()        => api.get("/pharmacie/inventaires"),
+  obtenir:   (id)      => api.get(`/pharmacie/inventaires/${id}`),
+  creer:     (data)    => api.post("/pharmacie/inventaires", data),
+  majLignes: (id, data) => api.put(`/pharmacie/inventaires/${id}/lignes`, data),
+  soumettre: (id)      => api.post(`/pharmacie/inventaires/${id}/soumettre`),
+  approuver: (id)      => api.post(`/pharmacie/inventaires/${id}/approuver`),
+};
+
 // --- EXPORT DES FONCTIONS DE VALIDATION ---
 export { validateId, createValidatedEndpoint };
 

@@ -111,6 +111,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/profile", "/api/admin/update-profile/**").authenticated()
                         .requestMatchers("/api/v1/doctor/**", "/api/doctor/**", "/api/v1/doctors/**", "/api/doctors/**").hasAuthority("ROLE_DOCTEUR")
 
+                        // Inventaire Pharmacie
+                        .requestMatchers("/api/pharmacie/inventaires/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_PHARMACIE", "ROLE_PHARMACIST")
+
                         // Finance et Pharmacie
                         .requestMatchers("/api/finance/prescription/**", "/api/v1/finance/prescription/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE", "ROLE_CAISSIER", "ROLE_PHARMACIE", "ROLE_PHARMACIST")

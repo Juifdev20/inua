@@ -449,7 +449,7 @@ const PharmacyInventory = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Inventaire Pharmacie - ${new Date().toLocaleDateString('fr-FR')}</title>
+        <title>Stock Médicaments - ${new Date().toLocaleDateString('fr-FR')}</title>
         <style>
           @page { margin: 20mm; }
           body { 
@@ -567,7 +567,7 @@ const PharmacyInventory = () => {
           <!-- Right: Document Title -->
           <div style="text-align: right;">
             <div style="font-size: 32px; font-weight: bold; color: ${hospitalConfig?.primaryColor || '#009966'}; margin: 0; line-height: 1;">
-              INVENTAIRE
+              STOCK
             </div>
             <div style="font-size: 11px; color: #666; margin-top: 5px;">
               Date: ${new Date().toLocaleDateString('fr-FR')}
@@ -872,7 +872,7 @@ const PharmacyInventory = () => {
             GESTION DES STOCKS
           </Badge>
           <h1 className="text-4xl font-black tracking-tight text-foreground">
-            Inventaire Pharmacie
+            Stock Médicaments
           </h1>
           <p className="text-muted-foreground font-medium mt-1 uppercase text-sm tracking-widest">
             {filteredMedications.length} médicament{filteredMedications.length > 1 ? 's' : ''} trouvé{filteredMedications.length > 1 ? 's' : ''}
@@ -892,7 +892,7 @@ const PharmacyInventory = () => {
             className="rounded-xl font-bold border-2"
           >
             <Printer className="w-4 h-4 mr-2" />
-            Imprimer l'inventaire
+            Imprimer le stock
           </Button>
           <Button
             onClick={loadInventory}

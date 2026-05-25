@@ -233,6 +233,9 @@ export const changePassword = (passwordData) => {
 export const getExpiryAlerts = (days = 30) => 
   pharmacyApi.get('/inventory/expiry-alerts', { params: { days } });
 
+export const sortirPerime = (medicationId) =>
+  pharmacyApi.post(`/inventory/${medicationId}/sortir-perime`);
+
 // ═════════════════════════════════════════════════════════════════
 // 💰 FLUX PHARMACIE → FINANCE - Pharmacy Finance Integration
 // ═════════════════════════════════════════════════════════════════

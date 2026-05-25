@@ -1,12 +1,48 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { PharmacyProvider, usePharmacy } from '../../context/PharmacyContext';
 import PharmacySidebar from './PharmacySidebar';
 import PharmacyHeader from './PharmacyHeader';
 import { cn } from '../../lib/utils';
+import { toast } from 'sonner';
+import { getExpiryAlerts } from '../../services/pharmacyApi/pharmacyApi.js';
 
 const PharmacyLayoutContent = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = usePharmacy();
+
+  useEffect(() => {
+    const checkExpiry = async () => {
+      try {
+        const res = await getExpiryAlerts();
+        const alerts = res.data || [];
+        if (alerts.length === 0) return;
+        const expired = alerts.filter(a => a.expired);
+        const soon = alerts.filter(a => !a.expired);
+        if (expired.length > 0) {
+          toast.error(
+            `${expired.length} médicament(s) périmé(s) !`,
+            {
+              description: expired.slice(0, 3).map(a => a.name).join(', '),
+              duration: 10000,
+              action: { label: 'Voir alertes', onClick: () => window.location.href = '/pharmacy/alerts' },
+            }
+          );
+        }
+        if (soon.length > 0) {
+          toast.warning(
+            `${soon.length} médicament(s) approchent de l'expiration`,
+            {
+              description: `Le plus proche : ${soon[0].name} — ${soon[0].joursRestants}j restant(s)`,
+              duration: 8000,
+              action: { label: 'Voir alertes', onClick: () => window.location.href = '/pharmacy/alerts' },
+            }
+          );
+        }
+      } catch (_) {
+      }
+    };
+    checkExpiry();
+  }, []);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">

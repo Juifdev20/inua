@@ -12,6 +12,7 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { getBaseUrl, getApiUrl } from '../../utils/websocket';
+import { getExpiryAlerts } from '../../services/pharmacyApi/pharmacyApi.js';
 import { isDesktopPWA } from '../../utils/pwaDetection';
 import '../../styles/pwa-titlebar.css';
 
@@ -89,6 +90,9 @@ const PharmacyHeader = () => {
   const notificationCtx = useNotifications();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Alertes péremption
+  const [expiryAlerts, setExpiryAlerts] = useState([]);
 
   const BACKEND_URL = getBaseUrl();
   const API_BASE_URL = getApiUrl('/api/notifications');
@@ -207,6 +211,18 @@ const PharmacyHeader = () => {
     window.addEventListener('notificationsUpdated', handler);
     return () => window.removeEventListener('notificationsUpdated', handler);
   }, [fetchNotificationData]);
+
+  useEffect(() => {
+    const fetchExpiry = async () => {
+      try {
+        const res = await getExpiryAlerts();
+        setExpiryAlerts(res.data || []);
+      } catch (_) {}
+    };
+    fetchExpiry();
+    const id = setInterval(fetchExpiry, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -503,9 +519,12 @@ const PharmacyHeader = () => {
               className="relative p-2.5 bg-muted/50 rounded-xl text-muted-foreground hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
             >
               <Bell className="w-5 h-5" strokeWidth={1.5} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+              {(unreadCount + expiryAlerts.length) > 0 && (
+                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-card animate-bounce ${
+                  expiryAlerts.some(a => a.expired) ? 'bg-red-500' :
+                  expiryAlerts.length > 0 ? 'bg-orange-500' : 'bg-rose-500'
+                }`}>
+                  {(unreadCount + expiryAlerts.length) > 99 ? '99+' : (unreadCount + expiryAlerts.length)}
                 </span>
               )}
             </button>
@@ -515,7 +534,13 @@ const PharmacyHeader = () => {
                 <div className="fixed inset-0 bg-black/50 z-40 sm:hidden" onClick={() => setShowNotifications(false)} />
                 <div className="fixed sm:absolute right-0 sm:right-0 left-0 sm:left-auto top-1/2 sm:top-auto -translate-y-1/2 sm:translate-y-0 sm:mt-3 w-full sm:w-80 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)] bg-card rounded-2xl shadow-xl border border-border overflow-hidden ring-1 ring-black/5 animate-in fade-in sm:slide-in-from-top-2 z-50">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
-                  <h3 className="font-bold text-foreground">Flux Pharmacie</h3>
+                  <h3 className="font-bold text-foreground">Flux Pharmacie
+                    {expiryAlerts.length > 0 && (
+                      <span className="ml-2 text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full">
+                        {expiryAlerts.length} péremption{expiryAlerts.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </h3>
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllRead}
@@ -526,6 +551,41 @@ const PharmacyHeader = () => {
                   )}
                 </div>
                 <div className="max-h-80 max-h-[60vh] overflow-y-auto">
+                  {expiryAlerts.length > 0 && (
+                    <div className="border-b border-border/50">
+                      <div className="px-3 py-1.5 bg-orange-50 dark:bg-orange-950/20">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">Péremption</p>
+                      </div>
+                      {expiryAlerts.slice(0, 3).map((a) => (
+                        <div
+                          key={`exp-${a.id}`}
+                          onClick={() => { navigate('/pharmacy/alerts'); setShowNotifications(false); }}
+                          className="p-3 border-b border-border/30 hover:bg-orange-50/50 dark:hover:bg-orange-950/10 transition-colors cursor-pointer flex gap-3"
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            <Calendar className={`w-4 h-4 ${a.expired ? 'text-red-500' : 'text-orange-500'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{a.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {a.expired
+                                ? <span className="text-red-500 font-bold">Expiré !</span>
+                                : <span>Expire dans <strong className="text-orange-600">{a.joursRestants}j</strong></span>
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {expiryAlerts.length > 3 && (
+                        <div
+                          onClick={() => { navigate('/pharmacy/alerts'); setShowNotifications(false); }}
+                          className="p-2 text-center text-xs font-semibold text-orange-600 hover:bg-orange-50 cursor-pointer"
+                        >
+                          +{expiryAlerts.length - 3} autre{expiryAlerts.length - 3 > 1 ? 's' : ''} →
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {notifications.length > 0 ? (
                     notifications.slice(0, 8).map((notif) => (
                       <div

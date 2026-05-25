@@ -11,5 +11,8 @@ import lombok.NoArgsConstructor;
     @Builder
     public class PatientSimpleDTO {
         private Long id;
+        private String firstName;
+        private String lastName;
         private String fullName;
+        private String patientCode;
     }

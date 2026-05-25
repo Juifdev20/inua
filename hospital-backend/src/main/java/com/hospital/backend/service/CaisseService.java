@@ -51,33 +51,29 @@ public class CaisseService {
             }
         }
         
-        // Ajouter la Trésorerie Globale virtuelle pour CDF (Admin/Finance uniquement)
-        if (soldeCentralCDF.compareTo(BigDecimal.ZERO) != 0) {
-            Caisse caisseCentralCDF = Caisse.builder()
-                .id(-1L)
-                .nom("Trésorerie Globale CDF")
-                .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
-                .devise(Currency.CDF)
-                .solde(soldeCentralCDF)
-                .soldeInitial(BigDecimal.ZERO)
-                .active(true)
-                .build();
-            caisses.add(0, caisseCentralCDF);
-        }
+        // Toujours ajouter la Trésorerie Globale virtuelle pour CDF (même si solde = 0)
+        Caisse caisseCentralCDF = Caisse.builder()
+            .id(-1L)
+            .nom("Trésorerie Globale CDF")
+            .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
+            .devise(Currency.CDF)
+            .solde(soldeCentralCDF)
+            .soldeInitial(BigDecimal.ZERO)
+            .active(true)
+            .build();
+        caisses.add(0, caisseCentralCDF);
         
-        // Ajouter la Trésorerie Globale virtuelle pour USD
-        if (soldeCentralUSD.compareTo(BigDecimal.ZERO) != 0) {
-            Caisse caisseCentralUSD = Caisse.builder()
-                .id(-2L)
-                .nom("Trésorerie Globale USD")
-                .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
-                .devise(Currency.USD)
-                .solde(soldeCentralUSD)
-                .soldeInitial(BigDecimal.ZERO)
-                .active(true)
-                .build();
-            caisses.add(1, caisseCentralUSD);
-        }
+        // Toujours ajouter la Trésorerie Globale virtuelle pour USD (même si solde = 0)
+        Caisse caisseCentralUSD = Caisse.builder()
+            .id(-2L)
+            .nom("Trésorerie Globale USD")
+            .description("Trésorerie centralisée - Réservée Admin/Finance (Fournisseurs, Salaires)")
+            .devise(Currency.USD)
+            .solde(soldeCentralUSD)
+            .soldeInitial(BigDecimal.ZERO)
+            .active(true)
+            .build();
+        caisses.add(1, caisseCentralUSD);
         
         return caisses;
     }

@@ -90,6 +90,10 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     @Query("SELECT p FROM Patient p JOIN p.user u JOIN u.role r WHERE r.nom = 'ROLE_PATIENT' AND p.isActive = true AND (" +
             "LOWER(p.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(p.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.lastName, ' ', p.firstName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.firstName, '-', p.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.lastName, '-', p.firstName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<Patient> searchActivePatientsList(@Param("search") String search);
 
