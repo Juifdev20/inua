@@ -89,7 +89,7 @@ export default function CompanyConsumptionPage() {
     stopSummaryPolling();
     summaryIntervalRef.current = setInterval(() => {
       loadSummaries(company, month);
-    }, 20000);
+    }, 300000);
   };
 
   const openCompany = (company) => {
