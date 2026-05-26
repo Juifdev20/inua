@@ -206,7 +206,7 @@ const LabResultsDoctor = () => {
         consultationId: consultationId,
         items: items,
         notes: selectedConsultation.globalInterpretation,
-        status: 'EN_ATTENTE'
+        status: 'PRESCRIPTION_ENVOYEE'
       };
 
       const token = localStorage.getItem('token');

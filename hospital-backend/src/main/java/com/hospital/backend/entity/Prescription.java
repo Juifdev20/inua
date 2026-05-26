@@ -56,6 +56,10 @@ public class Prescription {
     @Column(name = "amount_paid", precision = 19, scale = 2)
     private BigDecimal amountPaid;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency")
+    private Currency currency;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paid_by")
     @JsonIgnoreProperties({"password", "role", "permissions", "patient"})

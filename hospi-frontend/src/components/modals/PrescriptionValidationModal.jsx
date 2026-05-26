@@ -225,18 +225,19 @@ const PrescriptionValidationModal = ({
 
       console.log('🔍 [VALIDATION] Réponse:', response.data);
 
-      // Vérifier si la facture a été créée
+      // Vérifier si la validation a réussi
       if (!response.data.success) {
-        toast.error(response.data.message || 'Erreur lors de la création de la facture');
+        toast.error(response.data.message || 'Erreur lors de la validation');
         return;
       }
 
+      // Vérifier si la facture a été créée
       if (!response.data.invoice) {
         toast.error('La facture n\'a pas été créée. Vérifiez les logs backend.');
         return;
       }
 
-      toast.success(`Facture ${response.data.invoice.invoiceCode} créée avec succès!`);
+      toast.success(`Facture ${response.data.invoice.invoiceCode} créée avec succès et envoyée à la caisse!`);
 
       onValidationComplete?.(response.data);
       onClose();

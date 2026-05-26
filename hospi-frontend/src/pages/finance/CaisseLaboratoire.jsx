@@ -195,12 +195,35 @@ const CaisseLaboratoire = () => {
     return Object.values(originalTotalsByCurrency).reduce((sum, val) => sum + val, 0);
   }, [originalTotalsByCurrency]);
 
+  // ✅ Calcul du ticket modeste pour les abonnés
+  const calculateAmountToPay = useMemo(() => {
+    if (!selectedTest) return adjustedTotal;
+    
+    const isAbonne = selectedTest.isAbonne;
+    const coverageRate = selectedTest.coverageRate ? parseFloat(selectedTest.coverageRate) : 100;
+    
+    if (isAbonne && coverageRate < 100) {
+      const companyCoverage = adjustedTotal * (coverageRate / 100);
+      return adjustedTotal - companyCoverage;
+    } else if (isAbonne && coverageRate >= 100) {
+      return 0; // Couverture 100%
+    }
+    
+    return adjustedTotal;
+  }, [selectedTest, adjustedTotal]);
+
   const handlePayment = (invoice) => {
     const invoiceToPay = {
       ...invoice,
-      totalAmount: adjustedTotal,
+      totalAmount: calculateAmountToPay,
       originalAmount: originalTotal,
-      adjustedExams: adjustedExams.filter(e => e.active)
+      examTotalAmount: adjustedTotal,
+      adjustedExams: adjustedExams.filter(e => e.active),
+      isAbonne: invoice.isAbonne,
+      coverageRate: invoice.coverageRate,
+      companyId: invoice.companyId,
+      companyName: invoice.companyName,
+      matricule: invoice.matricule
     };
     setSelectedInvoice(invoiceToPay);
     setShowPaymentModal(true);
@@ -280,6 +303,73 @@ const CaisseLaboratoire = () => {
     } catch (error) {
       console.error('❌ [AUTO-SEND] Erreur:', error.response?.data || error);
       toast.error('Paiement réussi mais erreur envoi labo. Cliquez "Envoyer au laboratoire" manuellement.');
+    } finally {
+      setSendingToLab(false);
+    }
+  };
+
+  // ✅ SEND TO LAB FOR SUBSCRIBER (100% coverage - no payment)
+  const handleSendToLabForSubscriber = async () => {
+    if (!selectedTest) return;
+
+    const consultationId = selectedTest.consultationId || selectedTest.id;
+    const patientId = selectedTest.patientId || selectedTest.patient?.id;
+    
+    if (!consultationId || !patientId) {
+      toast.error('ID Consultation ou Patient manquant. Vérifiez les données.');
+      return;
+    }
+
+    const activeExams = adjustedExams.filter(e => e.active);
+    if (activeExams.length === 0) {
+      toast.error('Aucun examen actif à envoyer au laboratoire.');
+      return;
+    }
+
+    try {
+      setSendingToLab(true);
+
+      // Call backend endpoint for subscriber (100% coverage)
+      await api.post(`${API}/send-lab-subscriber/${consultationId}`);
+
+      // Send lab tests to LabQueue
+      const promises = activeExams.map(async (exam) => {
+        const labTestPayload = {
+          consultationId,
+          patientId,
+          patientName: selectedTest.patientName || 'Patient inconnu',
+          testType: 'LABORATOIRE',
+          testName: exam.serviceName || exam.name || 'Examen de laboratoire',
+          testCode: exam.code || exam.serviceCode || `LAB-${Date.now().toString().slice(-6)}`,
+          description: exam.doctorNote || selectedTest.note || '',
+          priority: exam.priority || 'NORMALE',
+          quantity: exam.quantity || 1,
+          unitPrice: exam.unitPrice || 0,
+          status: 'EN_ATTENTE',
+          fromFinance: true
+        };
+
+        console.log('📤 [SUBSCRIBER] Envoi LabTest:', labTestPayload);
+        return addToQueue(labTestPayload);
+      });
+
+      const results = await Promise.all(promises);
+
+      console.log('✅ [SUBSCRIBER] Tests envoyés:', results.length);
+      toast.success(`✅ ${results.length} test(s) envoyés au laboratoire (couvert par l'entreprise)!`);
+
+      // Notify LabQueue to refresh
+      window.dispatchEvent(new CustomEvent('labTestsAdded', { 
+        detail: { newTests: results.length, patientId, consultationId } 
+      }));
+
+      setSelectedTest(null);
+      loadLabTests();
+
+    } catch (error) {
+      console.error('❌ [SUBSCRIBER] Erreur:', error.response?.data || error);
+      const errorMsg = error.response?.data?.message || error.message || 'Erreur lors de l\'envoi au laboratoire';
+      toast.error(errorMsg);
     } finally {
       setSendingToLab(false);
     }
@@ -748,14 +838,25 @@ const CaisseLaboratoire = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xl font-black truncate text-foreground">{selectedTest.patientName}</h3>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="outline" className="text-xs font-semibold">
                         {selectedTest.consultationCode || `REF-${selectedTest.id}`}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatFullDate(selectedTest.createdAt)}
                       </span>
+                      {selectedTest.isAbonne && (
+                        <Badge className="text-xs font-bold bg-emerald-500 text-white border-emerald-600">
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Abonné - {selectedTest.companyName || 'Entreprise'}
+                        </Badge>
+                      )}
                     </div>
+                    {selectedTest.isAbonne && selectedTest.matricule && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Matricule: {selectedTest.matricule} • Couverture: {selectedTest.coverageRate || 100}%
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -947,6 +1048,32 @@ const CaisseLaboratoire = () => {
                       </div>
                     ))}
                     
+                    {/* Ticket modeste pour abonnés */}
+                    {selectedTest.isAbonne && selectedTest.coverageRate && parseFloat(selectedTest.coverageRate) < 100 && (
+                      <div className="flex items-center gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                        <ShieldCheck className="w-4 h-4 text-amber-500" />
+                        <div className="flex-1">
+                          <p className="text-xs text-amber-600 font-semibold">Ticket modeste (patient)</p>
+                          <p className="text-xs text-amber-500/70">Couverture entreprise: {selectedTest.coverageRate}%</p>
+                        </div>
+                        <span className="text-lg font-black text-amber-600">
+                          {formatCurrency(calculateAmountToPay, 'USD')}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Couverture 100% pour abonnés */}
+                    {selectedTest.isAbonne && (!selectedTest.coverageRate || parseFloat(selectedTest.coverageRate) >= 100) && (
+                      <div className="flex items-center gap-2 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                        <div className="flex-1">
+                          <p className="text-xs text-emerald-600 font-semibold">Couverture 100% par l'entreprise</p>
+                          <p className="text-xs text-emerald-500/70">Aucun paiement requis</p>
+                        </div>
+                        <span className="text-lg font-black text-emerald-600">0 $US</span>
+                      </div>
+                    )}
+                    
                     {/* Réduction si applicable */}
                     {Object.keys(originalTotalsByCurrency).length > 0 && 
                      Object.keys(adjustedTotalsByCurrency).length > 0 &&
@@ -965,19 +1092,37 @@ const CaisseLaboratoire = () => {
 
                 {/* Actions */}
                 <div className="space-y-3 pt-2">
-                  {!getStatusConfig(selectedTest.status).paid && (
+                  {/* Abonné couverture 100% - envoi direct sans paiement */}
+                  {selectedTest.isAbonne && (!selectedTest.coverageRate || parseFloat(selectedTest.coverageRate) >= 100) && !getStatusConfig(selectedTest.status).paid && (
+                    <Button
+                      onClick={handleSendToLabForSubscriber}
+                      disabled={sendingToLab || adjustedExams.every(e => !e.active)}
+                      className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:shadow-none disabled:translate-y-0"
+                    >
+                      {sendingToLab ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                      <div className="flex flex-col items-start leading-none">
+                        <span className="text-sm">Envoyer au laboratoire</span>
+                        <span className="text-xs font-medium opacity-90">Couvert par l'entreprise</span>
+                      </div>
+                    </Button>
+                  )}
+                  
+                  {/* Paiement normal ou ticket modeste */}
+                  {!getStatusConfig(selectedTest.status).paid && !(
+                    selectedTest.isAbonne && (!selectedTest.coverageRate || parseFloat(selectedTest.coverageRate) >= 100)
+                  ) && (
                     <Button
                       onClick={() => handlePayment(selectedTest)}
-                      disabled={adjustedTotal === 0 || adjustedExams.every(e => !e.active)}
+                      disabled={calculateAmountToPay === 0 && !selectedTest.isAbonne || adjustedExams.every(e => !e.active)}
                       className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black gap-2 shadow-lg shadow-emerald-500/25 transition-all hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:shadow-none disabled:translate-y-0"
                     >
                       <DollarSign className="w-6 h-6" />
                       <div className="flex flex-col items-start leading-none">
-                        <span className="text-sm">Encaisser</span>
+                        <span className="text-sm">
+                          {selectedTest.isAbonne ? 'Encaisser ticket modeste' : 'Encaisser'}
+                        </span>
                         <span className="text-xs font-medium opacity-90">
-                          {Object.entries(adjustedTotalsByCurrency).map(([curr, amt], i) => (
-                            <span key={curr}>{i > 0 && ' + '}{formatCurrency(amt, curr)}</span>
-                          ))}
+                          {formatCurrency(calculateAmountToPay, 'USD')}
                         </span>
                       </div>
                     </Button>

@@ -128,7 +128,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             .patient(patient)
             .doctor(doctor)
             .notes(dto.getNotes())
-            .status(PrescriptionStatus.EN_ATTENTE_PAIEMENT)
+            .status(PrescriptionStatus.PRESCRIPTION_ENVOYEE)
+            .currency(com.hospital.backend.entity.Currency.USD)
             .build();
         
         prescription = prescriptionRepository.save(prescription);
@@ -218,25 +219,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
 
         PrescriptionDTO result = mapToDTO(prescription);
-        
-        // ✅ AUTO-CRÉATION DE LA FACTURE pour la caisse pharmacie
-        try {
-            log.info("🧾 [AUTO-INVOICE] Création automatique de la facture pour prescription ID: {}", prescription.getId());
-            System.out.println("🧾 [AUTO-INVOICE] Création automatique de la facture pour prescription ID=" + prescription.getId());
-            System.out.flush();
-            invoiceService.createPrescriptionInvoice(prescription.getId(), doctor);
-            log.info("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID: {}", prescription.getId());
-            System.out.println("✅ [AUTO-INVOICE] Facture créée avec succès pour prescription ID=" + prescription.getId());
-            System.out.flush();
-        } catch (Exception e) {
-            log.error("❌ [AUTO-INVOICE] Erreur lors de la création de la facture: {}", e.getMessage());
-            log.error("❌ [AUTO-INVOICE] Stack trace:", e);
-            System.out.println("❌ [AUTO-INVOICE] Erreur: " + e.getMessage());
-            e.printStackTrace(System.out);
-            System.out.flush();
-            // Ne pas bloquer la création de la prescription si la facture échoue
-        }
-        
+
+        // NOTE: Invoice will be created after pharmacy validates the prescription
+        // not automatically when prescription is created
+
         return result;
     }
     
@@ -259,6 +245,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             .notes(prescription.getNotes())
             .totalAmount(prescription.getTotalAmount())
             .amountPaid(prescription.getAmountPaid())
+            .currency(prescription.getCurrency() != null ? prescription.getCurrency().name() : "USD")
             .items(items)
             .build();
     }

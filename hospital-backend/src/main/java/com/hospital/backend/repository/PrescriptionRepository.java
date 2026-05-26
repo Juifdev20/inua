@@ -31,7 +31,7 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
     
     Page<Prescription> findByStatus(PrescriptionStatus status, Pageable pageable);
     
-    @Query("SELECT p FROM Prescription p WHERE p.status = 'PAYEE' ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Prescription p WHERE p.status IN ('PRESCRIPTION_ENVOYEE', 'VALIDEE', 'PAYEE') ORDER BY p.createdAt DESC")
     List<Prescription> findPendingPrescriptions();
     
     /**

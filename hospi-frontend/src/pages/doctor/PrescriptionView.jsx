@@ -173,7 +173,7 @@ const PrescriptionView = ({
         consultationId: consultationId,
         items: items,
         notes: diagnostic || selectedConsultation.globalInterpretation,
-        status: 'EN_ATTENTE'
+        status: 'PRESCRIPTION_ENVOYEE'
       };
 
       // 1. Créer la prescription

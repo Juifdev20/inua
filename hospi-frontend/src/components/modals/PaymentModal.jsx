@@ -68,23 +68,13 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
           `${BACKEND_URL}/api/v1/finance/prescription/process-payment/${invoice.id}?paymentMethod=${backendMethod}`
         );
       } else if (isLabInvoice) {
-        // ★ Paiement pour examens laboratoire - calculer ticket modeste pour abonnés
+        // ★ Paiement pour examens laboratoire - utiliser le montant calculé par CaisseLaboratoire
         const totalAmount = invoice.examTotalAmount || invoice.totalAmount || invoice.amount || 0;
-        let amountPaid = totalAmount;
+        // Le montant à payer est déjà calculé dans CaisseLaboratoire (ticket modeste pour abonnés)
+        const amountPaid = invoice.totalAmount || totalAmount;
 
-        // Si abonné, calculer le ticket modeste
-        if (invoice.isAbonne && invoice.coverageRate) {
-          const coverageRate = parseFloat(invoice.coverageRate) || 100;
-          if (coverageRate < 100) {
-            const companyCoverage = totalAmount * (coverageRate / 100);
-            amountPaid = totalAmount - companyCoverage;
-            console.log('💳 [PAYMENT] Abonné - total={}, coverage={}%, ticketModeste={}',
-              totalAmount, coverageRate, amountPaid);
-          } else {
-            amountPaid = 0; // Couverture 100%
-            console.log('💳 [PAYMENT] Abonné - couverture 100% - amountPaid=0');
-          }
-        }
+        console.log('💳 [PAYMENT] Paiement labo - total={}, amountPaid={}, isAbonne={}, coverageRate={}',
+          totalAmount, amountPaid, invoice.isAbonne, invoice.coverageRate);
 
         response = await api.post(`${API}/pay-lab/${invoice.id}`, {
           paymentMethod: backendMethod,

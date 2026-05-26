@@ -31,7 +31,10 @@ const MedicationSelector = ({
       setError(null);
       const response = await medicationAPI.getInventory();
       const medicationsList = response.data || [];
-      setMedications(medicationsList.filter(med => med.isActive !== false));
+      // Filtrer: actifs ET avec stock > 0
+      setMedications(medicationsList.filter(med => 
+        med.isActive !== false && (med.stockQuantity || 0) > 0
+      ));
     } catch (err) {
       console.error('Erreur lors du chargement des médicaments:', err);
       setError('Impossible de charger les médicaments');

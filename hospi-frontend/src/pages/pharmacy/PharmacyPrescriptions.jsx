@@ -15,7 +15,8 @@ import {
   ShoppingCart,
   Filter,
   Search,
-  Printer
+  Printer,
+  DollarSign
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,7 @@ import PrescriptionValidationModal from '../../components/modals/PrescriptionVal
 /* ═══════════════════════════════════════════
    COMPOSANT PRESCRIPTION CARD
    ═══════════════════════════════════════════ */
-const PrescriptionCard = ({ prescription, onView, onConvert, onPrint, loading }) => {
+const PrescriptionCard = ({ prescription, onView, onConvert, onDeliver, onPrint, loading }) => {
   console.log('🔍 [CARD DEBUG] Rendu de PrescriptionCard pour:', prescription);
   
   const formatDate = (dateString) => {
@@ -51,6 +52,7 @@ const PrescriptionCard = ({ prescription, onView, onConvert, onPrint, loading })
   const getStatusBadge = (status) => {
     const statusMap = {
       'EN_ATTENTE': { color: '#F59E0B', label: 'En attente' },
+      'PRESCRIPTION_ENVOYEE': { color: '#F59E0B', label: 'En attente pharmacie' },
       'VALIDEE': { color: '#10B981', label: 'Validée' },
       'PAYEE': { color: '#059669', label: 'Payée' },
       'DELIVREE': { color: '#8B5CF6', label: 'Délivrée' },
@@ -134,7 +136,7 @@ const PrescriptionCard = ({ prescription, onView, onConvert, onPrint, loading })
             Imprimer
           </Button>
           
-          {(prescription.status === 'EN_ATTENTE' || prescription.status === 'PAYEE') && (
+          {prescription.status === 'PRESCRIPTION_ENVOYEE' && (
             <Button
               size="sm"
               onClick={() => onConvert(prescription.id)}
@@ -146,7 +148,23 @@ const PrescriptionCard = ({ prescription, onView, onConvert, onPrint, loading })
               ) : (
                 <ShoppingCart className="w-3 h-3 mr-1" />
               )}
-              Convertir
+              Valider quantités
+            </Button>
+          )}
+
+          {prescription.status === 'PAYEE' && (
+            <Button
+              size="sm"
+              onClick={() => onDeliver(prescription.id)}
+              disabled={loading}
+              className="rounded-lg font-bold bg-purple-600 hover:bg-purple-700 w-full h-7 text-xs"
+            >
+              {loading ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <CheckCircle className="w-3 h-3 mr-1" />
+              )}
+              Livrer
             </Button>
           )}
         </div>
@@ -377,6 +395,40 @@ const PharmacyPrescriptions = () => {
     }
   };
 
+  const handleDeliverPrescription = async (prescriptionId) => {
+    try {
+      setConverting(prescriptionId);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/v1/pharmacy/prescriptions/${prescriptionId}/deliver`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Médicaments livrés avec succès', {
+          description: 'Le statut de la prescription a été mis à jour'
+        });
+        loadPrescriptions();
+      } else {
+        toast.error('Erreur lors de la livraison', {
+          description: data.message || 'Une erreur est survenue'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur livraison prescription:', error);
+      toast.error('Erreur lors de la livraison', {
+        description: 'Une erreur est survenue'
+      });
+    } finally {
+      setConverting(null);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadPrescriptions();
@@ -387,10 +439,10 @@ const PharmacyPrescriptions = () => {
   // ========================================
   const statusFilters = [
     { key: 'ALL', label: 'Toutes', color: '#6B7280' },
-    { key: 'EN_ATTENTE', label: 'En attente', color: '#F59E0B' },
-    { key: 'VALIDEE', label: 'Validées', color: '#10B981' },
+    { key: 'PRESCRIPTION_ENVOYEE', label: 'En attente pharmacie', color: '#F59E0B' },
+    { key: 'VALIDEE', label: 'Validées pharmacie', color: '#10B981' },
     { key: 'PAYEE', label: 'Payées', color: '#3B82F6' },
-    { key: 'PARTIELLEMENT_DELIVREE', label: 'Partielles', color: '#8B5CF6' },
+    { key: 'DELIVREE', label: 'Délivrées', color: '#8B5CF6' },
   ];
 
   const filteredPrescriptions = prescriptions.filter(prescription => {
@@ -541,6 +593,7 @@ const PharmacyPrescriptions = () => {
               prescription={prescription}
               onView={handleViewPrescription}
               onConvert={handleConvertToOrder}
+              onDeliver={handleDeliverPrescription}
               onPrint={handlePrintPrescription}
               loading={converting === prescription.id}
             />

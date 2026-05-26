@@ -2,9 +2,9 @@ package com.hospital.backend.entity;
 
 public enum PrescriptionStatus {
     EN_ATTENTE,
-    EN_ATTENTE_PAIEMENT,
     PRESCRIPTION_ENVOYEE,
     VALIDEE,
+    EN_ATTENTE_PAIEMENT,
     PAYEE,
     DELIVREE,
     PARTIELLEMENT_DELIVREE,

@@ -119,14 +119,14 @@ const financeApi = {
   getPharmacyQueue: async () => {
     try {
       console.log('🔍 [DEBUG] Appel de getPharmacyQueue...');
-      
-      // 2. Appeler l'endpoint principal
+
+      // Call the pharmacy-invoices endpoint for Caisse Pharmacie
       const response = await api.get('/prescription/pharmacy-invoices');
       console.log('🔍 [DEBUG] Données reçues de /prescription/pharmacy-invoices:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ [DEBUG] Erreur getPharmacyQueue:', error.response?.status, error.response?.data);
-      
+
       // Fallback: essayer l'ancien endpoint
       try {
         const response = await api.get('/queues/PHARMACY');

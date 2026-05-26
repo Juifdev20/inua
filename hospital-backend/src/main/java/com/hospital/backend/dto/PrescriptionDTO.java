@@ -34,6 +34,7 @@ public class PrescriptionDTO {
     private BigDecimal totalAmount;     // Total des médicaments
     private BigDecimal amountPaid;      // Montant payé
     private BigDecimal remainingAmount; // Reste à payer
+    private String currency;            // Devise (USD, CDF)
 
     private List<PrescriptionItemDTO> items;
     private String notes;

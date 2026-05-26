@@ -5,6 +5,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.service.PharmacieFinanceIntegrationService;
 import com.hospital.backend.repository.MedicationRepository;
 import com.hospital.backend.repository.StockMovementRepository;
+import com.hospital.backend.repository.PrescriptionRepository;
 import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.PrescriptionService;
 import com.hospital.backend.service.InvoiceService;
@@ -47,6 +48,7 @@ public class PharmacyController {
     private final InvoiceService invoiceService;
     private final UserRepository userRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final PrescriptionRepository prescriptionRepository;
     private final PasswordEncoder passwordEncoder;
     private final PharmacieFinanceIntegrationService pharmacieFinanceIntegrationService;
     private final MedicationRepository medicationRepository;
@@ -504,42 +506,42 @@ public class PharmacyController {
 
     @PostMapping("/prescriptions/{prescriptionId:[0-9]+}/validate")
     @PreAuthorize("hasAnyAuthority('ROLE_PHARMACIE', 'ROLE_PHARMACY', 'ROLE_ADMIN')")
-    @Operation(summary = "Valider une prescription médicale et créer la facture automatiquement")
+    @Operation(summary = "Valider les quantités d'une prescription et envoyer à la caisse")
     public ResponseEntity<?> validatePrescription(
             @PathVariable Long prescriptionId,
             @RequestBody(required = false) Map<String, Object> validationData) {
         try {
-            log.info("🔍 [DEBUG] Validation de la prescription {} avec création automatique de facture", prescriptionId);
-            log.info("🔍 [DEBUG] Données de validation reçues: {}", validationData);
-            
-            // 1. Mettre à jour les items si des données sont fournies
+            log.info("🔍 [NOUVEAU FLUX] Validation des quantités de la prescription {}", prescriptionId);
+            log.info("🔍 [NOUVEAU FLUX] Données de validation reçues: {}", validationData);
+
+            // 1. Mettre à jour les items si des données sont fournies (validation des quantités)
             if (validationData != null && validationData.containsKey("items")) {
-                log.info("🔍 [DEBUG] Mise à jour des items de la prescription avant validation");
+                log.info("🔍 [NOUVEAU FLUX] Mise à jour des quantités des items de la prescription");
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> items = (List<Map<String, Object>>) validationData.get("items");
                 prescriptionService.updateItems(prescriptionId, items);
             }
-            
-            // 2. Valider la prescription
+
+            // 2. Valider la prescription - changer statut à VALIDEE
             PrescriptionDTO validatedPrescription = prescriptionService.updateStatus(prescriptionId, PrescriptionStatus.VALIDEE);
-            log.info("✅ [DEBUG] Prescription {} validée avec succès", prescriptionId);
-            
+            log.info("✅ [NOUVEAU FLUX] Prescription {} validée par la pharmacie avec succès", prescriptionId);
+
             // 3. Générer automatiquement la facture pour la caisse
             try {
-                log.info("🔧 [DEBUG] Génération automatique de la facture pour prescription {}", prescriptionId);
+                log.info("🔧 [NOUVEAU FLUX] Génération automatique de la facture pour prescription {}", prescriptionId);
                 InvoiceDTO invoice = invoiceService.generateInvoice(prescriptionId);
-                
-                log.info("✅ [DEBUG] Facture {} générée avec succès - Patient: {} - Montant: {} - Statut: {}", 
+
+                log.info("✅ [NOUVEAU FLUX] Facture {} générée avec succès - Patient: {} - Montant: {} - Statut: {}",
                     invoice.getInvoiceCode(), invoice.getPatientName(), invoice.getTotalAmount(), invoice.getStatus());
-                
+
                 return ResponseEntity.ok(Map.of(
                     "success", true,
                     "prescription", validatedPrescription,
                     "invoice", invoice,
-                    "message", "Facture n°" + invoice.getInvoiceCode() + " envoyée à la caisse"
+                    "message", "Prescription validée et facture n°" + invoice.getInvoiceCode() + " envoyée à la caisse"
                 ));
             } catch (Exception e) {
-                log.error("❌ [DEBUG] Erreur génération facture pour prescription {}: {}", prescriptionId, e.getMessage(), e);
+                log.error("❌ [NOUVEAU FLUX] Erreur génération facture pour prescription {}: {}", prescriptionId, e.getMessage(), e);
                 // Retourner une erreur pour que le frontend sache que ça a échoué
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
@@ -549,9 +551,47 @@ public class PharmacyController {
                 ));
             }
         } catch (Exception e) {
-            log.error("❌ [DEBUG] Erreur validation prescription {}: {}", prescriptionId, e.getMessage(), e);
+            log.error("❌ [NOUVEAU FLUX] Erreur validation prescription {}: {}", prescriptionId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "Erreur lors de la validation",
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/prescriptions/{prescriptionId:[0-9]+}/deliver")
+    @PreAuthorize("hasAnyAuthority('ROLE_PHARMACIE', 'ROLE_PHARMACY', 'ROLE_ADMIN')")
+    @Operation(summary = "Livrer les médicaments au patient (après paiement)")
+    public ResponseEntity<?> deliverPrescription(
+            @PathVariable Long prescriptionId,
+            @RequestBody(required = false) Map<String, Object> deliveryData) {
+        try {
+            log.info("📦 [NOUVEAU FLUX] Livraison de la prescription {} au patient", prescriptionId);
+            
+            // Vérifier que la prescription est payée
+            PrescriptionDTO prescription = prescriptionService.getById(prescriptionId);
+            if (prescription.getStatus() != PrescriptionStatus.PAYEE) {
+                log.warn("⚠️ [NOUVEAU FLUX] Prescription {} n'est pas payée. Statut actuel: {}", prescriptionId, prescription.getStatus());
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Prescription non payée",
+                    "message", "La prescription doit être payée avant la livraison"
+                ));
+            }
+            
+            // Changer le statut à DELIVREE
+            PrescriptionDTO deliveredPrescription = prescriptionService.updateStatus(prescriptionId, PrescriptionStatus.DELIVREE);
+            log.info("✅ [NOUVEAU FLUX] Prescription {} livrée avec succès", prescriptionId);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "prescription", deliveredPrescription,
+                "message", "Médicaments livrés au patient avec succès"
+            ));
+        } catch (Exception e) {
+            log.error("❌ [NOUVEAU FLUX] Erreur livraison prescription {}: {}", prescriptionId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Erreur lors de la livraison",
                 "message", e.getMessage()
             ));
         }

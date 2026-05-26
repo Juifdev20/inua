@@ -734,21 +734,10 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new RuntimeException("Le montant total de la facture ne peut pas être zéro ou négatif");
         }
         
-        // Déterminer la devise à partir du premier médicament avec une devise définie
-        Currency invoiceCurrency = items.stream()
-            .filter(item -> item.getMedication() != null && item.getMedication().getSaleCurrency() != null)
-            .findFirst()
-            .map(item -> item.getMedication().getSaleCurrency())
-            .orElse(Currency.CDF); // Par défaut CDF si aucune devise trouvée
-        
-        // Log détaillé de toutes les devises trouvées
-        items.forEach(item -> {
-            if (item.getMedication() != null) {
-                log.info("💱 [DEBUG] Médicament {} - SaleCurrency: {}", 
-                    item.getMedication().getName(), 
-                    item.getMedication().getSaleCurrency());
-            }
-        });
+        // Utiliser la devise de la prescription (USD par défaut)
+        Currency invoiceCurrency = prescription.getCurrency() != null ? prescription.getCurrency() : Currency.USD;
+
+        log.info("💱 [DEBUG] Devise de la prescription: {}", invoiceCurrency);
         log.info("💱 [DEBUG] Devise de la facture déterminée: {}", invoiceCurrency);
         
         // Créer d'abord l'invoice pour obtenir l'ID

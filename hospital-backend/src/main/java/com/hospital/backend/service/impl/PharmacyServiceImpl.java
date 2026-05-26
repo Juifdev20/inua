@@ -9,8 +9,6 @@ import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.RevenueService;
 import com.hospital.backend.service.NotificationService;
-import com.hospital.backend.dto.ExpenseDTO;
-import com.hospital.backend.entity.Expense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -468,9 +466,9 @@ public class PharmacyServiceImpl implements PharmacyService {
     @Override
     @Transactional
     public SupplierDTO createSupplier(SupplierDTO supplierDTO) {
-        Supplier supplier = mapToEntity(supplierDTO);
+        Supplier supplier = mapSupplierDTOToEntity(supplierDTO);
         Supplier savedSupplier = supplierRepository.save(supplier);
-        return mapToDTO(savedSupplier);
+        return mapSupplierToDTO(savedSupplier);
     }
 
     @Override
@@ -491,20 +489,20 @@ public class PharmacyServiceImpl implements PharmacyService {
         supplier.setIsPreferred(supplierDTO.getIsPreferred());
 
         Supplier updatedSupplier = supplierRepository.save(supplier);
-        return mapToDTO(updatedSupplier);
+        return mapSupplierToDTO(updatedSupplier);
     }
 
     @Override
     public SupplierDTO getSupplierById(Long id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
-        return mapToDTO(supplier);
+        return mapSupplierToDTO(supplier);
     }
 
     @Override
     public List<SupplierDTO> getActiveSuppliers() {
         return supplierRepository.findByIsActiveTrue().stream()
-                .map(this::mapToDTO)
+                .map(this::mapSupplierToDTO)
                 .collect(Collectors.toList());
     }
 
@@ -512,7 +510,7 @@ public class PharmacyServiceImpl implements PharmacyService {
     public PageResponse<SupplierDTO> searchSuppliers(String query, Pageable pageable) {
         Page<Supplier> suppliers = supplierRepository.searchSuppliers(query, pageable);
         return PageResponse.<SupplierDTO>builder()
-                .content(suppliers.getContent().stream().map(this::mapToDTO).collect(Collectors.toList()))
+                .content(suppliers.getContent().stream().map(this::mapSupplierToDTO).collect(Collectors.toList()))
                 .totalElements(suppliers.getTotalElements())
                 .totalPages(suppliers.getTotalPages())
                 .size(suppliers.getSize())
@@ -582,7 +580,7 @@ public class PharmacyServiceImpl implements PharmacyService {
             throw new RuntimeException("Cannot add items to order in status: " + order.getStatus());
         }
 
-        PharmacyOrderItem item = mapToEntity(itemDTO);
+        PharmacyOrderItem item = mapOrderItemDTOToEntity(itemDTO);
         item.setPharmacyOrder(order);
 
         PharmacyOrderItem savedItem = pharmacyOrderItemRepository.save(item);
@@ -590,7 +588,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         // Update order total
         updateOrderTotal(order);
 
-        return mapToDTO(savedItem);
+        return mapOrderItemToDTO(savedItem);
     }
 
     @Override
@@ -608,7 +606,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         // Update order total
         updateOrderTotal(item.getPharmacyOrder());
 
-        return mapToDTO(updatedItem);
+        return mapOrderItemToDTO(updatedItem);
     }
 
     @Override
@@ -736,7 +734,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         // Map items
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             List<PharmacyOrderItem> items = dto.getItems().stream()
-                .map(this::mapItemToEntity)
+                .map(this::mapOrderItemDTOToEntity)
                 .collect(Collectors.toList());
             order.setItems(items);
             // Set bidirectional relationship
@@ -755,7 +753,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         return order;
     }
     
-    private PharmacyOrderItem mapItemToEntity(PharmacyOrderItemDTO dto) {
+    private PharmacyOrderItem mapOrderItemDTOToEntity(PharmacyOrderItemDTO dto) {
         PharmacyOrderItem item = new PharmacyOrderItem();
         item.setId(dto.getId());
         item.setQuantity(dto.getQuantity());
@@ -819,7 +817,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         // Map items
         if (entity.getItems() != null) {
             dto.setItems(entity.getItems().stream()
-                .map(this::mapItemToDTO)
+                .map(this::mapOrderItemToDTO)
                 .collect(Collectors.toList()));
         }
         
@@ -837,7 +835,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         return dto;
     }
     
-    private PharmacyOrderItemDTO mapItemToDTO(PharmacyOrderItem item) {
+    private PharmacyOrderItemDTO mapOrderItemToDTO(PharmacyOrderItem item) {
         if (item == null) return null;
         
         PharmacyOrderItemDTO dto = new PharmacyOrderItemDTO();
@@ -852,10 +850,43 @@ public class PharmacyServiceImpl implements PharmacyService {
         
         return dto;
     }
-    private PharmacyOrderItem mapToEntity(PharmacyOrderItemDTO dto) { /* implementation */ return new PharmacyOrderItem(); }
-    private PharmacyOrderItemDTO mapToDTO(PharmacyOrderItem entity) { /* implementation */ return new PharmacyOrderItemDTO(); }
-    private Supplier mapToEntity(SupplierDTO dto) { /* implementation */ return new Supplier(); }
-    private SupplierDTO mapToDTO(Supplier entity) { /* implementation */ return new SupplierDTO(); }
+    private Supplier mapSupplierDTOToEntity(SupplierDTO dto) {
+        if (dto == null) return null;
+        
+        Supplier supplier = new Supplier();
+        supplier.setId(dto.getId());
+        supplier.setName(dto.getName());
+        supplier.setDescription(dto.getDescription());
+        supplier.setContactPerson(dto.getContactPerson());
+        supplier.setPhoneNumber(dto.getPhoneNumber());
+        supplier.setEmailAddress(dto.getEmailAddress());
+        supplier.setPhysicalAddress(dto.getPhysicalAddress());
+        supplier.setPaymentTerms(dto.getPaymentTerms());
+        supplier.setDeliveryTime(dto.getDeliveryTime());
+        supplier.setIsActive(dto.getIsActive());
+        supplier.setIsPreferred(dto.getIsPreferred());
+        
+        return supplier;
+    }
+    
+    private SupplierDTO mapSupplierToDTO(Supplier entity) {
+        if (entity == null) return null;
+        
+        return SupplierDTO.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .contactPerson(entity.getContactPerson())
+                .phoneNumber(entity.getPhoneNumber())
+                .emailAddress(entity.getEmailAddress())
+                .physicalAddress(entity.getPhysicalAddress())
+                .paymentTerms(entity.getPaymentTerms())
+                .deliveryTime(entity.getDeliveryTime())
+                .isActive(entity.getIsActive())
+                .isPreferred(entity.getIsPreferred())
+                .build();
+    }
+    
     private MedicationStockAlertDTO mapToStockAlertDTO(Medication medication) {
         if (medication == null) return null;
         
@@ -1134,7 +1165,7 @@ public class PharmacyServiceImpl implements PharmacyService {
             .filter(item -> item.getMedication() != null)
             .collect(Collectors.groupingBy(PharmacyOrderItem::getMedication));
         
-        List<TopProductDTO> products = grouped.entrySet().stream()
+        return grouped.entrySet().stream()
             .map(entry -> {
                 Medication med = entry.getKey();
                 List<PharmacyOrderItem> items = entry.getValue();
@@ -1153,8 +1184,6 @@ public class PharmacyServiceImpl implements PharmacyService {
             .sorted((a, b) -> b.getQuantity().compareTo(a.getQuantity()))
             .limit(limit)
             .collect(Collectors.toList());
-        
-        return products;
     }
     
     @Override
@@ -1195,7 +1224,6 @@ public class PharmacyServiceImpl implements PharmacyService {
                 case ASSURANCE -> "Assurance";
                 case VIREMENT -> "Virement";
                 case CHEQUE -> "Chèque";
-                default -> entry.getKey().name();
             };
             
             methods.add(PaymentMethodDTO.builder()
@@ -1270,7 +1298,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         
         return PharmacyReportDTO.StockMetricsDTO.builder()
             .stockValuation(valuation)
-            .totalItems((long) medications.stream().mapToLong(Medication::getStockQuantity).sum())
+            .totalItems(medications.stream().mapToLong(Medication::getStockQuantity).sum())
             .alertsCount((long) lowStock.size())
             .averageRotation("12j")
             .build();
@@ -1544,7 +1572,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         
         // 2. Créer la dépense automatiquement
         try {
-            Long userId = pharmacist != null ? pharmacist.getId() : 1L;
+            Long userId = pharmacist.getId();
             
             ExpenseDTO expenseDTO = ExpenseDTO.builder()
                 .amount(totalCost)

@@ -3,16 +3,21 @@ package com.hospital.backend.service;
 import com.hospital.backend.dto.AdmissionDTO;
 import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.Admission;
+import com.hospital.backend.entity.Company;
 import com.hospital.backend.entity.Consultation;
 import com.hospital.backend.entity.ConsultationStatus;
 import com.hospital.backend.entity.Currency;
+import com.hospital.backend.entity.Medication;
 import com.hospital.backend.entity.PaymentMethod;
+import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.Prescription;
 import com.hospital.backend.entity.PrescriptionStatus;
 import com.hospital.backend.entity.Revenue;
+import com.hospital.backend.entity.SubscriptionStatus;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.AdmissionRepository;
 import com.hospital.backend.repository.ConsultationRepository;
+import com.hospital.backend.repository.MedicationRepository;
 import com.hospital.backend.repository.PrescriptionRepository;
 import com.hospital.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +48,8 @@ public class UltraSimpleFinanceService {
     private final RevenueService revenueService;
     private final UserRepository userRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final CompanyConsumptionService companyConsumptionService;
+    private final MedicationRepository medicationRepository;
 
     @Transactional(readOnly = false)
     public Map<String, Object> payConsultation(Long consultationId, String paymentMethod, Double amountPaid, Long userId) {
@@ -399,38 +406,84 @@ public class UltraSimpleFinanceService {
     @Transactional(readOnly = false)
     public Map<String, Object> payPrescription(Long prescriptionId, String paymentMethod, Double amountPaid, Long userId) {
         log.info("==========================================");
-        log.info("💊 [FINANCE] Paiement prescription laboratoire");
-        log.info("💊 [FINANCE] ID: {}, Méthode: {}, Montant: {}", prescriptionId, paymentMethod, amountPaid);
+        log.info("💊 [NOUVEAU FLUX] Paiement prescription pharmacie");
+        log.info("💊 [NOUVEAU FLUX] ID: {}, Méthode: {}, Montant: {}", prescriptionId, paymentMethod, amountPaid);
         log.info("==========================================");
         
         if (prescriptionId == null) {
-            log.error("❌ [FINANCE] prescriptionId est NULL!");
+            log.error("❌ [NOUVEAU FLUX] prescriptionId est NULL!");
             return Map.of("success", false, "message", "ID prescription requis");
         }
         
         try {
             // 1. Vérifier que la prescription existe
-            log.info("🔍 [FINANCE] Recherche prescription {}...", prescriptionId);
+            log.info("🔍 [NOUVEAU FLUX] Recherche prescription {}...", prescriptionId);
             Prescription prescription = prescriptionRepository.findById(prescriptionId)
                 .orElseThrow(() -> new RuntimeException("Prescription non trouvée"));
             
-            log.info("✅ [FINANCE] Prescription trouvée - ID: {}, Statut: {}", prescription.getId(), prescription.getStatus());
+            log.info("✅ [NOUVEAU FLUX] Prescription trouvée - ID: {}, Statut: {}", prescription.getId(), prescription.getStatus());
             
-            // 2. Vérifier le statut actuel
+            // 2. Vérifier le statut actuel - doit être VALIDEE dans le nouveau flux
             if (prescription.getStatus() == PrescriptionStatus.PAYEE) {
-                log.warn("⚠️ [FINANCE] Prescription déjà payée!");
+                log.warn("⚠️ [NOUVEAU FLUX] Prescription déjà payée!");
                 return Map.of("success", false, "message", "Prescription déjà payée");
             }
-            
-            if (prescription.getStatus() != PrescriptionStatus.EN_ATTENTE_PAIEMENT) {
-                log.warn("⚠️ [FINANCE] Prescription n'est pas en attente de paiement! Statut: {}", prescription.getStatus());
-                return Map.of("success", false, "message", "Prescription n'est pas en attente de paiement");
+
+            if (prescription.getStatus() != PrescriptionStatus.VALIDEE) {
+                log.warn("⚠️ [NOUVEAU FLUX] Prescription n'est pas validée par la pharmacie! Statut: {}", prescription.getStatus());
+                return Map.of("success", false, "message", "La prescription doit être validée par la pharmacie avant le paiement");
             }
             
-            // 3. Changer le statut à PAYEE
-            log.info("📝 [FINANCE] Changement statut -> PAYEE...");
+            // 3. Calculer le montant total de la prescription
+            BigDecimal totalAmount = calculatePrescriptionTotal(prescription);
+            log.info("💰 [NOUVEAU FLUX] Montant total calculé: {}", totalAmount);
+            
+            // 4. Vérifier si le patient est abonné et enregistrer la consommation
+            Patient patient = prescription.getPatient();
+            Admission admission = null;
+            com.hospital.backend.entity.Company company = null;
+            BigDecimal coverageRate = null;
+            boolean isAbonne = false;
+            BigDecimal finalAmountPaid = BigDecimal.valueOf(amountPaid != null ? amountPaid : totalAmount.doubleValue());
+            
+            // Récupérer l'admission via la consultation (relation Prescription -> Consultation -> Admission)
+            if (prescription.getConsultation() != null && prescription.getConsultation().getAdmission() != null) {
+                admission = prescription.getConsultation().getAdmission();
+                
+                // Vérifier si le patient est abonné (cohérent avec logique consultation/labo)
+                if (Boolean.TRUE.equals(admission.getIsAbonne()) && admission.getCompany() != null) {
+                    company = admission.getCompany();
+                    if (company.getSubscriptionStatus() == com.hospital.backend.entity.SubscriptionStatus.ACTIVE) {
+                        isAbonne = true;
+                        coverageRate = admission.getCoverageRate() != null 
+                            ? admission.getCoverageRate() : company.getCoverageRate();
+                        if (coverageRate == null) coverageRate = new BigDecimal("100.00");
+                        
+                        log.info("💳 [NOUVEAU FLUX] Patient abonné détecté - Entreprise: {}, Taux couverture: {}%", 
+                            company.getName(), coverageRate);
+                        
+                        // Calculer le ticket modeste si couverture < 100%
+                        if (coverageRate.compareTo(new BigDecimal("100")) < 0) {
+                            BigDecimal companyCoverage = totalAmount.multiply(coverageRate)
+                                .divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP);
+                            BigDecimal patientSurplus = totalAmount.subtract(companyCoverage);
+                            finalAmountPaid = patientSurplus;
+                            log.info("💳 [NOUVEAU FLUX] Ticket modeste - Couverture entreprise: {}, Surplus patient: {}", 
+                                companyCoverage, patientSurplus);
+                        } else {
+                            // Couverture 100% - patient ne paie rien
+                            finalAmountPaid = BigDecimal.ZERO;
+                            log.info("💳 [NOUVEAU FLUX] Couverture 100% - Patient ne paie rien");
+                        }
+                    }
+                }
+            }
+            
+            // 5. Changer le statut à PAYEE
+            log.info("📝 [NOUVEAU FLUX] Changement statut -> PAYEE...");
             prescription.setStatus(PrescriptionStatus.PAYEE);
-            prescription.setAmountPaid(BigDecimal.valueOf(amountPaid != null ? amountPaid : 0));
+            prescription.setTotalAmount(totalAmount);
+            prescription.setAmountPaid(finalAmountPaid);
             prescription.setPaidAt(LocalDateTime.now());
             
             if (userId != null) {
@@ -438,38 +491,116 @@ public class UltraSimpleFinanceService {
                 prescription.setPaidBy(paidBy);
             }
             
-            // 4. Sauvegarder
-            log.info("💾 [FINANCE] Sauvegarde en cours...");
+            // 6. Sauvegarder
+            log.info("💾 [NOUVEAU FLUX] Sauvegarde en cours...");
             Prescription saved = prescriptionRepository.save(prescription);
-            log.info("✅ [FINANCE] Prescription sauvegardée - ID: {}, Nouveau statut: {}", saved.getId(), saved.getStatus());
+            log.info("✅ [NOUVEAU FLUX] Prescription sauvegardée - ID: {}, Nouveau statut: {}", saved.getId(), saved.getStatus());
             
-            // 5. Créer le revenu automatiquement
+            // 7. Déduire le stock des médicaments
             try {
-                createRevenueFromPrescription(saved, amountPaid, paymentMethod, userId);
-                log.info("💰 [FINANCE] Revenu créé pour le paiement prescription");
+                deductMedicationStock(saved);
+                log.info("📦 [NOUVEAU FLUX] Stock déduit avec succès");
             } catch (Exception e) {
-                log.error("❌ [FINANCE] Erreur création revenu: {}", e.getMessage());
-                // Ne pas bloquer le paiement si la création de revenu échoue
+                log.error("❌ [NOUVEAU FLUX] Erreur déduction stock: {}", e.getMessage());
+                // Ne pas bloquer le paiement si la déduction de stock échoue
+            }
+            
+            // 8. Enregistrer la consommation pour les patients abonnés
+            if (isAbonne && company != null && admission != null) {
+                try {
+                    companyConsumptionService.record(
+                        company,
+                        patient,
+                        admission,
+                        com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.PHARMACIE,
+                        "Prescription médicale - " + saved.getPrescriptionCode(),
+                        totalAmount,
+                        coverageRate
+                    );
+                    log.info("✅ [NOUVEAU FLUX] Consommation PHARMACIE enregistrée pour patient abonné");
+                } catch (Exception e) {
+                    log.error("❌ [NOUVEAU FLUX] Erreur enregistrement consommation: {}", e.getMessage());
+                    // Ne pas bloquer le paiement si l'enregistrement de consommation échoue
+                }
+            }
+            
+            // 9. Créer le revenu automatiquement (seulement si le patient paie quelque chose)
+            if (finalAmountPaid.compareTo(BigDecimal.ZERO) > 0) {
+                try {
+                    createRevenueFromPrescription(saved, finalAmountPaid.doubleValue(), paymentMethod, userId);
+                    log.info("💰 [NOUVEAU FLUX] Revenu créé pour le paiement prescription");
+                } catch (Exception e) {
+                    log.error("❌ [NOUVEAU FLUX] Erreur création revenu: {}", e.getMessage());
+                    // Ne pas bloquer le paiement si la création de revenu échoue
+                }
+            } else {
+                log.info("💰 [NOUVEAU FLUX] Aucun revenu créé (patient abonné avec couverture 100%)");
             }
             
             log.info("==========================================");
-            log.info("✅ [FINANCE] Paiement prescription réussi");
+            log.info("✅ [NOUVEAU FLUX] Paiement prescription réussi - Ticket généré");
             log.info("==========================================");
             
             return Map.of(
                 "success", true,
-                "message", "Prescription payée avec succès",
+                "message", isAbonne ? "Prescription payée avec succès (patient abonné)" : "Prescription payée avec succès - Stock déduit",
                 "prescriptionId", saved.getId(),
-                "status", saved.getStatus().name()
+                "status", saved.getStatus().name(),
+                "totalAmount", saved.getTotalAmount(),
+                "amountPaid", saved.getAmountPaid(),
+                "isAbonne", isAbonne
             );
             
         } catch (Exception e) {
-            log.error("❌ [FINANCE] ERREUR paiement prescription: {}", e.getMessage(), e);
+            log.error("❌ [NOUVEAU FLUX] ERREUR paiement prescription: {}", e.getMessage(), e);
             return Map.of(
                 "success", false,
                 "message", "Erreur lors du paiement: " + e.getMessage()
             );
         }
+    }
+    
+    /**
+     * Calcule le montant total d'une prescription en sommant les prix des médicaments
+     */
+    private BigDecimal calculatePrescriptionTotal(Prescription prescription) {
+        return prescription.getItems().stream()
+            .map(item -> {
+                BigDecimal unitPrice = item.getMedication().getUnitPrice() != null 
+                    ? item.getMedication().getUnitPrice() 
+                    : BigDecimal.ZERO;
+                Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+                return unitPrice.multiply(BigDecimal.valueOf(quantity));
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    
+    /**
+     * Déduit le stock des médicaments après paiement
+     */
+    private void deductMedicationStock(Prescription prescription) {
+        log.info("📦 [STOCK] Déduction du stock pour prescription {}", prescription.getId());
+        
+        prescription.getItems().forEach(item -> {
+            Medication medication = item.getMedication();
+            Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+            
+            if (quantity > 0) {
+                Integer currentStock = medication.getStockQuantity() != null ? medication.getStockQuantity() : 0;
+                Integer newStock = currentStock - quantity;
+                
+                if (newStock < 0) {
+                    log.warn("⚠️ [STOCK] Stock insuffisant pour {} (demandé: {}, disponible: {})", 
+                        medication.getName(), quantity, currentStock);
+                    throw new RuntimeException("Stock insuffisant pour: " + medication.getName());
+                }
+                
+                medication.setStockQuantity(newStock);
+                medicationRepository.save(medication);
+                
+                log.info("✅ [STOCK] {} - Stock: {} -> {}", medication.getName(), currentStock, newStock);
+            }
+        });
     }
 
     private void createRevenueFromPrescription(Prescription prescription, Double amount, String paymentMethodStr, Long userId) {
@@ -505,15 +636,15 @@ public class UltraSimpleFinanceService {
     }
 
     public Map<String, Object> getPendingPrescriptions() {
-        log.info("📋 [FINANCE] Récupération prescriptions en attente de paiement");
+        log.info("📋 [NOUVEAU FLUX] Récupération prescriptions validées par la pharmacie (en attente de paiement)");
         
         try {
             List<Prescription> pendingPrescriptions = prescriptionRepository.findByStatus(
-                PrescriptionStatus.EN_ATTENTE_PAIEMENT, 
+                PrescriptionStatus.VALIDEE,
                 org.springframework.data.domain.Pageable.unpaged()
             ).getContent();
             
-            log.info("✅ [FINANCE] {} prescriptions en attente de paiement trouvées", pendingPrescriptions.size());
+            log.info("✅ [NOUVEAU FLUX] {} prescriptions en attente de paiement trouvées", pendingPrescriptions.size());
             
             return Map.of(
                 "success", true,
@@ -521,7 +652,7 @@ public class UltraSimpleFinanceService {
                 "count", pendingPrescriptions.size()
             );
         } catch (Exception e) {
-            log.error("❌ [FINANCE] ERREUR récupération prescriptions: {}", e.getMessage(), e);
+            log.error("❌ [NOUVEAU FLUX] ERREUR récupération prescriptions: {}", e.getMessage(), e);
             return Map.of(
                 "success", false,
                 "message", "Erreur lors de la récupération: " + e.getMessage()
