@@ -266,14 +266,14 @@ export default function CompaniesPage() {
 
       {/* ---- Modal création / édition ---- */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Modifier l\'entreprise' : 'Nouvelle entreprise abonnée'}</DialogTitle>
             <DialogDescription>
               Renseignez les informations du contrat d'abonnement.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
             <div className="md:col-span-2">
               <Label>Nom de l'entreprise *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
