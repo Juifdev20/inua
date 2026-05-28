@@ -7,6 +7,8 @@ import com.hospital.backend.entity.ConsultationStatus;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.service.ConsultationService;
 import com.lowagie.text.*;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import java.awt.Color;
 
@@ -38,6 +40,7 @@ import java.util.Map;
 public class ConsultationController {
 
     private final ConsultationService consultationService;
+    private final com.hospital.backend.repository.HospitalConfigRepository hospitalConfigRepository;
 
     // --- ✅ MÉTHODE : HISTORIQUE RÉEL POUR LE DOCTEUR ---
 
@@ -366,6 +369,90 @@ public class ConsultationController {
 
             document.open();
 
+            // Récupérer la configuration de l'hôpital
+            com.hospital.backend.entity.HospitalConfig config = hospitalConfigRepository.findFirstByOrderByIdAsc().orElse(null);
+            boolean logoEnabled = config != null && (config.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(config.getEnableLogoOnDocuments()));
+            String hospitalName = config != null && config.getHospitalName() != null ? config.getHospitalName() : "INUA AFYA";
+            String hospitalLogoUrl = config != null && config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
+            String ministryName = config != null && config.getMinistryName() != null ? config.getMinistryName() : "";
+            String departmentName = config != null && config.getDepartmentName() != null ? config.getDepartmentName() : "";
+            String address = config != null && config.getAddress() != null ? config.getAddress() : "";
+            String phoneNumber = config != null && config.getPhoneNumber() != null ? config.getPhoneNumber() : "";
+            String email = config != null && config.getEmail() != null ? config.getEmail() : "";
+            String footerText = config != null && config.getFooterText() != null ? config.getFooterText() : ("Document généré par " + hospitalName);
+
+            // ── EN-TÊTE AVEC CONFIG ─────────────────────────────────────────
+            PdfPTable headerTable = new PdfPTable(2);
+            headerTable.setWidthPercentage(100);
+            headerTable.setWidths(new float[]{1, 3});
+
+            // Logo
+            if (logoEnabled && !hospitalLogoUrl.isEmpty()) {
+                try {
+                    Image logo;
+                    if (hospitalLogoUrl.startsWith("data:")) {
+                        String base64 = hospitalLogoUrl.substring(hospitalLogoUrl.indexOf(",") + 1);
+                        logo = Image.getInstance(java.util.Base64.getDecoder().decode(base64));
+                    } else {
+                        logo = Image.getInstance(hospitalLogoUrl);
+                    }
+                    logo.scaleToFit(60, 60);
+                    PdfPCell logoCell = new PdfPCell(logo);
+                    logoCell.setBorder(Rectangle.NO_BORDER);
+                    logoCell.setVerticalAlignment(Element.ALIGN_TOP);
+                    headerTable.addCell(logoCell);
+                } catch (Exception e) {
+                    log.warn("⚠️ Impossible de charger le logo: {}", e.getMessage());
+                    PdfPCell emptyCell = new PdfPCell();
+                    emptyCell.setBorder(Rectangle.NO_BORDER);
+                    headerTable.addCell(emptyCell);
+                }
+            } else {
+                PdfPCell emptyCell = new PdfPCell();
+                emptyCell.setBorder(Rectangle.NO_BORDER);
+                headerTable.addCell(emptyCell);
+            }
+
+            // Infos hôpital
+            PdfPCell infoCell = new PdfPCell();
+            infoCell.setBorder(Rectangle.NO_BORDER);
+            infoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+            Font hospitalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+            Font subFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
+
+            infoCell.addElement(new Paragraph(hospitalName.toUpperCase(), hospitalFont));
+            if (!ministryName.isEmpty()) {
+                infoCell.addElement(new Paragraph(ministryName, subFont));
+            }
+            if (!departmentName.isEmpty()) {
+                infoCell.addElement(new Paragraph(departmentName, subFont));
+            }
+            if (!address.isEmpty()) {
+                infoCell.addElement(new Paragraph("📍 " + address, subFont));
+            }
+            if (!phoneNumber.isEmpty()) {
+                infoCell.addElement(new Paragraph("📞 " + phoneNumber, subFont));
+            }
+            if (!email.isEmpty()) {
+                infoCell.addElement(new Paragraph("✉️ " + email, subFont));
+            }
+            headerTable.addCell(infoCell);
+
+            document.add(headerTable);
+            document.add(new Paragraph(" "));
+
+            // Ligne séparatrice
+            PdfPTable lineTable = new PdfPTable(1);
+            lineTable.setWidthPercentage(100);
+            PdfPCell lineCell = new PdfPCell();
+            lineCell.setBorder(Rectangle.BOTTOM);
+            lineCell.setBorderWidth(1);
+            lineCell.setPadding(2);
+            lineTable.addCell(lineCell);
+            document.add(lineTable);
+            document.add(new Paragraph(" "));
+
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
             Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
             Font textFont = FontFactory.getFont(FontFactory.HELVETICA, 12, Color.BLACK);
@@ -383,6 +470,12 @@ public class ConsultationController {
 
             if (dto.getPoids() != null) document.add(new Paragraph("Poids: " + dto.getPoids(), textFont));
             if (dto.getTensionArterielle() != null) document.add(new Paragraph("Tension: " + dto.getTensionArterielle(), textFont));
+
+            // Pied de page
+            document.add(new Paragraph(" "));
+            Paragraph footer = new Paragraph(footerText, FontFactory.getFont(FontFactory.HELVETICA, 9, Font.ITALIC));
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
 
             document.close();
             byte[] pdfBytes = baos.toByteArray();

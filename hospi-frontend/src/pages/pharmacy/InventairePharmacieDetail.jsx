@@ -10,6 +10,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { inventairePharmaAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ export default function InventairePharmacieDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { config } = useHospitalConfig();
 
   const [inventaire, setInventaire] = useState(null);
   const [lignes, setLignes] = useState([]);
@@ -190,16 +192,39 @@ export default function InventairePharmacieDetail() {
       const ph = doc.internal.pageSize.getHeight();
       const kpis = calcKpis(lignes);
 
-      // En-tête
-      doc.setFillColor(30, 64, 175);
-      doc.rect(0, 0, pw, 22, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
+      // Couleur depuis config
+      const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [5, 150, 105];
+      };
+      const primaryColor = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
+      const hospitalName = config?.hospitalName || 'INUA AFYA';
+
+      // Logo
+      if (config?.hospitalLogoUrl) {
+        try {
+          doc.addImage(config.hospitalLogoUrl, 'PNG', 14, 5, 20, 20);
+        } catch (e) {
+          // Logo non chargé, on continue sans
+        }
+      }
+
+      // Nom de l'hôpital
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont(undefined, 'bold');
-      doc.text('FICHE D\'INVENTAIRE PHARMACIE', pw / 2, 9, { align: 'center' });
-      doc.setFontSize(10);
+      doc.text(hospitalName.toUpperCase(), pw - 14, 12, { align: 'right' });
+
+      // En-tête
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 28, pw, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('FICHE D\'INVENTAIRE PHARMACIE', pw / 2, 36, { align: 'center' });
+      doc.setFontSize(9);
       doc.setFont(undefined, 'normal');
-      doc.text(`Référence : INV-${inventaire.id}`, pw / 2, 16, { align: 'center' });
+      doc.text(`Référence : INV-${inventaire.id}`, pw / 2, 42, { align: 'center' });
 
       // Infos générales
       doc.setTextColor(30, 30, 30);
@@ -232,7 +257,7 @@ export default function InventairePharmacieDetail() {
       doc.setFont(undefined, 'bold'); doc.setFontSize(8);
       doc.setFillColor(248, 250, 252);
       doc.rect(col1, y, pw - 28, 12, 'F');
-      doc.setTextColor(30, 64, 175);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.text(`Articles : ${kpis.total}`, col1 + 4, y + 5);
       doc.text(`Avec écart : ${kpis.avecEcart}`, col1 + 35, y + 5);
       doc.text(`Valeur écarts : ${fmtMoney(kpis.valTotale)}`, col1 + 72, y + 5);
@@ -261,7 +286,7 @@ export default function InventairePharmacieDetail() {
         head: [['Code DCI', 'Désignation', 'Forme', 'Dosage', 'Unité', 'Th.', 'Phys.', 'Écart', 'Val. Écart', 'Observation']],
         body: tableData,
         styles: { fontSize: 7, cellPadding: 1.5 },
-        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+        headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold', fontSize: 7 },
         columnStyles: {
           0: { cellWidth: 22 }, 1: { cellWidth: 38 }, 2: { cellWidth: 18 },
           3: { cellWidth: 16 }, 4: { cellWidth: 14 }, 5: { cellWidth: 14 },
@@ -284,7 +309,7 @@ export default function InventairePharmacieDetail() {
         doc.setPage(i);
         doc.setFontSize(7); doc.setTextColor(150, 150, 150);
         doc.text(
-          `Document généré le ${new Date().toLocaleString('fr-FR')} — Système de Gestion Hospitalière`,
+          `Document généré le ${new Date().toLocaleString('fr-FR')} — ${config?.footerText || hospitalName}`,
           14, ph - 5
         );
         doc.text(`Page ${i}/${totalPages}`, pw - 14, ph - 5, { align: 'right' });

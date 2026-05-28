@@ -790,6 +790,11 @@ const Expenses = () => {
         <div className="bg-white text-black p-8 font-serif leading-tight">
           {/* ENTÊTE OFFICIELLE */}
           <div className="text-center space-y-1 border-b-2 border-black pb-4 mb-6">
+            {config?.hospitalLogoUrl && (
+              <div className="flex justify-center mb-2">
+                <img src={config.hospitalLogoUrl} alt={config.hospitalName} className="h-16 object-contain" />
+              </div>
+            )}
             <h1 className="text-xl font-bold uppercase">{config?.country || 'République Démocratique du Congo'}</h1>
             <h2 className="text-lg font-semibold uppercase">{config?.departmentName || 'Ministère de la Santé Publique'}</h2>
             <div className="flex justify-between text-xs font-medium px-4">

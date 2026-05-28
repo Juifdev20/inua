@@ -13,6 +13,7 @@ import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.RevenueService;
 
 import com.lowagie.text.*;
+import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 
@@ -48,6 +49,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final MedicationRepository medicationRepository;
     private final PrescriptionItemRepository prescriptionItemRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final HospitalConfigRepository hospitalConfigRepository;
     // ★ AJOUTÉ : Pour créer la facture/consulter les détails du médecin si nécessaire
     private final UserRepository userRepository;
     
@@ -103,6 +105,90 @@ public class InvoiceServiceImpl implements InvoiceService {
             PdfWriter.getInstance(document, outputStream);
             document.open();
 
+            // Récupérer la configuration de l'hôpital
+            HospitalConfig config = hospitalConfigRepository.findFirstByOrderByIdAsc().orElse(null);
+            boolean logoEnabled = config != null && (config.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(config.getEnableLogoOnDocuments()));
+            String hospitalName = config != null && config.getHospitalName() != null ? config.getHospitalName() : "INUA AFYA";
+            String hospitalLogoUrl = config != null && config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
+            String ministryName = config != null && config.getMinistryName() != null ? config.getMinistryName() : "";
+            String departmentName = config != null && config.getDepartmentName() != null ? config.getDepartmentName() : "";
+            String address = config != null && config.getAddress() != null ? config.getAddress() : "";
+            String phoneNumber = config != null && config.getPhoneNumber() != null ? config.getPhoneNumber() : "";
+            String email = config != null && config.getEmail() != null ? config.getEmail() : "";
+            String footerText = config != null && config.getFooterText() != null ? config.getFooterText() : ("Document généré par " + hospitalName);
+
+            // ── EN-TÊTE AVEC CONFIG ─────────────────────────────────────────
+            PdfPTable headerTable = new PdfPTable(2);
+            headerTable.setWidthPercentage(100);
+            headerTable.setWidths(new float[]{1, 3});
+
+            // Logo
+            if (logoEnabled && !hospitalLogoUrl.isEmpty()) {
+                try {
+                    com.lowagie.text.Image logo;
+                    if (hospitalLogoUrl.startsWith("data:")) {
+                        String base64 = hospitalLogoUrl.substring(hospitalLogoUrl.indexOf(",") + 1);
+                        logo = com.lowagie.text.Image.getInstance(java.util.Base64.getDecoder().decode(base64));
+                    } else {
+                        logo = com.lowagie.text.Image.getInstance(hospitalLogoUrl);
+                    }
+                    logo.scaleToFit(60, 60);
+                    PdfPCell logoCell = new PdfPCell(logo);
+                    logoCell.setBorder(Rectangle.NO_BORDER);
+                    logoCell.setVerticalAlignment(Element.ALIGN_TOP);
+                    headerTable.addCell(logoCell);
+                } catch (Exception e) {
+                    log.warn("⚠️ Impossible de charger le logo: {}", e.getMessage());
+                    PdfPCell emptyCell = new PdfPCell();
+                    emptyCell.setBorder(Rectangle.NO_BORDER);
+                    headerTable.addCell(emptyCell);
+                }
+            } else {
+                PdfPCell emptyCell = new PdfPCell();
+                emptyCell.setBorder(Rectangle.NO_BORDER);
+                headerTable.addCell(emptyCell);
+            }
+
+            // Infos hôpital
+            PdfPCell infoCell = new PdfPCell();
+            infoCell.setBorder(Rectangle.NO_BORDER);
+            infoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+            Font hospitalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+            Font subFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
+
+            infoCell.addElement(new Paragraph(hospitalName.toUpperCase(), hospitalFont));
+            if (!ministryName.isEmpty()) {
+                infoCell.addElement(new Paragraph(ministryName, subFont));
+            }
+            if (!departmentName.isEmpty()) {
+                infoCell.addElement(new Paragraph(departmentName, subFont));
+            }
+            if (!address.isEmpty()) {
+                infoCell.addElement(new Paragraph("📍 " + address, subFont));
+            }
+            if (!phoneNumber.isEmpty()) {
+                infoCell.addElement(new Paragraph("📞 " + phoneNumber, subFont));
+            }
+            if (!email.isEmpty()) {
+                infoCell.addElement(new Paragraph("✉️ " + email, subFont));
+            }
+            headerTable.addCell(infoCell);
+
+            document.add(headerTable);
+            document.add(new Paragraph(" "));
+
+            // Ligne séparatrice
+            PdfPTable lineTable = new PdfPTable(1);
+            lineTable.setWidthPercentage(100);
+            PdfPCell lineCell = new PdfPCell();
+            lineCell.setBorder(Rectangle.BOTTOM);
+            lineCell.setBorderWidth(1);
+            lineCell.setPadding(2);
+            lineTable.addCell(lineCell);
+            document.add(lineTable);
+            document.add(new Paragraph(" "));
+
             Font fontTitle  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
             Font fontBold   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
             Font fontNormal = FontFactory.getFont(FontFactory.HELVETICA, 10);
@@ -143,6 +229,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                     "\nTOTAL À PAYER : " + dto.getTotalAmount() + " CDF", fontTitle);
             totalParagraph.setAlignment(Element.ALIGN_RIGHT);
             document.add(totalParagraph);
+
+            // Pied de page
+            document.add(new Paragraph(" "));
+            Paragraph footer = new Paragraph(footerText, FontFactory.getFont(FontFactory.HELVETICA, 9, Font.ITALIC));
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
 
         } catch (DocumentException e) {
             log.error("Erreur lors de la création du document PDF", e);

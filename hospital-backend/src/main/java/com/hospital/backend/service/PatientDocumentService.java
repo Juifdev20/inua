@@ -28,6 +28,7 @@ public class PatientDocumentService {
 
     private final PatientDocumentRepository patientDocumentRepository;
     private final ConsultationRepository consultationRepository;
+    private final HospitalConfigRepository hospitalConfigRepository;
 
     // Configuration du chemin de stockage des PDFs
     @Value("${app.document.storage.path:./documents}")
@@ -271,6 +272,90 @@ public class PatientDocumentService {
     private void generatePDFContent(com.lowagie.text.Document document, Consultation consultation, Patient patient) throws Exception {
         document.open();
 
+        // Récupérer la configuration de l'hôpital
+        HospitalConfig config = hospitalConfigRepository.findFirstByOrderByIdAsc().orElse(null);
+        boolean logoEnabled = config != null && (config.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(config.getEnableLogoOnDocuments()));
+        String hospitalName = config != null && config.getHospitalName() != null ? config.getHospitalName() : "INUA AFYA";
+        String hospitalLogoUrl = config != null && config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
+        String ministryName = config != null && config.getMinistryName() != null ? config.getMinistryName() : "";
+        String departmentName = config != null && config.getDepartmentName() != null ? config.getDepartmentName() : "";
+        String address = config != null && config.getAddress() != null ? config.getAddress() : "";
+        String phoneNumber = config != null && config.getPhoneNumber() != null ? config.getPhoneNumber() : "";
+        String email = config != null && config.getEmail() != null ? config.getEmail() : "";
+        String footerText = config != null && config.getFooterText() != null ? config.getFooterText() : ("Document généré par " + hospitalName);
+
+        // ── EN-TÊTE AVEC CONFIG ─────────────────────────────────────────
+        com.lowagie.text.pdf.PdfPTable headerTable = new com.lowagie.text.pdf.PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setWidths(new float[]{1, 3});
+
+        // Logo
+        if (logoEnabled && !hospitalLogoUrl.isEmpty()) {
+            try {
+                com.lowagie.text.Image logo;
+                if (hospitalLogoUrl.startsWith("data:")) {
+                    String base64 = hospitalLogoUrl.substring(hospitalLogoUrl.indexOf(",") + 1);
+                    logo = com.lowagie.text.Image.getInstance(java.util.Base64.getDecoder().decode(base64));
+                } else {
+                    logo = com.lowagie.text.Image.getInstance(hospitalLogoUrl);
+                }
+                logo.scaleToFit(60, 60);
+                com.lowagie.text.pdf.PdfPCell logoCell = new com.lowagie.text.pdf.PdfPCell(logo);
+                logoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+                logoCell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_TOP);
+                headerTable.addCell(logoCell);
+            } catch (Exception e) {
+                log.warn("⚠️ Impossible de charger le logo: {}", e.getMessage());
+                com.lowagie.text.pdf.PdfPCell emptyCell = new com.lowagie.text.pdf.PdfPCell();
+                emptyCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+                headerTable.addCell(emptyCell);
+            }
+        } else {
+            com.lowagie.text.pdf.PdfPCell emptyCell = new com.lowagie.text.pdf.PdfPCell();
+            emptyCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            headerTable.addCell(emptyCell);
+        }
+
+        // Infos hôpital
+        com.lowagie.text.pdf.PdfPCell infoCell = new com.lowagie.text.pdf.PdfPCell();
+        infoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        infoCell.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_RIGHT);
+
+        com.lowagie.text.Font hospitalFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 14, com.lowagie.text.Font.BOLD);
+        com.lowagie.text.Font subFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 9, com.lowagie.text.Font.NORMAL);
+
+        infoCell.addElement(new com.lowagie.text.Paragraph(hospitalName.toUpperCase(), hospitalFont));
+        if (!ministryName.isEmpty()) {
+            infoCell.addElement(new com.lowagie.text.Paragraph(ministryName, subFont));
+        }
+        if (!departmentName.isEmpty()) {
+            infoCell.addElement(new com.lowagie.text.Paragraph(departmentName, subFont));
+        }
+        if (!address.isEmpty()) {
+            infoCell.addElement(new com.lowagie.text.Paragraph("📍 " + address, subFont));
+        }
+        if (!phoneNumber.isEmpty()) {
+            infoCell.addElement(new com.lowagie.text.Paragraph("📞 " + phoneNumber, subFont));
+        }
+        if (!email.isEmpty()) {
+            infoCell.addElement(new com.lowagie.text.Paragraph("✉️ " + email, subFont));
+        }
+        headerTable.addCell(infoCell);
+
+        document.add(headerTable);
+        document.add(new com.lowagie.text.Paragraph(" "));
+
+        // Ligne séparatrice
+        com.lowagie.text.pdf.PdfPTable lineTable = new com.lowagie.text.pdf.PdfPTable(1);
+        lineTable.setWidthPercentage(100);
+        com.lowagie.text.pdf.PdfPCell lineCell = new com.lowagie.text.pdf.PdfPCell();
+        lineCell.setBorder(com.lowagie.text.Rectangle.BOTTOM);
+        lineCell.setBorderWidth(1);
+        lineCell.setPadding(2);
+        lineTable.addCell(lineCell);
+        document.add(lineTable);
+        document.add(new com.lowagie.text.Paragraph(" "));
+
         // Polices
         com.lowagie.text.Font titleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 18, com.lowagie.text.Font.BOLD);
         com.lowagie.text.Font headerFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 14, com.lowagie.text.Font.BOLD);
@@ -385,8 +470,7 @@ public class PatientDocumentService {
 
         // Pied de page
         com.lowagie.text.Paragraph footer = new com.lowagie.text.Paragraph(
-                "Document généré automatiquement le " + LocalDateTime.now().format(DATETIME_FORMATTER) + 
-                " | Hôpital - Système de Gestion",
+                footerText + " | Document généré le " + LocalDateTime.now().format(DATETIME_FORMATTER),
                 new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 9, com.lowagie.text.Font.ITALIC));
         footer.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
         document.add(footer);

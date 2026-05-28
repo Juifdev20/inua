@@ -20,6 +20,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,8 @@ const STATUS_CONFIG = {
  * Provides intelligent stock replenishment suggestions based on consumption history
  */
 export default function PredictiveRestock() {
+  const { config } = useHospitalConfig();
+
   // ═══════════════════════════════════════════════════════════
   // STATE MANAGEMENT
   // ═══════════════════════════════════════════════════════════
@@ -196,25 +199,48 @@ export default function PredictiveRestock() {
   const exportToPDF = useCallback(() => {
     const doc = new jsPDF();
     
+    // Couleur depuis config
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [5, 150, 105];
+    };
+    const primaryColor = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
+    const hospitalName = config?.hospitalName || 'INUA AFYA';
+    
+    // Logo
+    if (config?.hospitalLogoUrl) {
+      try {
+        doc.addImage(config.hospitalLogoUrl, 'PNG', 14, 5, 20, 20);
+      } catch (e) {
+        // Logo non chargé, on continue sans
+      }
+    }
+    
+    // Nom de l'hôpital
+    doc.setFontSize(12);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont(undefined, 'bold');
+    doc.text(hospitalName.toUpperCase(), doc.internal.pageSize.width - 14, 12, { align: 'right' });
+    
     // Header
-    doc.setFontSize(18);
-    doc.setTextColor(0, 102, 204);
-    doc.text('Bon de Commande - Réapprovisionnement Prédictif', 14, 20);
+    doc.setFontSize(16);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Bon de Commande - Réapprovisionnement Prédictif', 14, 32);
     
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
-    doc.text(`Période couverte: ${monthsToCover} mois`, 14, 36);
-    doc.text(`Fournisseur: ${selectedSupplier === 'ALL' ? 'Tous' : selectedSupplier}`, 14, 42);
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 42);
+    doc.text(`Période couverte: ${monthsToCover} mois`, 14, 48);
+    doc.text(`Fournisseur: ${selectedSupplier === 'ALL' ? 'Tous' : selectedSupplier}`, 14, 54);
     
     // Summary box
     doc.setFillColor(240, 248, 255);
-    doc.roundedRect(14, 48, 180, 25, 3, 3, 'F');
+    doc.roundedRect(14, 60, 180, 25, 3, 3, 'F');
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
-    doc.text(`Total médicaments: ${totalMedications}`, 18, 58);
-    doc.text(`Articles à commander: ${itemsToOrder.length}`, 18, 65);
-    doc.text(`Budget total: ${filteredTotalBudget.toFixed(2)} $`, 100, 58);
+    doc.text(`Total médicaments: ${totalMedications}`, 18, 70);
+    doc.text(`Articles à commander: ${itemsToOrder.length}`, 18, 77);
+    doc.text(`Budget total: ${filteredTotalBudget.toFixed(2)} $`, 100, 70);
     
     // Table
     const tableData = itemsToOrder.map(p => [
@@ -230,11 +256,11 @@ export default function PredictiveRestock() {
     ]);
     
     autoTable(doc, {
-      startY: 80,
+      startY: 92,
       head: [['Code', 'Nom', 'Fournisseur', 'CMM', 'Stock', 'Qty', 'Prix U.', 'Total', 'Statut']],
       body: tableData,
       styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+      headStyles: { fillColor: primaryColor, textColor: 255 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
     });
     
@@ -245,7 +271,7 @@ export default function PredictiveRestock() {
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(
-        `Page ${i} sur ${pageCount} - Inua Afya Pharmacy System`,
+        `Page ${i} sur ${pageCount} — ${config?.footerText || hospitalName}`,
         doc.internal.pageSize.width / 2,
         doc.internal.pageSize.height - 10,
         { align: 'center' }
@@ -253,7 +279,7 @@ export default function PredictiveRestock() {
     }
     
     doc.save(`bon-de-commande-${new Date().toISOString().split('T')[0]}.pdf`);
-  }, [itemsToOrder, monthsToCover, selectedSupplier, totalMedications, filteredTotalBudget]);
+  }, [itemsToOrder, monthsToCover, selectedSupplier, totalMedications, filteredTotalBudget, config]);
 
   // ═══════════════════════════════════════════════════════════
   // RENDER HELPERS
