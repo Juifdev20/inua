@@ -7,6 +7,7 @@ import com.hospital.backend.dto.PatientDashboardStatsDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.InvoiceService;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.RevenueService;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -53,6 +55,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final RevenueService revenueService;
     // ★ AJOUTÉ : Pour envoyer des notifications au patient sur les factures et paiements
     private final NotificationService notificationService;
+    // ★ AJOUTÉ : Pour enregistrer la consommation des entreprises abonnées
+    private final CompanyConsumptionService companyConsumptionService;
 
     // ── LOGIQUE DE RÉSOLUTION D'IDENTITÉ ─────────────────────────────
 
@@ -190,6 +194,22 @@ public class InvoiceServiceImpl implements InvoiceService {
                 ? i.getItems().stream().map(this::mapItemToDTO).collect(Collectors.toList())
                 : null;
 
+        // ✅ Récupérer les informations d'abonnement depuis l'admission
+        Boolean isAbonne = false;
+        String companyName = null;
+        BigDecimal coverageRate = null;
+
+        if (i.getPrescription() != null && i.getPrescription().getConsultation() != null) {
+            Admission admission = i.getPrescription().getConsultation().getAdmission();
+            if (admission != null) {
+                isAbonne = admission.getIsAbonne() != null ? admission.getIsAbonne() : false;
+                if (admission.getCompany() != null) {
+                    companyName = admission.getCompany().getName();
+                }
+                coverageRate = admission.getCoverageRate();
+            }
+        }
+
         return InvoiceDTO.builder()
                 .id(i.getId())
                 .invoiceCode(i.getInvoiceCode())
@@ -214,6 +234,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .updatedAt(i.getUpdatedAt())
                 .departmentSource(i.getDepartmentSource())
                 .currency(i.getCurrency())  // ✅ Mapper la devise
+                .isAbonne(isAbonne)  // ✅ Mapper l'abonnement
+                .companyName(companyName)  // ✅ Mapper le nom de l'entreprise
+                .coverageRate(coverageRate)  // ✅ Mapper le taux de couverture
                 .build();
     }
 
@@ -815,24 +838,83 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Transactional
     public InvoiceDTO processPrescriptionPayment(Long invoiceId, PaymentMethod paymentMethod) {
         log.info("🔵 [PAYMENT SERVICE] Début traitement paiement - Facture ID: {}, Méthode: {}", invoiceId, paymentMethod);
-        
+
         Invoice invoice = invoiceRepository.findById(invoiceId)
             .orElseThrow(() -> {
                 log.error("❌ [PAYMENT SERVICE] Facture non trouvée - ID: {}", invoiceId);
                 return new ResourceNotFoundException("Facture non trouvée");
             });
-        
-        log.info("✅ [PAYMENT SERVICE] Facture trouvée - Statut: {}, Prescription: {}", 
+
+        log.info("✅ [PAYMENT SERVICE] Facture trouvée - Statut: {}, Prescription: {}",
             invoice.getStatus(), invoice.getPrescription() != null ? invoice.getPrescription().getId() : null);
-        
+
         if (invoice.getStatus() != InvoiceStatus.EN_ATTENTE) {
             log.error("❌ [PAYMENT SERVICE] Statut incorrect - Attendu: EN_ATTENTE, Actuel: {}", invoice.getStatus());
             throw new RuntimeException("Cette facture n'est pas en attente de paiement. Statut actuel: " + invoice.getStatus());
         }
-        
+
         if (invoice.getPrescription() == null) {
             log.error("❌ [PAYMENT SERVICE] Facture non liée à une prescription");
             throw new RuntimeException("Cette facture n'est pas liée à une prescription");
+        }
+
+        // ★ Vérifier si le patient est abonné et appliquer la couverture entreprise
+        Prescription prescription = invoice.getPrescription();
+        boolean isAbonne = false;
+        com.hospital.backend.entity.Company company = null;
+        BigDecimal coverageRate = BigDecimal.ZERO;
+
+        if (prescription.getConsultation() != null && prescription.getConsultation().getAdmission() != null) {
+            Admission admission = prescription.getConsultation().getAdmission();
+            isAbonne = admission.getIsAbonne() != null ? admission.getIsAbonne() : false;
+            company = admission.getCompany();
+            coverageRate = admission.getCoverageRate() != null ? admission.getCoverageRate() : BigDecimal.ZERO;
+
+            log.info("💳 [ABONNÉ] Patient abonné: {}, Entreprise: {}, Taux couverture: {}%",
+                isAbonne, company != null ? company.getName() : "N/A", coverageRate);
+        }
+
+        // Si abonné, calculer la couverture et enregistrer la consommation
+        if (isAbonne && company != null) {
+            BigDecimal totalAmount = invoice.getTotalAmount();
+            BigDecimal companyCoverage = totalAmount;
+            BigDecimal patientSurplus = BigDecimal.ZERO;
+
+            // Si taux de couverture < 100%, calculer le surplus du patient
+            if (coverageRate.compareTo(new BigDecimal("100")) < 0) {
+                companyCoverage = totalAmount.multiply(coverageRate)
+                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                patientSurplus = totalAmount.subtract(companyCoverage);
+            }
+
+            log.info("💳 [ABONNÉ] Total: {}, Couverture entreprise: {}, Surplus patient: {}",
+                totalAmount, companyCoverage, patientSurplus);
+
+            // Enregistrer la consommation entreprise
+            try {
+                companyConsumptionService.record(
+                    company,
+                    prescription.getPatient(),
+                    prescription.getConsultation().getAdmission(),
+                    com.hospital.backend.entity.CompanyConsumptionRecord.FluxType.PHARMACIE,
+                    "Prescription " + prescription.getPrescriptionCode(),
+                    totalAmount,
+                    coverageRate
+                );
+                log.info("✅ [ABONNÉ] Consommation pharmacie enregistrée pour l'entreprise");
+            } catch (Exception e) {
+                log.error("❌ [ABONNÉ] Erreur enregistrement consommation: {}", e.getMessage(), e);
+            }
+
+            // Mettre à jour le montant à payer (seulement le surplus si couverture < 100%)
+            if (patientSurplus.compareTo(BigDecimal.ZERO) > 0) {
+                invoice.setTotalAmount(patientSurplus);
+                log.info("💳 [ABONNÉ] Montant facture ajusté au surplus: {}", patientSurplus);
+            } else {
+                // Couverture 100% - montant à 0
+                invoice.setTotalAmount(BigDecimal.ZERO);
+                log.info("💳 [ABONNÉ] Couverture 100% - montant facture: 0");
+            }
         }
         
         // Vérification du stock pour chaque médicament
@@ -875,21 +957,25 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setPaidAt(LocalDateTime.now());
         
         invoice = invoiceRepository.save(invoice);
-        
+
         // Mise à jour du statut de la prescription
-        Prescription prescription = invoice.getPrescription();
         prescription.setStatus(PrescriptionStatus.PAYEE);
         prescriptionRepository.save(prescription);
         log.info("✅ Prescription {} marquée comme PAYEE - prête pour retrait pharmacie", prescription.getPrescriptionCode());
-        
-        // ★ CRÉATION AUTOMATIQUE DU REVENU POUR PRESCRIPTION
+
+        // ★ CRÉATION AUTOMATIQUE DU REVENU POUR PRESCRIPTION (SEULEMENT POUR NON-ABONNÉS)
         try {
-            Long userId = invoice.getCreatedBy() != null ? invoice.getCreatedBy().getId() : null;
-            if (userId != null) {
-                revenueService.createRevenueFromInvoice(invoice.getId(), userId);
-                log.info("💰✅ Revenu auto-créé pour la prescription facture: {}", invoice.getId());
+            // Créer le revenu SEULEMENT si le patient n'est PAS abonné
+            if (!isAbonne) {
+                Long userId = invoice.getCreatedBy() != null ? invoice.getCreatedBy().getId() : null;
+                if (userId != null) {
+                    revenueService.createRevenueFromInvoice(invoice.getId(), userId);
+                    log.info("💰✅ Revenu auto-créé pour la prescription facture: {}", invoice.getId());
+                } else {
+                    log.warn("⚠️ Impossible de créer le revenu prescription - Utilisateur inconnu");
+                }
             } else {
-                log.warn("⚠️ Impossible de créer le revenu prescription - Utilisateur inconnu");
+                log.info("💳 [ABONNÉ] Pas de création de revenu - Patient abonné (dette entreprise)");
             }
         } catch (Exception e) {
             log.error("❌ Erreur création auto revenu prescription: {}", e.getMessage());

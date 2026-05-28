@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -272,6 +273,12 @@ public class CompanyServiceImpl implements CompanyService {
 
         HospitalConfig cfg = hospitalConfigRepository.findFirstByOrderByIdAsc().orElse(null);
 
+        log.info("🔍 [DEBUG] Config récupérée: {}", cfg != null ? "OK" : "NULL");
+        if (cfg != null) {
+            log.info("🔍 [DEBUG] Logo URL: {}", cfg.getHospitalLogoUrl());
+            log.info("🔍 [DEBUG] Enable logo on documents: {}", cfg.getEnableLogoOnDocuments());
+        }
+
         // ── Couleurs depuis la config ──────────────────────────────────────────
         java.awt.Color primaryColor   = parseHexColor(cfg != null ? cfg.getPrimaryColor()   : null, new java.awt.Color(30, 64, 175));
         java.awt.Color secondaryColor = parseHexColor(cfg != null ? cfg.getSecondaryColor() : null, new java.awt.Color(239, 246, 255));
@@ -315,16 +322,40 @@ public class CompanyServiceImpl implements CompanyService {
             logoCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
             logoCell.setPadding(2f);
             boolean logoAdded = false;
-            if (cfg != null && Boolean.TRUE.equals(cfg.getEnableLogoOnDocuments())
+            boolean logoEnabled = cfg != null && (cfg.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(cfg.getEnableLogoOnDocuments()));
+            if (logoEnabled
                     && cfg.getHospitalLogoUrl() != null && !cfg.getHospitalLogoUrl().isBlank()) {
                 try {
-                    com.lowagie.text.Image logo = com.lowagie.text.Image.getInstance(cfg.getHospitalLogoUrl());
+                    com.lowagie.text.Image logo;
+                    String hospitalLogoUrl = cfg.getHospitalLogoUrl();
+                    log.info("🔍 [DEBUG] Tentative de chargement du logo: {}", hospitalLogoUrl.substring(0, Math.min(50, hospitalLogoUrl.length())));
+                    if (hospitalLogoUrl.startsWith("data:image")) {
+                        // Gérer les images en base64
+                        String base64Data = hospitalLogoUrl.substring(hospitalLogoUrl.indexOf(",") + 1);
+                        byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+                        logo = com.lowagie.text.Image.getInstance(imageBytes);
+                        log.info("✅ [DEBUG] Logo chargé depuis base64");
+                    } else if (hospitalLogoUrl.startsWith("http://") || hospitalLogoUrl.startsWith("https://")) {
+                        // Gérer les URLs HTTP/HTTPS
+                        logo = com.lowagie.text.Image.getInstance(new java.net.URL(hospitalLogoUrl));
+                        log.info("✅ [DEBUG] Logo chargé depuis URL");
+                    } else {
+                        // Gérer les chemins locaux
+                        logo = com.lowagie.text.Image.getInstance(hospitalLogoUrl);
+                        log.info("✅ [DEBUG] Logo chargé depuis chemin local");
+                    }
                     logo.scaleToFit(80f, 80f);
                     logoCell.addElement(logo);
                     logoAdded = true;
+                    log.info("✅ [DEBUG] Logo ajouté au PDF");
                 } catch (Exception ex) {
-                    log.warn("Impossible de charger le logo hôpital: {}", ex.getMessage());
+                    log.error("❌ [DEBUG] Erreur chargement logo hôpital: {}", ex.getMessage(), ex);
                 }
+            } else {
+                log.warn("⚠️ [DEBUG] Logo non chargé - cfg={}, enableLogo={}, logoUrl={}",
+                    cfg != null,
+                    cfg != null ? cfg.getEnableLogoOnDocuments() : null,
+                    cfg != null ? (cfg.getHospitalLogoUrl() != null ? cfg.getHospitalLogoUrl().substring(0, Math.min(50, cfg.getHospitalLogoUrl().length())) : "NULL") : "NULL");
             }
             if (!logoAdded) logoCell.addElement(new com.lowagie.text.Phrase(""));
             headerTbl.addCell(logoCell);
@@ -397,8 +428,8 @@ public class CompanyServiceImpl implements CompanyService {
             table.setWidths(new float[]{1.8f, 3f, 1.8f, 2f, 2.2f, 1.8f, 2.2f, 2.2f});
             table.setSpacingAfter(6f);
 
-            // Ligne d'en-têtes
-            String[] colHeaders = {"Date", "Patient", "Matricule", "Flux", "Service",
+            // Ligne d'en-têtes (une seule ligne par patient avec colonnes par service)
+            String[] colHeaders = {"Date", "Patient", "Matricule", "Consultation", "Labo", "Pharmacie",
                                    "Total", "Prise en charge", "Ticket modeste"};
             for (String h : colHeaders) {
                 com.lowagie.text.pdf.PdfPCell hCell =
@@ -409,61 +440,56 @@ public class CompanyServiceImpl implements CompanyService {
                 table.addCell(hCell);
             }
 
-            // Lignes de données (une ligne par flux non-nul, par patient)
+            // Lignes de données (une ligne par patient)
             BigDecimal sumTotal    = BigDecimal.ZERO;
             BigDecimal sumCoverage = BigDecimal.ZERO;
             BigDecimal sumSurplus  = BigDecimal.ZERO;
             DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             boolean alt = false;
-            int fluxCount = 0;
+            int patientCount = 0;
 
             for (PatientConsumptionSummaryDTO s : summaries) {
                 String dateStr   = s.getAdmissionDate() != null ? s.getAdmissionDate().format(dateFmt) : "—";
                 String patNom    = s.getPatientName()   != null ? s.getPatientName()   : "—";
                 String matricule = s.getMatricule()     != null ? s.getMatricule()     : "—";
-                String[] fluxLabels   = {"Consultation", "Labo", "Pharmacie"};
-                String[] serviceNames = {"Consultation", "Laboratoire", "Pharmacie"};
 
-                for (int i = 0; i < 3; i++) {
-                    BigDecimal rTotal = i == 0 ? nvl(s.getConsultationAmount())
-                                      : i == 1 ? nvl(s.getLaboAmount())
-                                      :           nvl(s.getPharmacieAmount());
-                    BigDecimal rCov   = i == 0 ? nvl(s.getConsultationCoverage())
-                                      : i == 1 ? nvl(s.getLaboCoverage())
-                                      :           nvl(s.getPharmacieCoverage());
-                    BigDecimal rSur   = i == 0 ? nvl(s.getConsultationSurplus())
-                                      : i == 1 ? nvl(s.getLaboSurplus())
-                                      :           nvl(s.getPharmacieSurplus());
+                BigDecimal consultationTotal = nvl(s.getConsultationAmount());
+                BigDecimal laboTotal         = nvl(s.getLaboAmount());
+                BigDecimal pharmacieTotal    = nvl(s.getPharmacieAmount());
+                BigDecimal patientTotal      = nvl(s.getTotalAmount());
+                BigDecimal patientCoverage   = nvl(s.getTotalCoverage());
+                BigDecimal patientSurplus    = nvl(s.getTotalSurplus());
 
-                    if (rTotal.compareTo(BigDecimal.ZERO) == 0) continue; // ignorer les flux vides
+                java.awt.Color rowBg = alt ? lightGray : java.awt.Color.WHITE;
+                alt = !alt;
 
-                    java.awt.Color rowBg = alt ? lightGray : java.awt.Color.WHITE;
-                    alt = !alt;
-
-                    String[] vals = {
-                        dateStr, patNom, matricule,
-                        fluxLabels[i], serviceNames[i],
-                        pdfAmt(rTotal, sym), pdfAmt(rCov, sym), pdfAmt(rSur, sym)
-                    };
-                    for (String v : vals) {
-                        com.lowagie.text.pdf.PdfPCell c =
-                                new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(v, fNormal));
-                        c.setBackgroundColor(rowBg);
-                        c.setPadding(4f);
-                        c.setBorderColor(borderGray);
-                        table.addCell(c);
-                    }
-                    sumTotal    = sumTotal.add(rTotal);
-                    sumCoverage = sumCoverage.add(rCov);
-                    sumSurplus  = sumSurplus.add(rSur);
-                    fluxCount++;
+                String[] vals = {
+                    dateStr, patNom, matricule,
+                    pdfAmt(consultationTotal, sym),
+                    pdfAmt(laboTotal, sym),
+                    pdfAmt(pharmacieTotal, sym),
+                    pdfAmt(patientTotal, sym),
+                    pdfAmt(patientCoverage, sym),
+                    pdfAmt(patientSurplus, sym)
+                };
+                for (String v : vals) {
+                    com.lowagie.text.pdf.PdfPCell c =
+                            new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase(v, fNormal));
+                    c.setBackgroundColor(rowBg);
+                    c.setPadding(4f);
+                    c.setBorderColor(borderGray);
+                    table.addCell(c);
                 }
+                sumTotal    = sumTotal.add(patientTotal);
+                sumCoverage = sumCoverage.add(patientCoverage);
+                sumSurplus  = sumSurplus.add(patientSurplus);
+                patientCount++;
             }
 
             // Ligne TOTAL
             com.lowagie.text.pdf.PdfPCell totLabelCell =
                     new com.lowagie.text.pdf.PdfPCell(new com.lowagie.text.Phrase("TOTAL", fTotal));
-            totLabelCell.setColspan(5);
+            totLabelCell.setColspan(6);
             totLabelCell.setBackgroundColor(secondaryColor);
             totLabelCell.setPadding(5f);
             totLabelCell.setBorderColor(borderGray);
@@ -482,7 +508,7 @@ public class CompanyServiceImpl implements CompanyService {
             // ══════════════════════════════════════════════════════════════════
             // PIED DE PAGE
             // ══════════════════════════════════════════════════════════════════
-            doc.add(new com.lowagie.text.Paragraph("Nombre de flux : " + fluxCount, fInfo));
+            doc.add(new com.lowagie.text.Paragraph("Nombre de patients : " + patientCount, fInfo));
 
             if (cfg != null && cfg.getFooterText() != null && !cfg.getFooterText().isBlank()) {
                 doc.add(new com.lowagie.text.Paragraph(" "));
@@ -532,8 +558,8 @@ public class CompanyServiceImpl implements CompanyService {
             }
 
             doc.close();
-            log.info("📄 PDF feuille de consommation - entreprise={}, période={}, flux={}",
-                    company.getName(), yearMonth, fluxCount);
+            log.info("📄 PDF feuille de consommation - entreprise={}, période={}, patients={}",
+                    company.getName(), yearMonth, patientCount);
             return baos.toByteArray();
         } catch (Exception e) {
             log.error("Erreur génération PDF feuille de consommation", e);
@@ -652,65 +678,79 @@ public class CompanyServiceImpl implements CompanyService {
         List<Admission> admissions = admissionRepository
                 .findByCompanyIdAndAdmissionDateBetween(companyId, start, end);
 
-        return admissions.stream().map(adm -> {
-            Long patientId = adm.getPatient() != null ? adm.getPatient().getId() : null;
+        // ✅ Grouper par patient (patientId) pour avoir une seule ligne par patient
+        Map<Long, List<Admission>> admissionsByPatient = admissions.stream()
+                .filter(adm -> adm.getPatient() != null)
+                .collect(Collectors.groupingBy(adm -> adm.getPatient().getId()));
 
-            // ── CONSULTATION : lire directement depuis l'admission ─────────────
-            // Ces champs sont calculés à la création et sont toujours fiables.
-            BigDecimal consultationCoverage = adm.getCompanyCoverage() != null
-                    ? adm.getCompanyCoverage() : BigDecimal.ZERO;
-            BigDecimal consultationSurplus  = adm.getPatientSurplus()  != null
-                    ? adm.getPatientSurplus()  : BigDecimal.ZERO;
-            BigDecimal consultationAmount   = consultationCoverage.add(consultationSurplus);
+        return admissionsByPatient.entrySet().stream().map(entry -> {
+            Long patientId = entry.getKey();
+            List<Admission> patientAdmissions = entry.getValue();
 
-            // ── LABO : records liés à l'admission (admission_id toujours renseigné pour les labos) ──
+            // Prendre la première admission pour les infos de base
+            Admission firstAdm = patientAdmissions.get(0);
+
+            // ── CONSULTATION : sommer depuis toutes les admissions du patient ─────────────
+            BigDecimal consultationAmount   = BigDecimal.ZERO;
+            BigDecimal consultationCoverage = BigDecimal.ZERO;
+            BigDecimal consultationSurplus  = BigDecimal.ZERO;
+
+            for (Admission adm : patientAdmissions) {
+                consultationCoverage = consultationCoverage.add(
+                    adm.getCompanyCoverage() != null ? adm.getCompanyCoverage() : BigDecimal.ZERO);
+                consultationSurplus = consultationSurplus.add(
+                    adm.getPatientSurplus() != null ? adm.getPatientSurplus() : BigDecimal.ZERO);
+            }
+            consultationAmount = consultationCoverage.add(consultationSurplus);
+
+            // ── LABO : records liés à toutes les admissions du patient ──
             BigDecimal laboAmount   = BigDecimal.ZERO;
             BigDecimal laboCoverage = BigDecimal.ZERO;
             BigDecimal laboSurplus  = BigDecimal.ZERO;
 
-            List<CompanyConsumptionRecord> laboRecs =
-                    consumptionRecordRepository.findByAdmissionId(adm.getId());
-            for (CompanyConsumptionRecord r : laboRecs) {
-                if (r.getFluxType() != CompanyConsumptionRecord.FluxType.LABO) continue;
-                laboAmount   = laboAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
-                laboCoverage = laboCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
-                laboSurplus  = laboSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
+            for (Admission adm : patientAdmissions) {
+                List<CompanyConsumptionRecord> laboRecs =
+                        consumptionRecordRepository.findByAdmissionId(adm.getId());
+                for (CompanyConsumptionRecord r : laboRecs) {
+                    if (r.getFluxType() != CompanyConsumptionRecord.FluxType.LABO) continue;
+                    laboAmount   = laboAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
+                    laboCoverage = laboCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                    laboSurplus  = laboSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
+                }
             }
 
-            // ── PHARMACIE : records par patient+entreprise+mois (admission_id = null en pharmacie) ──
+            // ── PHARMACIE : records par patient+entreprise+mois ──
             BigDecimal pharmacieAmount   = BigDecimal.ZERO;
             BigDecimal pharmacieCoverage = BigDecimal.ZERO;
             BigDecimal pharmacieSurplus  = BigDecimal.ZERO;
 
-            if (patientId != null) {
-                List<CompanyConsumptionRecord> pharmRecs =
-                        consumptionRecordRepository
-                                .findByCompanyIdAndPatientIdAndFluxTypeAndConsumedAtBetween(
-                                        companyId, patientId,
-                                        CompanyConsumptionRecord.FluxType.PHARMACIE,
-                                        start, end);
-                for (CompanyConsumptionRecord r : pharmRecs) {
-                    pharmacieAmount   = pharmacieAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
-                    pharmacieCoverage = pharmacieCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
-                    pharmacieSurplus  = pharmacieSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
-                }
+            List<CompanyConsumptionRecord> pharmRecs =
+                    consumptionRecordRepository
+                            .findByCompanyIdAndPatientIdAndFluxTypeAndConsumedAtBetween(
+                                    companyId, patientId,
+                                    CompanyConsumptionRecord.FluxType.PHARMACIE,
+                                    start, end);
+            for (CompanyConsumptionRecord r : pharmRecs) {
+                pharmacieAmount   = pharmacieAmount.add(  r.getTotalAmount()     != null ? r.getTotalAmount()     : BigDecimal.ZERO);
+                pharmacieCoverage = pharmacieCoverage.add(r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                pharmacieSurplus  = pharmacieSurplus.add( r.getPatientSurplus()  != null ? r.getPatientSurplus()  : BigDecimal.ZERO);
             }
 
             BigDecimal totalAmount   = consultationAmount.add(laboAmount).add(pharmacieAmount);
             BigDecimal totalCoverage = consultationCoverage.add(laboCoverage).add(pharmacieCoverage);
             BigDecimal totalSurplus  = consultationSurplus.add(laboSurplus).add(pharmacieSurplus);
 
-            String patientName = adm.getPatient() != null
-                    ? adm.getPatient().getFirstName() + " " + adm.getPatient().getLastName() : "—";
+            String patientName = firstAdm.getPatient() != null
+                    ? firstAdm.getPatient().getFirstName() + " " + firstAdm.getPatient().getLastName() : "—";
 
             return PatientConsumptionSummaryDTO.builder()
-                    .admissionId(adm.getId())
+                    .admissionId(firstAdm.getId())  // ID de la première admission
                     .patientId(patientId)
                     .patientName(patientName)
-                    .matricule(adm.getMatricule())
-                    .admissionDate(adm.getAdmissionDate())
-                    .admissionStatus(adm.getStatus() != null ? adm.getStatus().name() : null)
-                    .coverageRate(adm.getCoverageRate())
+                    .matricule(firstAdm.getMatricule())
+                    .admissionDate(firstAdm.getAdmissionDate())  // Date de la première admission
+                    .admissionStatus(firstAdm.getStatus() != null ? firstAdm.getStatus().name() : null)
+                    .coverageRate(firstAdm.getCoverageRate())
                     .consultationAmount(consultationAmount)
                     .laboAmount(laboAmount)
                     .pharmacieAmount(pharmacieAmount)

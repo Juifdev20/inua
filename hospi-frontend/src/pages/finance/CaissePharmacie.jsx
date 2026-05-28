@@ -4,7 +4,8 @@ import {
   Pill, Eye, DollarSign, CheckCircle, Package,
   Search, Loader2, RefreshCw, ArrowUpDown,
   Receipt, ShoppingBag, Tablets, ClipboardList,
-  Clock, ChevronRight, AlertTriangle, PackageCheck
+  Clock, ChevronRight, AlertTriangle, PackageCheck,
+  Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -74,8 +75,25 @@ const CaissePharmacie = () => {
   };
 
   const handlePayment = (invoice) => {
-    setSelectedInvoice(invoice);
-    setShowPaymentModal(true);
+    // Si patient abonné avec couverture 100% ou montant 0, confirmer directement sans modal
+    if (invoice.isAbonne && (!invoice.coverageRate || invoice.coverageRate >= 100 || (invoice.totalAmount || 0) === 0)) {
+      // Confirmer automatiquement sans paiement
+      handleDirectConfirm(invoice);
+    } else {
+      setSelectedInvoice(invoice);
+      setShowPaymentModal(true);
+    }
+  };
+
+  const handleDirectConfirm = async (invoice) => {
+    try {
+      const response = await financeApi.processPrescriptionPayment(invoice.id, 'ESPECES');
+      toast.success('Prescription validée - Couverture entreprise');
+      handlePaymentSuccess();
+    } catch (error) {
+      console.error('Direct confirm error:', error);
+      toast.error('Erreur lors de la validation');
+    }
   };
 
   const handlePaymentSuccess = () => {
@@ -288,9 +306,17 @@ const CaissePharmacie = () => {
                             <p className="font-bold text-sm text-foreground truncate">
                               {rx.patientName || 'Patient Inconnu'}
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {formatTime(rx.createdAt || rx.date)} • #{rx.id}
-                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatTime(rx.createdAt || rx.date)} • #{rx.id}
+                              </p>
+                              {rx.isAbonne && (
+                                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[9px] font-bold px-1.5 py-0 h-4">
+                                  <Building2 className="w-2.5 h-2.5 mr-1" />
+                                  {rx.companyName || 'Abonné'}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                         {!paid && (
@@ -387,6 +413,23 @@ const CaissePharmacie = () => {
                   </div>
 
                   <CardContent className="p-5 space-y-5">
+                    {/* Abonné badge */}
+                    {selectedPrescription.isAbonne && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                        <Building2 className="w-4 h-4 text-blue-500" />
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-blue-600">
+                            Patient abonné - {selectedPrescription.companyName || 'Entreprise'}
+                          </p>
+                          {selectedPrescription.coverageRate && (
+                            <p className="text-[10px] text-blue-500/70">
+                              Couverture: {selectedPrescription.coverageRate}%
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Workflow : Prescrit → Payé → Retrait */}
                     <div className="flex items-center justify-center gap-0 py-3">
                       <div className="flex flex-col items-center gap-1.5">
@@ -433,26 +476,44 @@ const CaissePharmacie = () => {
 
                     {/* Montant */}
                     <div className="text-center py-2">
-                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                        Montant total
-                      </p>
-                      <p className={cn(
-                        'text-4xl font-black tracking-tighter',
-                        isPaid(selectedPrescription.status) ? 'text-teal-600' : 'text-amber-600'
-                      )}>
-                        {formatCurrency(selectedPrescription.totalAmount || selectedPrescription.amount, selectedPrescription.currency)}
-                      </p>
-                      <div className="mt-3">
-                        {isPaid(selectedPrescription.status) ? (
-                          <Badge className="border-none bg-teal-500/10 text-teal-600 font-bold px-4 py-1">
-                            <PackageCheck className="w-3.5 h-3.5 mr-1.5" /> Retrait autorisé
-                          </Badge>
-                        ) : (
-                          <Badge className="border-none bg-amber-500/10 text-amber-600 font-bold px-4 py-1">
-                            <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> En attente de paiement
-                          </Badge>
-                        )}
-                      </div>
+                      {selectedPrescription.isAbonne && (!selectedPrescription.coverageRate || selectedPrescription.coverageRate >= 100) ? (
+                        <>
+                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                            Couverture entreprise
+                          </p>
+                          <p className="text-4xl font-black tracking-tighter text-blue-600">
+                            100%
+                          </p>
+                          <div className="mt-3">
+                            <Badge className="border-none bg-blue-500/10 text-blue-600 font-bold px-4 py-1">
+                              <Building2 className="w-3.5 h-3.5 mr-1.5" /> Couvert par {selectedPrescription.companyName || 'l\'entreprise'}
+                            </Badge>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                            Montant total
+                          </p>
+                          <p className={cn(
+                            'text-4xl font-black tracking-tighter',
+                            isPaid(selectedPrescription.status) ? 'text-teal-600' : 'text-amber-600'
+                          )}>
+                            {formatCurrency(selectedPrescription.totalAmount || selectedPrescription.amount, selectedPrescription.currency)}
+                          </p>
+                          <div className="mt-3">
+                            {isPaid(selectedPrescription.status) ? (
+                              <Badge className="border-none bg-teal-500/10 text-teal-600 font-bold px-4 py-1">
+                                <PackageCheck className="w-3.5 h-3.5 mr-1.5" /> Retrait autorisé
+                              </Badge>
+                            ) : (
+                              <Badge className="border-none bg-amber-500/10 text-amber-600 font-bold px-4 py-1">
+                                <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> En attente de paiement
+                              </Badge>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Liste des médicaments */}

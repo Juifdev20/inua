@@ -166,6 +166,12 @@ const financeApi = {
     }
   },
 
+  // ★ NOUVEAU : Paiement prescription pharmacie
+  processPrescriptionPayment: async (invoiceId, paymentMethod = 'ESPECES') => {
+    const response = await globalApi.post(`/v1/finance/prescription/process-payment/${invoiceId}?paymentMethod=${paymentMethod}`);
+    return response.data;
+  },
+
   getLaboratoryQueue: async () => {
     const response = await api.get('/queues/LABORATORY');
     return response.data;

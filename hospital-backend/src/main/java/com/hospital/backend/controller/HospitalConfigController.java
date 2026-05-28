@@ -42,11 +42,17 @@ public class HospitalConfigController {
     public ResponseEntity<ApiResponse<HospitalConfigDTO>> updateConfig(
             @Valid @RequestBody HospitalConfigDTO dto) {
         
+        log.info("🔍 [CONFIG DEBUG] Mise à jour config reçue - hospitalLogoUrl: {}",
+            dto.getHospitalLogoUrl() != null ? dto.getHospitalLogoUrl().substring(0, Math.min(50, dto.getHospitalLogoUrl().length())) : "NULL");
+        
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long userId = getUserIdFromAuthentication(auth);
         
         HospitalConfig config = toEntity(dto);
         HospitalConfig saved = configService.saveOrUpdate(config, userId);
+        
+        log.info("🔍 [CONFIG DEBUG] Config sauvegardée - hospitalLogoUrl: {}",
+            saved.getHospitalLogoUrl() != null ? saved.getHospitalLogoUrl().substring(0, Math.min(50, saved.getHospitalLogoUrl().length())) : "NULL");
         
         return ResponseEntity.ok(ApiResponse.success("Configuration mise à jour avec succès", toDTO(saved)));
     }

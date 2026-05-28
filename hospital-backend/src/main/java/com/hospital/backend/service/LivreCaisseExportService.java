@@ -850,7 +850,7 @@ public class LivreCaisseExportService {
         String hospitalName = config.getHospitalName() != null ? config.getHospitalName() : "CLINIQUE CI UCBC";
         String hospitalCode = config.getHospitalCode() != null ? config.getHospitalCode() : "";
         String hospitalLogoUrl = config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
-        Boolean enableLogoOnDocuments = config.getEnableLogoOnDocuments() != null ? config.getEnableLogoOnDocuments() : false;
+        Boolean enableLogoOnDocuments = config.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(config.getEnableLogoOnDocuments());
         String headerSubtitle = config.getHeaderSubtitle() != null ? config.getHeaderSubtitle() : "";
         
         // Infos administratives

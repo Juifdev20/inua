@@ -13,7 +13,7 @@ export const hospitalConfigService = {
   getConfig: async () => {
     // Essayer d'abord l'API
     try {
-      const response = await api.get(`/hospital-config`);
+      const response = await api.get(`/api/hospital-config`);
       // Sauvegarder en local pour fallback
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response.data.data));
       return response.data.data;
@@ -38,7 +38,7 @@ export const hospitalConfigService = {
     
     // Essayer l'API si disponible
     try {
-      const response = await api.put(`/hospital-config`, configData);
+      const response = await api.put(`/api/hospital-config`, configData);
       return response.data;
     } catch (error) {
       // Si 404, simuler un succès avec les données locales
@@ -56,7 +56,7 @@ export const hospitalConfigService = {
   initializeDefault: async () => {
     localStorage.removeItem(STORAGE_KEY);
     try {
-      const response = await api.post(`/hospital-config/initialize`, {});
+      const response = await api.post(`/api/hospital-config/initialize`, {});
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {

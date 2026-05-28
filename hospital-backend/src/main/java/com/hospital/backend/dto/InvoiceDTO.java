@@ -42,7 +42,12 @@ public class InvoiceDTO {
     private LocalDateTime paidAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
+
     private DepartmentSource departmentSource;
     private Currency currency;  // ✅ Devise de la facture (CDF ou USD)
+
+    // ✅ AJOUT: Informations d'abonnement entreprise
+    private Boolean isAbonne;       // Patient abonné?
+    private String companyName;     // Nom de l'entreprise
+    private BigDecimal coverageRate; // Taux de couverture (%)
 }

@@ -743,7 +743,7 @@ public class PatientBillingController {
             String hospitalName = config != null && config.getHospitalName() != null ? config.getHospitalName() : "INUA AFYA";
             String hospitalCode = config != null && config.getHospitalCode() != null ? config.getHospitalCode() : "";
             String hospitalLogoUrl = config != null && config.getHospitalLogoUrl() != null ? config.getHospitalLogoUrl() : "";
-            Boolean enableLogoOnDocuments = config != null && config.getEnableLogoOnDocuments() != null ? config.getEnableLogoOnDocuments() : false;
+            Boolean enableLogoOnDocuments = config != null && (config.getEnableLogoOnDocuments() == null || Boolean.TRUE.equals(config.getEnableLogoOnDocuments()));
             
             // === INFORMATIONS ADMINISTRATIVES ===
             String ministryName = config != null && config.getMinistryName() != null ? config.getMinistryName() : "";
