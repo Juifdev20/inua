@@ -9,6 +9,7 @@ import com.hospital.backend.service.PharmacyService;
 import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.RevenueService;
 import com.hospital.backend.service.NotificationService;
+import com.hospital.backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,6 +43,7 @@ public class PharmacyServiceImpl implements PharmacyService {
     private final ExpenseService expenseService;
     private final RevenueService revenueService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
     private final CompanyConsumptionService consumptionService;
     private final CompanyEmployeeRepository companyEmployeeRepository;
 
@@ -249,6 +251,15 @@ public class PharmacyServiceImpl implements PharmacyService {
         } catch (Exception e) {
             log.error("❌ Erreur lors de la notification de vente à la finance: {}", e.getMessage());
         }
+
+        // 💊 NOTIFIER LE PATIENT si sa prescription est prête
+        if (updatedOrder.getStatus() == PharmacyOrderStatus.PAYEE) {
+            try {
+                notifyPatientIfPrescriptionReady(updatedOrder);
+            } catch (Exception e) {
+                log.error("❌ Erreur notification patient prescription prête: {}", e.getMessage());
+            }
+        }
         
         return mapToDTO(updatedOrder);
     }
@@ -314,6 +325,13 @@ public class PharmacyServiceImpl implements PharmacyService {
             notificationService.notifyPaymentConfirmed(updatedOrder);
         } catch (Exception e) {
             log.error("❌ Erreur notification pharmacie: {}", e.getMessage());
+        }
+
+        // 💊 NOTIFIER LE PATIENT si sa prescription est prête
+        try {
+            notifyPatientIfPrescriptionReady(updatedOrder);
+        } catch (Exception e) {
+            log.error("❌ Erreur notification patient prescription prête: {}", e.getMessage());
         }
         
         // 💰 ENREGISTRER DANS LE GRAND LIVRE (Comptabilité)
@@ -1056,6 +1074,15 @@ public class PharmacyServiceImpl implements PharmacyService {
         // Mettre à jour le statut de la prescription
         prescription.setStatus(PrescriptionStatus.PRESCRIPTION_ENVOYEE);
         prescriptionRepository.save(prescription);
+
+        // 💊 NOTIFIER LE PATIENT si sa prescription est déjà payée (prête immédiatement)
+        if (isPrescriptionPaid) {
+            try {
+                notifyPatientIfPrescriptionReady(order);
+            } catch (Exception e) {
+                log.error("❌ Erreur notification patient prescription prête: {}", e.getMessage());
+            }
+        }
         
         log.info("✅ [PRESCRIPTION] Prescription {} convertie en commande {}", prescriptionId, order.getOrderCode());
         
@@ -1064,6 +1091,60 @@ public class PharmacyServiceImpl implements PharmacyService {
     
     private String generateOrderCode() {
         return "ORD-" + System.currentTimeMillis();
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // NOTIFICATIONS PATIENT - Prescription prête
+    // ═════════════════════════════════════════════════════════════════
+
+    /**
+     * 💊 Notifie le patient quand sa prescription est prête à être retirée
+     */
+    private void notifyPatientIfPrescriptionReady(PharmacyOrder order) {
+        try {
+            Patient patient = order.getPatient();
+            if (patient == null) return;
+
+            String refCode = order.getOrderCode();
+            String doctorName = "Inconnu";
+
+            // Essayer de retrouver la prescription associée
+            try {
+                List<Prescription> prescriptions = prescriptionRepository.findAllByPatientId(patient.getId());
+                if (prescriptions != null && !prescriptions.isEmpty()) {
+                    Prescription latest = prescriptions.get(0);
+                    refCode = latest.getPrescriptionCode();
+                    if (latest.getDoctor() != null) {
+                        doctorName = latest.getDoctor().getFirstName() + " " + latest.getDoctor().getLastName();
+                    }
+                }
+            } catch (Exception ex) {
+                // fallback sur orderCode
+            }
+
+            // Notification push via WebSocket
+            User patientUser = patient.getUser();
+            if (patientUser != null) {
+                notificationService.notifyPatientPrescriptionReady(
+                    patientUser, refCode, doctorName
+                );
+            }
+
+            // Email au patient
+            String patientEmail = patient.getEmail();
+            if (patientEmail != null && !patientEmail.isEmpty()) {
+                emailService.sendPrescriptionReadyEmail(
+                    patientEmail,
+                    patient.getFirstName() + " " + patient.getLastName(),
+                    refCode,
+                    doctorName
+                );
+            }
+
+            log.info("📢 Notification prescription prête envoyée au patient {}", patient.getId());
+        } catch (Exception e) {
+            log.error("❌ Erreur notification prescription prête: {}", e.getMessage());
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════

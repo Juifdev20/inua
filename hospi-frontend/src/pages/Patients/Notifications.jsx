@@ -438,7 +438,7 @@ const Notifications = () => {
       }
     } else if (notification.type === 'DOCUMENT') {
       navigate('/patient/documents');
-    } else if (notification.type === 'PRISE_MEDICAMENT') {
+    } else if (notification.type === 'PRISE_MEDICAMENT' || notification.type === 'PRESCRIPTION_PRETE') {
       navigate('/patient/prescriptions');
     } else if (notification.type === 'PAIEMENT' || notification.type === 'FACTURE') {
       // Redirection vers la page des factures et paiements
@@ -484,6 +484,7 @@ const Notifications = () => {
       case 'DOCUMENT': return FileText;
       case 'PAIEMENT': return CreditCard;
       case 'PRISE_MEDICAMENT': return Pill;
+      case 'PRESCRIPTION_PRETE': return Pill;
       default: return Bell;
     }
   };
@@ -495,6 +496,7 @@ const Notifications = () => {
       PAIEMENT: 'bg-purple-500/10 text-purple-500',
       SYSTEME: 'bg-amber-500/10 text-amber-500',
       PRISE_MEDICAMENT: 'bg-rose-500/10 text-rose-500',
+      PRESCRIPTION_PRETE: 'bg-violet-500/10 text-violet-500',
     };
     return colors[type] || 'bg-muted text-muted-foreground';
   };
@@ -573,6 +575,7 @@ const Notifications = () => {
           { id: 'unread', label: 'Non lues' },
           { id: 'RENDEZ_VOUS', label: 'Rendez-vous' },
           { id: 'DOCUMENT', label: 'Documents' },
+          { id: 'PRESCRIPTION_PRETE', label: 'Pharmacie' },
           { id: 'PRISE_MEDICAMENT', label: 'Médicaments' },
         ].map((btn) => (
           <button

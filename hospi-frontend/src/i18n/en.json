@@ -73,7 +73,8 @@
     "dashboard": "Dashboard",
     "patientFiles": "Patient Files",
     "admissions": "Forms / Admissions",
-    "documents": "Documents"
+    "documents": "Documents",
+    "history": "History"
   },
   "pharmacy": {
     "title": "Pharmacy Module",

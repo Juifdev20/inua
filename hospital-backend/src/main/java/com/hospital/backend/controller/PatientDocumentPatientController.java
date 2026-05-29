@@ -404,14 +404,16 @@ public class PatientDocumentPatientController {
                 java.math.BigDecimal totalDue = java.math.BigDecimal.ZERO;
                 java.math.BigDecimal totalPaid = java.math.BigDecimal.ZERO;
                 
+                // ✅ CORRECTION: Utiliser les champs précis de Consultation pour éviter
+                // le double-comptage (admission.serviceFee peut déjà inclure les examens)
                 // Frais de fiche
-                if (admission.getRegistrationFee() != null) {
-                    totalDue = totalDue.add(admission.getRegistrationFee());
+                if (consultation.getFicheAmountDue() != null) {
+                    totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountDue()));
                 }
                 
                 // Frais de consultation
-                if (admission.getServiceFee() != null) {
-                    totalDue = totalDue.add(admission.getServiceFee());
+                if (consultation.getConsulAmountDue() != null) {
+                    totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountDue()));
                 }
                 
                 // Frais d'examens
@@ -420,8 +422,11 @@ public class PatientDocumentPatientController {
                 }
                 
                 // Montant payé
-                if (admission.getAmountPaid() != null) {
-                    totalPaid = totalPaid.add(admission.getAmountPaid());
+                if (consultation.getFicheAmountPaid() != null) {
+                    totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountPaid()));
+                }
+                if (consultation.getConsulAmountPaid() != null) {
+                    totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountPaid()));
                 }
                 if (consultation.getExamAmountPaid() != null) {
                     totalPaid = totalPaid.add(consultation.getExamAmountPaid());

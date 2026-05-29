@@ -180,6 +180,30 @@ public class NotificationService {
     }
 
     /**
+     * 💊 Notifie le patient que sa prescription est prête à être retirée
+     * Déclenché quand la commande pharmacie passe au statut PAYEE
+     * @param patient Le patient destinataire
+     * @param prescriptionCode Code de la prescription
+     * @param doctorName Nom du médecin prescripteur
+     */
+    @Transactional
+    public void notifyPatientPrescriptionReady(User patient, String prescriptionCode, String doctorName) {
+        try {
+            String title = "💊 Vos médicaments sont prêts";
+            String message = String.format(
+                "Votre ordonnance prescrite par Dr. %s est prête. Vous pouvez la retirer à la pharmacie avec le numéro %s.",
+                doctorName, prescriptionCode
+            );
+
+            createAndSend(patient, title, message, NotificationType.PRESCRIPTION_PRETE);
+
+            log.info("📢 Notification patient {}: Prescription {} prête", patient.getId(), prescriptionCode);
+        } catch (Exception e) {
+            log.error("❌ Erreur notification prescription prête pour patient {}: {}", patient.getId(), e.getMessage());
+        }
+    }
+
+    /**
      * 💰 Notifie la Pharmacie qu'un paiement a été confirmé par la Finance
      * Déclenché lorsque la finance confirme le paiement d'une commande pharmacie
      * @param order La commande pharmacie payée

@@ -87,6 +87,7 @@ import ReceptionDocuments from "./pages/reception/Documents";
 import { Settings as ReceptionSettings } from "./pages/reception/Settings";
 import { ExamReception } from "./pages/reception/ExamReception";
 import ReceptionPayments from "./pages/reception/ReceptionPayments";
+import ReceptionHistory from "./pages/reception/ReceptionHistory";
 
 /* 💰 Finance */
 import FinanceLayout from "./components/finance/FinanceLayout";
@@ -273,6 +274,7 @@ function App() {
                   <Route path="exams" element={<ExamReception />} />
                   <Route path="paiements" element={<ReceptionPayments />} />
                   <Route path="documents" element={<ReceptionDocuments />} />
+                  <Route path="historique" element={<ReceptionHistory />} />
                   <Route path="settings" element={<ReceptionSettings />} />
                   <Route path="medical-report/:consultationId" element={<MedicalReportView />} />
                 </Route>

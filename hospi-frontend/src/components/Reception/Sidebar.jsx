@@ -10,6 +10,7 @@ import {
   LogOut, 
   ChevronLeft, 
   X,
+  History,
   FolderSearch // Ajout de cette icône pour illustrer le dossier patient
 } from 'lucide-react';
 import LogoInuaAfya from '../LogoInuaAfya';
@@ -46,6 +47,7 @@ const Sidebar = ({ sidebarCollapsed: controlledCollapsed, setSidebarCollapsed: s
     { path: '/reception/patients', labelKey: 'reception.patientFiles', icon: Users, color: 'text-emerald-500' },
     { path: '/reception/admissions', labelKey: 'reception.admissions', icon: ClipboardList, color: 'text-amber-500' },
     { path: '/reception/documents', labelKey: 'reception.documents', icon: FileText, color: 'text-purple-500' },
+    { path: '/reception/historique', labelKey: 'reception.history', icon: History, color: 'text-rose-500' },
     { path: '/reception/settings', labelKey: 'common.settings', icon: Settings, color: 'text-slate-400' },
   ];
 

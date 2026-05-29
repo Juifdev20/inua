@@ -311,9 +311,9 @@ const CaissePharmacie = () => {
                                 {formatTime(rx.createdAt || rx.date)} • #{rx.id}
                               </p>
                               {rx.isAbonne && (
-                                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[9px] font-bold px-1.5 py-0 h-4">
-                                  <Building2 className="w-2.5 h-2.5 mr-1" />
-                                  {rx.companyName || 'Abonné'}
+                                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[9px] font-bold px-1.5 py-0 h-4 max-w-[120px] truncate">
+                                  <Building2 className="w-2.5 h-2.5 mr-1 shrink-0" />
+                                  <span className="truncate">{rx.companyName || 'Abonné'}</span>
                                 </Badge>
                               )}
                             </div>
@@ -369,11 +369,11 @@ const CaissePharmacie = () => {
             </div>
 
             {/* Barre résumé */}
-            <div className="p-3 rounded-xl bg-card border border-border shadow-sm flex items-center justify-between text-xs">
+            <div className="p-3 rounded-xl bg-card border border-border shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
               <span className="text-muted-foreground font-medium">
                 {filtered.length} ordonnance{filtered.length > 1 ? 's' : ''}
               </span>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 <span className="text-muted-foreground">
                   À encaisser : <strong className="text-amber-600">{formatCurrency(totalAmountUnpaid, stats.currency || 'USD')}</strong>
                 </span>
@@ -418,7 +418,7 @@ const CaissePharmacie = () => {
                       <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
                         <Building2 className="w-4 h-4 text-blue-500" />
                         <div className="flex-1">
-                          <p className="text-xs font-bold text-blue-600">
+                          <p className="text-xs font-bold text-blue-600 truncate">
                             Patient abonné - {selectedPrescription.companyName || 'Entreprise'}
                           </p>
                           {selectedPrescription.coverageRate && (
@@ -433,42 +433,42 @@ const CaissePharmacie = () => {
                     {/* Workflow : Prescrit → Payé → Retrait */}
                     <div className="flex items-center justify-center gap-0 py-3">
                       <div className="flex flex-col items-center gap-1.5">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-teal-500/10 border-teal-500 text-teal-500">
-                          <ClipboardList className="w-4 h-4" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 bg-teal-500/10 border-teal-500 text-teal-500">
+                          <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Prescrit</span>
                       </div>
 
                       <div className={cn(
-                        'w-12 h-0.5 mt-[-16px]',
+                        'w-8 sm:w-12 h-0.5 mt-[-16px]',
                         isPaid(selectedPrescription.status) ? 'bg-teal-500' : 'bg-border'
                       )} />
 
                       <div className="flex flex-col items-center gap-1.5">
                         <div className={cn(
-                          'w-10 h-10 rounded-full flex items-center justify-center border-2',
+                          'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2',
                           isPaid(selectedPrescription.status)
                             ? 'bg-teal-500/10 border-teal-500 text-teal-500'
                             : 'bg-muted border-border text-muted-foreground'
                         )}>
-                          <DollarSign className="w-4 h-4" />
+                          <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Payé</span>
                       </div>
 
                       <div className={cn(
-                        'w-12 h-0.5 mt-[-16px]',
+                        'w-8 sm:w-12 h-0.5 mt-[-16px]',
                         isPaid(selectedPrescription.status) ? 'bg-teal-500' : 'bg-border'
                       )} />
 
                       <div className="flex flex-col items-center gap-1.5">
                         <div className={cn(
-                          'w-10 h-10 rounded-full flex items-center justify-center border-2',
+                          'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2',
                           isPaid(selectedPrescription.status)
                             ? 'bg-teal-500/10 border-teal-500 text-teal-500'
                             : 'bg-muted border-border text-muted-foreground'
                         )}>
-                          <Package className="w-4 h-4" />
+                          <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Retrait</span>
                       </div>
@@ -481,12 +481,12 @@ const CaissePharmacie = () => {
                           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
                             Couverture entreprise
                           </p>
-                          <p className="text-4xl font-black tracking-tighter text-blue-600">
+                          <p className="text-3xl sm:text-4xl font-black tracking-tighter text-blue-600">
                             100%
                           </p>
                           <div className="mt-3">
-                            <Badge className="border-none bg-blue-500/10 text-blue-600 font-bold px-4 py-1">
-                              <Building2 className="w-3.5 h-3.5 mr-1.5" /> Couvert par {selectedPrescription.companyName || 'l\'entreprise'}
+                            <Badge className="border-none bg-blue-500/10 text-blue-600 font-bold px-4 py-1 max-w-full truncate">
+                              <Building2 className="w-3.5 h-3.5 mr-1.5 shrink-0" /> <span className="truncate">Couvert par {selectedPrescription.companyName || 'l\'entreprise'}</span>
                             </Badge>
                           </div>
                         </>
@@ -496,7 +496,7 @@ const CaissePharmacie = () => {
                             Montant total
                           </p>
                           <p className={cn(
-                            'text-4xl font-black tracking-tighter',
+                            'text-3xl sm:text-4xl font-black tracking-tighter',
                             isPaid(selectedPrescription.status) ? 'text-teal-600' : 'text-amber-600'
                           )}>
                             {formatCurrency(selectedPrescription.totalAmount || selectedPrescription.amount, selectedPrescription.currency)}

@@ -62,4 +62,13 @@ public interface EmailService {
      * @param code Code à 6 chiffres pour connexion sans mot de passe
      */
     void sendMagicCodeEmail(String to, String firstName, String code);
+
+    /**
+     * ★ Envoie un email de notification quand une prescription est prête
+     * @param to Adresse email du patient
+     * @param patientName Nom du patient
+     * @param prescriptionCode Code de la prescription
+     * @param doctorName Nom du médecin prescripteur
+     */
+    void sendPrescriptionReadyEmail(String to, String patientName, String prescriptionCode, String doctorName);
 }

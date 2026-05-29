@@ -152,6 +152,161 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    @Async("taskExecutor")
+    public void sendPrescriptionReadyEmail(String to, String patientName, String prescriptionCode, String doctorName) {
+        try {
+            log.info("📧 [EMAIL] Envoi notification prescription prête à {}", to);
+
+            String subject = appName + " - Vos médicaments sont prêts";
+            String htmlContent = buildPrescriptionReadyTemplate(patientName, prescriptionCode, doctorName);
+
+            sendHtmlEmailInternal(to, subject, htmlContent);
+            log.info("✅ [EMAIL] Notification prescription prête envoyée à {}", to);
+
+        } catch (Exception e) {
+            log.error("❌ [EMAIL] Erreur envoi notification prescription à {}: {}", to, e.getMessage());
+        }
+    }
+
+    /**
+     * ★ TEMPLATE HTML - Prescription prête à être retirée
+     */
+    private String buildPrescriptionReadyTemplate(String patientName, String prescriptionCode, String doctorName) {
+        return """
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Vos médicaments sont prêts - Inua Afya</title>
+                <style>
+                    @media only screen and (max-width: 600px) {
+                        .container { width: 100%% !important; padding: 10px !important; }
+                        .content { padding: 20px !important; }
+                    }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        background-color: #f5f5f5;
+                        margin: 0;
+                        padding: 20px;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        background: #ffffff;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                    }
+                    .header {
+                        background: linear-gradient(135deg, #8B5CF6 0%%, #7C3AED 100%%);
+                        padding: 30px;
+                        text-align: center;
+                        color: white;
+                    }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                    .content { padding: 40px 30px; color: #333; }
+                    .greeting { font-size: 22px; color: #2c3e50; margin-bottom: 20px; font-weight: 600; }
+                    .message { color: #555; margin-bottom: 25px; line-height: 1.6; }
+                    .info-box {
+                        background: linear-gradient(135deg, #f8fffe 0%%, #e6f9f1 100%%);
+                        border: 2px solid #37f49e;
+                        border-radius: 10px;
+                        padding: 25px;
+                        margin: 25px 0;
+                    }
+                    .info-box h3 { color: #2c3e50; margin-top: 0; font-size: 18px; }
+                    .prescription-code {
+                        background: #f8f9fa;
+                        border: 2px dashed #dee2e6;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 8px;
+                        text-align: center;
+                        font-family: monospace;
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #8B5CF6;
+                    }
+                    .button-container { text-align: center; margin: 30px 0; }
+                    .button {
+                        display: inline-block;
+                        background: linear-gradient(135deg, #8B5CF6 0%%, #7C3AED 100%%);
+                        color: white;
+                        padding: 15px 40px;
+                        text-decoration: none;
+                        border-radius: 30px;
+                        font-weight: 600;
+                        font-size: 16px;
+                        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+                    }
+                    .footer {
+                        background: #f8f9fa;
+                        padding: 20px;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 13px;
+                        border-top: 1px solid #e9ecef;
+                    }
+                    .warning {
+                        background: #fff3cd;
+                        border-left: 4px solid #ffc107;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 5px;
+                        font-size: 14px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>💊 Vos médicaments sont prêts</h1>
+                    </div>
+
+                    <div class="content">
+                        <div class="greeting">Bonjour %s,</div>
+
+                        <div class="message">
+                            Votre ordonnance prescrite par <strong>Dr. %s</strong> a été validée par notre pharmacie.
+                            Vos médicaments sont maintenant <strong>prêts à être retirés</strong>.
+                        </div>
+
+                        <div class="prescription-code">
+                            Ordonnance N° : %s
+                        </div>
+
+                        <div class="info-box">
+                            <h3>📍 Comment retirer vos médicaments</h3>
+                            <p>Présentez-vous à la pharmacie avec :</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Votre carte de patient ou pièce d'identité</li>
+                                <li>Le numéro de votre ordonnance ci-dessus</li>
+                            </ul>
+                        </div>
+
+                        <div class="button-container">
+                            <a href="%s/patient/notifications" class="button">Voir mes notifications</a>
+                        </div>
+
+                        <div class="warning">
+                            <strong>⏰ Important :</strong> Merci de venir retirer vos médicaments dans les <strong>48 heures</strong>.
+                            Passé ce délai, votre ordonnance pourrait être retournée au stock.
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <p><strong>Inua Afya</strong> - Hôpital Moderne</p>
+                        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+                        <p>© 2026 Inua Afya. Tous droits réservés.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(patientName, doctorName, prescriptionCode, frontendUrl);
+    }
+
     /**
      * ★ TEMPLATE HTML - Code de connexion temporaire (Magic Code)
      */

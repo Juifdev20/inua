@@ -10,5 +10,6 @@ public enum NotificationType {
     MEDICAMENT_A_PREPARER, // Médicaments à préparer (Pharmacie)
     CONSULTATION_TERMINEE, // Consultation terminée - patient à rappeler
     PRISE_MEDICAMENT,    // ⏰ Rappel de prise de médicament
+    PRESCRIPTION_PRETE,  // 💊 Prescription prête à être retirée
     SYSTEME
 }

@@ -276,6 +276,15 @@ public class DoctorController {
             consultation.setDateCloture(LocalDateTime.now());
             Consultation saved = consultationRepository.save(consultation);
 
+            // 🎯 Génération automatique du dossier patient si tout est payé
+            if (!hasExams) {
+                try {
+                    consultationService.generateDossierIfFullyPaid(saved);
+                } catch (Exception e) {
+                    log.error("❌ [DOCTOR] Erreur génération dossier auto: {}", e.getMessage());
+                }
+            }
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", hasExams

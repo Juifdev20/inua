@@ -251,6 +251,11 @@ public interface ConsultationService {
     ConsultationDTO finaliserConsultation(Long id, FinaliserConsultationRequest request);
 
     /**
+     * 🎯 Génère automatiquement le dossier patient si la consultation est terminée et tout payé
+     */
+    void generateDossierIfFullyPaid(Consultation consultation);
+
+    /**
      * ✅ DOSSIER COMPLET: Génère le parcours patient complet (Triage, Labo, Prescription, Pharmacie, Finance)
      */
     PatientJourneyDTO getPatientJourney(Long consultationId);

@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+// Forward reference OK since in same package
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -144,7 +146,7 @@ public class ConsultationDTO {
     private List<Object> labTests = new ArrayList<>();
 
     @Builder.Default
-    private List<Object> prescriptions = new ArrayList<>();
+    private List<PrescriptionDTO> prescriptions = new ArrayList<>();
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("createdAt")

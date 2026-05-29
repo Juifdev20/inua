@@ -1,7 +1,10 @@
 package com.hospital.backend.config;
 
+import com.hospital.backend.entity.Gender;
+import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.Role;
 import com.hospital.backend.entity.User;
+import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.HospitalConfigService;
@@ -27,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final HospitalConfigService hospitalConfigService;
 
@@ -43,7 +47,8 @@ public class DataInitializer implements CommandLineRunner {
         initializeLaboUser();
         initializePharmacieUser();
         initializeFinanceUser();
-        
+        initializePatientUser();
+
         log.info("✅ Initialisation terminée!");
     }
     
@@ -262,6 +267,55 @@ public class DataInitializer implements CommandLineRunner {
             log.info("💰 Finance créée: {} / Mot de passe: finance123", username);
         } else {
             log.info("💰 Finance existe déjà");
+        }
+    }
+
+    private void initializePatientUser() {
+        String username = "patient";
+        String email = "patient@inuaafia.com";
+
+        User user = userRepository.findByUsername(username).orElse(null);
+
+        if (user == null) {
+            // Créer le User
+            Role role = roleRepository.findByNom("ROLE_PATIENT")
+                .orElseThrow(() -> new RuntimeException("Rôle ROLE_PATIENT non trouvé"));
+            user = User.builder()
+                .username(username)
+                .email(email)
+                .password(passwordEncoder.encode("patient123"))
+                .firstName("Jean")
+                .lastName("Patient")
+                .phoneNumber("+243000000006")
+                .role(role)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            user = userRepository.save(user);
+            log.info("🏥 Utilisateur patient créé: {} / Mot de passe: patient123", username);
+        }
+
+        // Vérifier si le profil Patient existe, sinon le créer
+        boolean patientExists = patientRepository.findByEmailOrUsername(email).isPresent();
+        if (!patientExists) {
+            Patient patient = Patient.builder()
+                .user(user)
+                .patientCode("PAT-" + System.currentTimeMillis())
+                .firstName("Jean")
+                .lastName("Patient")
+                .email(email)
+                .phoneNumber("+243000000006")
+                .gender(Gender.MASCULIN)
+                .createdBy(user)
+                .build();
+            patientRepository.save(patient);
+            log.info("🏥 Profil patient créé pour: {}", username);
+        } else {
+            log.info("🏥 Profil patient existe déjà");
         }
     }
 }

@@ -11,6 +11,7 @@ import com.hospital.backend.dto.ExamItemDTO;
 import com.hospital.backend.dto.MedicalServiceDTO;
 import com.hospital.backend.dto.PageResponse;
 import com.hospital.backend.dto.PatientJourneyDTO;
+import com.hospital.backend.dto.PrescriptionDTO;
 import com.hospital.backend.dto.RevenueDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
@@ -67,6 +68,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final PrescribedExamRepository prescribedExamRepository;
     private final LabTestRepository labTestRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final PrescriptionItemRepository prescriptionItemRepository;
     private final EntityManager entityManager;
     private final RevenueService revenueService;
     private final HospitalConfigRepository hospitalConfigRepository;
@@ -541,6 +543,67 @@ public class ConsultationServiceImpl implements ConsultationService {
             }
         } catch (Exception e) {
             dto.setPrescribedExams(List.of());
+        }
+
+        // ★ Inclure les prescriptions avec leurs items détaillés
+        try {
+            List<Prescription> prescriptions = prescriptionRepository.findAllByConsultationId(c.getId());
+            if (prescriptions != null && !prescriptions.isEmpty()) {
+                List<PrescriptionDTO> prescriptionDTOs = prescriptions.stream()
+                    .map(p -> {
+                        List<PrescriptionDTO.PrescriptionItemDTO> items = prescriptionItemRepository.findByPrescriptionId(p.getId())
+                            .stream()
+                            .map(item -> {
+                                String durationStr = item.getDuration() != null ? item.getDuration().toString() : null;
+                                Integer stockQuantity = item.getMedication() != null ? item.getMedication().getStockQuantity() : 0;
+                                BigDecimal unitPrice = item.getMedication() != null ? item.getMedication().getUnitPrice() : BigDecimal.ZERO;
+                                BigDecimal totalPrice = BigDecimal.ZERO;
+                                if (unitPrice != null && item.getQuantity() != null) {
+                                    totalPrice = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+                                }
+                                return PrescriptionDTO.PrescriptionItemDTO.builder()
+                                    .id(item.getId())
+                                    .medicationId(item.getMedication() != null ? item.getMedication().getId() : null)
+                                    .medicationName(item.getMedication() != null ? item.getMedication().getName() : null)
+                                    .dosage(item.getDosage())
+                                    .frequency(item.getFrequency())
+                                    .timeSlots(item.getTimeSlots())
+                                    .duration(durationStr)
+                                    .quantity(item.getQuantity() != null ? item.getQuantity() : 0)
+                                    .quantityPerDose(item.getQuantityPerDose())
+                                    .instructions(item.getInstructions())
+                                    .unitPrice(unitPrice != null ? unitPrice : BigDecimal.ZERO)
+                                    .totalPrice(totalPrice)
+                                    .stockQuantity(stockQuantity != null ? stockQuantity : 0)
+                                    .build();
+                            })
+                            .collect(Collectors.toList());
+
+                        return PrescriptionDTO.builder()
+                            .id(p.getId())
+                            .prescriptionCode(p.getPrescriptionCode())
+                            .consultationId(c.getId())
+                            .patientId(p.getPatient() != null ? p.getPatient().getId() : null)
+                            .patientName(p.getPatient() != null ? p.getPatient().getFirstName() + " " + p.getPatient().getLastName() : null)
+                            .doctorId(p.getDoctor() != null ? p.getDoctor().getId() : null)
+                            .doctorName(p.getDoctor() != null ? p.getDoctor().getFirstName() + " " + p.getDoctor().getLastName() : null)
+                            .notes(p.getNotes())
+                            .status(p.getStatus())
+                            .totalAmount(p.getTotalAmount())
+                            .amountPaid(p.getAmountPaid())
+                            .currency(p.getCurrency() != null ? p.getCurrency().name() : "USD")
+                            .createdAt(p.getCreatedAt())
+                            .items(items)
+                            .build();
+                    })
+                    .collect(Collectors.toList());
+                dto.setPrescriptions(prescriptionDTOs);
+            } else {
+                dto.setPrescriptions(List.of());
+            }
+        } catch (Exception e) {
+            log.warn("Erreur chargement prescriptions pour consultation {}: {}", c.getId(), e.getMessage());
+            dto.setPrescriptions(List.of());
         }
 
         if (c.getPatient() != null) {
@@ -1933,7 +1996,8 @@ public class ConsultationServiceImpl implements ConsultationService {
     /**
      * 🎯 Génère automatiquement le dossier patient si la consultation est terminée et tout payé
      */
-    private void generateDossierIfFullyPaid(Consultation consultation) {
+    @Override
+    public void generateDossierIfFullyPaid(Consultation consultation) {
         try {
             // Vérifier que la consultation est bien terminée (COMPLETED ou TERMINE)
             if (consultation.getStatus() != ConsultationStatus.COMPLETED 
@@ -1952,16 +2016,18 @@ public class ConsultationServiceImpl implements ConsultationService {
             }
             
             // Calculer le montant total dû (frais fiche + consultation + examens)
+            // ✅ CORRECTION: Utiliser les champs précis de Consultation pour éviter
+            // le double-comptage (admission.serviceFee peut déjà inclure les examens)
             BigDecimal totalDue = BigDecimal.ZERO;
             
             // Frais de fiche
-            if (admission.getRegistrationFee() != null) {
-                totalDue = totalDue.add(admission.getRegistrationFee());
+            if (consultation.getFicheAmountDue() != null) {
+                totalDue = totalDue.add(BigDecimal.valueOf(consultation.getFicheAmountDue()));
             }
             
-            // Frais de consultation (service fee)
-            if (admission.getServiceFee() != null) {
-                totalDue = totalDue.add(admission.getServiceFee());
+            // Frais de consultation
+            if (consultation.getConsulAmountDue() != null) {
+                totalDue = totalDue.add(BigDecimal.valueOf(consultation.getConsulAmountDue()));
             }
             
             // Frais d'examens prescrits
@@ -1971,8 +2037,11 @@ public class ConsultationServiceImpl implements ConsultationService {
             
             // Montant payé
             BigDecimal totalPaid = BigDecimal.ZERO;
-            if (admission.getAmountPaid() != null) {
-                totalPaid = totalPaid.add(admission.getAmountPaid());
+            if (consultation.getFicheAmountPaid() != null) {
+                totalPaid = totalPaid.add(BigDecimal.valueOf(consultation.getFicheAmountPaid()));
+            }
+            if (consultation.getConsulAmountPaid() != null) {
+                totalPaid = totalPaid.add(BigDecimal.valueOf(consultation.getConsulAmountPaid()));
             }
             if (consultation.getExamAmountPaid() != null) {
                 totalPaid = totalPaid.add(consultation.getExamAmountPaid());
@@ -2465,8 +2534,9 @@ public class ConsultationServiceImpl implements ConsultationService {
                     || consultStatus == ConsultationStatus.TREATED
                     || consultStatus == ConsultationStatus.RESULTATS_PRETS
                     || consultStatus == ConsultationStatus.AU_LABO
-                    || consultStatus == ConsultationStatus.EXAMENS_PAYES;
-                    
+                    || consultStatus == ConsultationStatus.EXAMENS_PAYES
+                    || consultationFee.compareTo(java.math.BigDecimal.ZERO) == 0;  // Gratuit = payé
+
             boolean isLabPaid = (consultation.getExamAmountPaid() != null && consultation.getExamAmountPaid().compareTo(examFee) >= 0)
                     || consultStatus == ConsultationStatus.PAYEE
                     || consultStatus == ConsultationStatus.PAID_PENDING_LAB
@@ -2474,7 +2544,15 @@ public class ConsultationServiceImpl implements ConsultationService {
                     || consultStatus == ConsultationStatus.TREATED
                     || consultStatus == ConsultationStatus.RESULTATS_PRETS
                     || consultStatus == ConsultationStatus.AU_LABO
-                    || consultStatus == ConsultationStatus.EXAMENS_PAYES;
+                    || consultStatus == ConsultationStatus.EXAMENS_PAYES
+                    || examFee.compareTo(java.math.BigDecimal.ZERO) == 0;  // Gratuit = payé
+
+            // CORRECTION: Si le statut global est SOLDE, tout est considéré comme payé
+            if ("SOLDE".equals(status)) {
+                isConsultationPaid = true;
+                isLabPaid = true;
+                log.info("[DEBUG] Statut global SOLDE -> consultationPaid=true, labPaid=true");
+            }
 
             return PatientJourneyDTO.BillingSummaryDTO.builder()
                     .invoiceNumber(consultation.getConsultationCode())
