@@ -299,8 +299,8 @@ public class DataInitializer implements CommandLineRunner {
             log.info("🏥 Utilisateur patient créé: {} / Mot de passe: patient123", username);
         }
 
-        // Vérifier si le profil Patient existe, sinon le créer
-        boolean patientExists = patientRepository.findByEmailOrUsername(email).isPresent();
+        // Vérifier si le profil Patient existe pour ce user, sinon le créer
+        boolean patientExists = patientRepository.findByUser(user).isPresent();
         if (!patientExists) {
             Patient patient = Patient.builder()
                 .user(user)
