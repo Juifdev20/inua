@@ -41,7 +41,8 @@ public class InvoiceController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+        int safeSize = Math.min(size, 100);
+        Pageable pageable = PageRequest.of(page, safeSize);
         return ResponseEntity.ok(invoiceService.getInvoicesByPatientEmail(authentication.getName(), pageable));
     }
 

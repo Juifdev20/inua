@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -80,6 +81,9 @@ public class FinanceTransactionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'FINANCE', 'CAISSIER')")
     @Operation(summary = "Liste paginée des transactions")
     public ResponseEntity<Page<FinanceTransaction>> getAllTransactions(Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         return ResponseEntity.ok(transactionRepository.findAll(pageable));
     }
 

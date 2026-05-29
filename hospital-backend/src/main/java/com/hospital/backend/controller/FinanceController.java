@@ -730,7 +730,8 @@ public class FinanceController {
         try {
             log.info("📋 [FINANCE] Récupération des paiements pharmacie en attente");
             
-            Pageable pageable = PageRequest.of(page, size);
+            int safeSize = Math.min(size, 100);
+            Pageable pageable = PageRequest.of(page, safeSize);
             var orders = pharmacyOrderRepository.findByStatus(
                 PharmacyOrderStatus.EN_ATTENTE_PAIEMENT, pageable);
             

@@ -82,8 +82,9 @@ public class RevenueController {
             @RequestParam(required = false) String sortBy,
             Authentication authentication) {
 
+        int safeSize = Math.min(size, 100);
         Sort sort = sortBy != null ? Sort.by(sortBy).descending() : Sort.by("date").descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(page, safeSize, sort);
 
         Page<RevenueDTO> revenues;
         if (source != null) {

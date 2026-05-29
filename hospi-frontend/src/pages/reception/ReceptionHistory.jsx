@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft,
   Calendar,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Eye,
@@ -40,20 +41,36 @@ const ReceptionHistory = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [search, setSearch] = useState('');
 
+  /* ---------- Pagination ---------- */
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 50;
+
   /* ---------- Chargement ---------- */
   useEffect(() => {
-    loadData();
+    loadData(0);
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (targetPage = 0) => {
     setLoading(true);
     try {
-      // Recupere TOUTES les consultations (size tres grand)
-      const response = await admissionService.getAdmissions(0, 9999);
+      const response = await admissionService.getAdmissions(targetPage, pageSize);
       const raw = Array.isArray(response)
         ? response
         : response?.content || response?.data?.content || response?.data || [];
+      const tPages = response?.totalPages || response?.data?.totalPages || 1;
+      const tElements = response?.totalElements || response?.data?.totalElements || raw.length;
+
       setConsultations(raw);
+      setPage(targetPage);
+      setTotalPages(tPages);
+      setTotalElements(tElements);
+      // Retour a la vue annees quand on change de page
+      setView('years');
+      setSelectedYear(null);
+      setSelectedPatient(null);
+      setSearch('');
     } catch (err) {
       console.error('Erreur chargement historique:', err);
       toast.error("Impossible de charger l'historique");
@@ -252,6 +269,40 @@ const ReceptionHistory = () => {
             );
           })}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-8 bg-card border border-border rounded-2xl p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              <span className="font-bold text-foreground">{totalElements}</span> fiche{totalElements > 1 ? 's' : ''} au total
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-1"
+                disabled={page === 0 || loading}
+                onClick={() => loadData(page - 1)}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Precedent</span>
+              </Button>
+              <span className="text-sm font-bold px-3 py-1 bg-emerald-500/10 text-emerald-700 rounded-lg">
+                {page + 1} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-1"
+                disabled={page >= totalPages - 1 || loading}
+                onClick={() => loadData(page + 1)}
+              >
+                <span className="hidden sm:inline">Suivant</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

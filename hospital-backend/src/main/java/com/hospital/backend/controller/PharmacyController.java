@@ -78,7 +78,8 @@ public class PharmacyController {
             log.info("📅 [SALES HISTORY] Paramètres reçus - startDate: {}, endDate: {}, archived: {}", startDate, endDate, archived);
             log.info("📅 [SALES HISTORY] Dates parsées - start: {}, end: {}", start, end);
             
-            Pageable pageable = PageRequest.of(page, size);
+            int safeSize = Math.min(size, 100);
+            Pageable pageable = PageRequest.of(page, safeSize);
             PageResponse<PharmacyOrderDTO> sales = pharmacyService.getSalesHistory(start, end, pageable, archived);
             
             log.info("✅ [SALES HISTORY] {} ventes récupérées", sales.getTotalElements());
@@ -211,7 +212,8 @@ public class PharmacyController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size);
+            int safeSize = Math.min(size, 100);
+            Pageable pageable = PageRequest.of(page, safeSize);
             List<PharmacyOrderStatus> statuses = status != null ?
                     List.of(PharmacyOrderStatus.valueOf(status)) :
                     List.of(PharmacyOrderStatus.EN_ATTENTE, PharmacyOrderStatus.EN_PREPARATION, PharmacyOrderStatus.PAYEE);
@@ -232,7 +234,8 @@ public class PharmacyController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size);
+            int safeSize = Math.min(size, 100);
+            Pageable pageable = PageRequest.of(page, safeSize);
             PageResponse<PharmacyOrderDTO> orders = pharmacyService.searchOrders(query, pageable);
             return ResponseEntity.ok(orders);
         } catch (Exception e) {

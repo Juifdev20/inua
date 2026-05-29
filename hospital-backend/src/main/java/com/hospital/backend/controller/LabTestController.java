@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -92,6 +93,9 @@ public class LabTestController {
     public ResponseEntity<ApiResponse<PageResponse<LabTestDTO>>> getByStatus(
             @PathVariable LabTestStatus status,
             @PageableDefault(size = 20) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<LabTestDTO> labTests = labTestService.getByStatus(status, pageable);
         return ResponseEntity.ok(ApiResponse.success(labTests));
     }
@@ -101,6 +105,9 @@ public class LabTestController {
     @Operation(summary = "Tests en attente", description = "Récupère tous les tests en attente")
     public ResponseEntity<ApiResponse<PageResponse<LabTestDTO>>> getPendingTests(
             @PageableDefault(size = 20, sort = "requestedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<LabTestDTO> labTests = labTestService.getPendingTests(pageable);
         return ResponseEntity.ok(ApiResponse.success(labTests));
     }
@@ -138,6 +145,9 @@ public class LabTestController {
     @Operation(summary = "Obtenir la file d'attente", description = "Liste des examens à traiter par le labo")
     public ResponseEntity<ApiResponse<PageResponse<LabTestDTO>>> getQueue(
             @PageableDefault(size = 20, sort = "requestedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<LabTestDTO> labTests = labTestService.getQueue(pageable);
         return ResponseEntity.ok(ApiResponse.success(labTests));
     }

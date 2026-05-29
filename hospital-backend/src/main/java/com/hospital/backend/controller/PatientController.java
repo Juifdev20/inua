@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -153,6 +154,9 @@ public class PatientController {
     @Operation(summary = "Lister les patients", description = "Récupère la liste paginée des patients actifs")
     public ResponseEntity<ApiResponse<PageResponse<PatientDTO>>> getAll(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<PatientDTO> patients = patientService.getAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(patients));
     }
@@ -162,6 +166,9 @@ public class PatientController {
     @Operation(summary = "Lister les archives", description = "Récupère la liste paginée des patients désactivés")
     public ResponseEntity<ApiResponse<PageResponse<PatientDTO>>> getAllArchived(
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<PatientDTO> patients = patientService.getAllArchived(pageable);
         return ResponseEntity.ok(ApiResponse.success(patients));
     }
@@ -172,6 +179,9 @@ public class PatientController {
     public ResponseEntity<ApiResponse<PageResponse<PatientDTO>>> search(
             @RequestParam String query,
             @PageableDefault(size = 20) Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         PageResponse<PatientDTO> patients = patientService.search(query, pageable);
         return ResponseEntity.ok(ApiResponse.success(patients));
     }

@@ -101,7 +101,8 @@ public class PrescriptionController {
             LocalDateTime start = startDate != null ? LocalDateTime.parse(startDate + "T00:00:00") : LocalDateTime.now().minusDays(30);
             LocalDateTime end = endDate != null ? LocalDateTime.parse(endDate + "T23:59:59") : LocalDateTime.now();
             
-            Pageable pageable = PageRequest.of(page, size);
+            int safeSize = Math.min(size, 100);
+            Pageable pageable = PageRequest.of(page, safeSize);
             PageResponse<PrescriptionDTO> paidPrescriptions = prescriptionService.getPaidPrescriptions(start, end, pageable);
             
             log.info("✅ {} prescriptions payées trouvées", paidPrescriptions.getTotalElements());

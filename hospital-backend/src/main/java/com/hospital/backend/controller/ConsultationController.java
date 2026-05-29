@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -249,6 +250,11 @@ public class ConsultationController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_DOCTEUR', 'ROLE_RECEPTION', 'ROLE_PATIENT')")
     public ResponseEntity<ApiResponse<PageResponse<ConsultationDTO>>> getAll(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        // 🛡️ Protection contre les requêtes massives (timeout / OOM)
+        int maxSize = 100;
+        if (pageable.getPageSize() > maxSize) {
+            pageable = PageRequest.of(pageable.getPageNumber(), maxSize, pageable.getSort());
+        }
         PageResponse<ConsultationDTO> consultations = consultationService.getAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(consultations));
     }
