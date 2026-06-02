@@ -11,6 +11,8 @@ import autoTable from 'jspdf-autotable';
 import { inventairePharmaAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
@@ -184,87 +186,192 @@ export default function InventairePharmacieDetail() {
 
   // ─── Impression PDF ─────────────────────────────────────────────────────────
 
-  const handlePDF = () => {
+  const handlePDF = async () => {
     if (!inventaire) return;
     try {
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pw = doc.internal.pageSize.getWidth();
-      const ph = doc.internal.pageSize.getHeight();
+      const pw = doc.internal.pageSize.getWidth();   // 297
+      const ph = doc.internal.pageSize.getHeight();  // 210
       const kpis = calcKpis(lignes);
+      const margin = 14;
 
-      // Couleur depuis config
       const hexToRgb = (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [5, 150, 105];
+        const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return r ? [parseInt(r[1], 16), parseInt(r[2], 16), parseInt(r[3], 16)] : [5, 150, 105];
       };
-      const primaryColor = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
-      const hospitalName = config?.hospitalName || 'INUA AFYA';
+      const [pr, pg, pb] = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
+      const hospitalName = config?.hospitalName || 'HÔPITAL';
 
-      // Logo
-      if (config?.hospitalLogoUrl) {
-        try {
-          doc.addImage(config.hospitalLogoUrl, 'PNG', 14, 5, 20, 20);
-        } catch (e) {
-          // Logo non chargé, on continue sans
+      // ═══════════════════════════════════════════════════════
+      // ZONE A — EN-TÊTE (y: 0 → 32)
+      // Fond gris très clair
+      doc.setFillColor(247, 249, 250);
+      doc.rect(0, 0, pw, 32, 'F');
+      // Ligne de séparation bas de l'en-tête
+      doc.setDrawColor(pr, pg, pb);
+      doc.setLineWidth(0.8);
+      doc.line(0, 32, pw, 32);
+
+      // Logo (gauche)
+      let textStartX = margin;
+      if (config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false) {
+        const logoDataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (logoDataUrl) {
+          const img = new Image();
+          img.src = logoDataUrl;
+          await new Promise(res => { img.onload = res; });
+          const logoH = 24;
+          const logoW = logoH * (img.width / img.height);
+          doc.addImage(logoDataUrl, 'PNG', margin, 4, logoW, logoH);
+          textStartX = margin + logoW + 5;
         }
       }
 
-      // Nom de l'hôpital
-      doc.setFontSize(12);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFont(undefined, 'bold');
-      doc.text(hospitalName.toUpperCase(), pw - 14, 12, { align: 'right' });
+      // Nom de l'hôpital (après logo)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(pr, pg, pb);
+      doc.text(hospitalName.toUpperCase(), textStartX, 14);
 
-      // En-tête
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 28, pw, 18, 'F');
+      // Sous-titre
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(config?.headerSubtitle || 'Système de Gestion Hospitalière', textStartX, 20);
+
+      // Contacts (droite)
+      doc.setFontSize(7.5);
+      doc.setTextColor(80, 80, 80);
+      const contactLines = [
+        config?.address,
+        [config?.phoneNumber, config?.email].filter(Boolean).join('  |  '),
+      ].filter(Boolean);
+      contactLines.forEach((line, i) => {
+        doc.text(line, pw - margin, 12 + i * 6, { align: 'right' });
+      });
+
+      // ═══════════════════════════════════════════════════════
+      // ZONE B — BANDE TITRE (y: 33 → 47)
+      doc.setFillColor(pr, pg, pb);
+      doc.rect(0, 33, pw, 14, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.text('FICHE D\'INVENTAIRE PHARMACIE', pw / 2, 36, { align: 'center' });
-      doc.setFontSize(9);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Référence : INV-${inventaire.id}`, pw / 2, 42, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text("FICHE D'INVENTAIRE PHARMACIE", pw / 2, 41, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Référence : INV-${inventaire.id}`, pw / 2, 45.5, { align: 'center' });
 
-      // Infos générales
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(9);
-      let y = 28;
-      const col1 = 14, col2 = pw / 2 + 5;
-      doc.setFont(undefined, 'bold'); doc.text('Date :', col1, y);
-      doc.setFont(undefined, 'normal'); doc.text(fmtDate(inventaire.date), col1 + 22, y);
-      doc.setFont(undefined, 'bold'); doc.text('Type :', col2, y);
-      doc.setFont(undefined, 'normal'); doc.text(TYPES_LABEL[inventaire.type] || inventaire.type, col2 + 22, y);
-      y += 6;
-      doc.setFont(undefined, 'bold'); doc.text('Statut :', col1, y);
-      doc.setFont(undefined, 'normal'); doc.text(STATUTS_INFO[inventaire.statut]?.label || inventaire.statut, col1 + 22, y);
-      doc.setFont(undefined, 'bold'); doc.text('Agent :', col2, y);
-      doc.setFont(undefined, 'normal'); doc.text(`${inventaire.agentPrenom || ''} ${inventaire.agentNom || ''}`, col2 + 22, y);
-      y += 6;
-      if (inventaire.pharmacienChefNom) {
-        doc.setFont(undefined, 'bold'); doc.text('Pharmacien chef :', col1, y);
-        doc.setFont(undefined, 'normal'); doc.text(`${inventaire.pharmacienChefPrenom || ''} ${inventaire.pharmacienChefNom}`, col1 + 40, y);
-        y += 6;
+      // ═══════════════════════════════════════════════════════
+      // ZONE C — INFOS GÉNÉRALES (y: 50 → 75)
+      const infoY = 50;
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, infoY, pw - 2 * margin, 24, 'FD');
+
+      const colW = (pw - 2 * margin) / 4;
+      const row1Fields = [
+        { label: 'Date', value: fmtDate(inventaire.date) },
+        { label: 'Type', value: TYPES_LABEL[inventaire.type] || inventaire.type || '—' },
+        { label: 'Statut', value: STATUTS_INFO[inventaire.statut]?.label || inventaire.statut || '—' },
+        { label: 'Agent', value: `${inventaire.agentPrenom || ''} ${inventaire.agentNom || ''}`.trim() || '—' },
+      ];
+
+      row1Fields.forEach((f, i) => {
+        const x = margin + 4 + i * colW;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(f.label.toUpperCase(), x, infoY + 6);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(30, 30, 30);
+        doc.text(f.value, x, infoY + 12);
+      });
+
+      // Ligne séparatrice horizontale entre row1 et row2
+      if (inventaire.pharmacienChefNom || inventaire.observations) {
+        doc.setDrawColor(235, 235, 235);
+        doc.line(margin, infoY + 14, margin + pw - 2 * margin, infoY + 14);
+
+        const row2Fields = [];
+        if (inventaire.pharmacienChefNom) {
+          row2Fields.push({
+            label: 'Pharmacien chef',
+            value: `${inventaire.pharmacienChefPrenom || ''} ${inventaire.pharmacienChefNom}`.trim(),
+          });
+        }
+        if (inventaire.observations) {
+          row2Fields.push({ label: 'Observations', value: inventaire.observations });
+        }
+        row2Fields.forEach((f, i) => {
+          const x = margin + 4 + i * colW * 2;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(120, 120, 120);
+          doc.text(f.label.toUpperCase(), x, infoY + 18);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(30, 30, 30);
+          const truncated = doc.splitTextToSize(f.value, colW * 2 - 8);
+          doc.text(truncated[0] || '', x, infoY + 22);
+        });
       }
-      if (inventaire.observations) {
-        doc.setFont(undefined, 'bold'); doc.text('Observations :', col1, y);
-        doc.setFont(undefined, 'normal'); doc.text(inventaire.observations, col1 + 35, y);
-        y += 6;
-      }
 
-      // KPIs
-      y += 2;
-      doc.setFont(undefined, 'bold'); doc.setFontSize(8);
-      doc.setFillColor(248, 250, 252);
-      doc.rect(col1, y, pw - 28, 12, 'F');
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text(`Articles : ${kpis.total}`, col1 + 4, y + 5);
-      doc.text(`Avec écart : ${kpis.avecEcart}`, col1 + 35, y + 5);
-      doc.text(`Valeur écarts : ${fmtMoney(kpis.valTotale)}`, col1 + 72, y + 5);
-      doc.text(`Conformité : ${kpis.conformite.toFixed(1)}%`, col1 + 130, y + 5);
-      y += 17;
+      // ═══════════════════════════════════════════════════════
+      // ZONE D — KPI CARDS (y: 77 → 92)
+      const kpiY = 77;
+      const kpiH = 14;
+      const kpiW = (pw - 2 * margin) / 4;
+      const kpiCards = [
+        {
+          label: 'Articles contrôlés',
+          value: String(kpis.total),
+          color: [pr, pg, pb],
+        },
+        {
+          label: 'Avec écart',
+          value: String(kpis.avecEcart),
+          color: kpis.avecEcart > 0 ? [220, 38, 38] : [22, 163, 74],
+        },
+        {
+          label: 'Valeur des écarts',
+          value: fmtMoney(kpis.valTotale),
+          color: kpis.valTotale < 0 ? [220, 38, 38] : [pr, pg, pb],
+        },
+        {
+          label: 'Taux de conformité',
+          value: `${kpis.conformite.toFixed(1)}%`,
+          color: kpis.conformite >= 90 ? [22, 163, 74] : [245, 158, 11],
+        },
+      ];
 
-      // Tableau
+      kpiCards.forEach((kpi, i) => {
+        const kx = margin + i * kpiW;
+        // Fond carte
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.rect(kx, kpiY, kpiW - 2, kpiH, 'FD');
+        // Accent coloré en haut
+        doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+        doc.rect(kx, kpiY, kpiW - 2, 2, 'F');
+        // Valeur (grande)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+        doc.text(kpi.value, kx + (kpiW - 2) / 2, kpiY + 8, { align: 'center' });
+        // Label (petit)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text(kpi.label, kx + (kpiW - 2) / 2, kpiY + 12, { align: 'center' });
+      });
+
+      // ═══════════════════════════════════════════════════════
+      // ZONE E — TABLEAU (y: 95+)
+      const tableStartY = kpiY + kpiH + 4;
       const tableData = lignes.map(l => {
         const ecartNum = parseFloat(l.ecart) || 0;
         return [
@@ -282,43 +389,63 @@ export default function InventairePharmacieDetail() {
       });
 
       autoTable(doc, {
-        startY: y,
+        startY: tableStartY,
         head: [['Code DCI', 'Désignation', 'Forme', 'Dosage', 'Unité', 'Th.', 'Phys.', 'Écart', 'Val. Écart', 'Observation']],
         body: tableData,
-        styles: { fontSize: 7, cellPadding: 1.5 },
-        headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold', fontSize: 7 },
+        styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
+        headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [250, 252, 250] },
         columnStyles: {
-          0: { cellWidth: 22 }, 1: { cellWidth: 38 }, 2: { cellWidth: 18 },
-          3: { cellWidth: 16 }, 4: { cellWidth: 14 }, 5: { cellWidth: 14 },
-          6: { cellWidth: 14 }, 7: { cellWidth: 14 }, 8: { cellWidth: 20 }, 9: { cellWidth: 30 },
+          0: { cellWidth: 24 },
+          1: { cellWidth: 44 },
+          2: { cellWidth: 18 },
+          3: { cellWidth: 16 },
+          4: { cellWidth: 14 },
+          5: { cellWidth: 14, halign: 'center' },
+          6: { cellWidth: 14, halign: 'center' },
+          7: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+          8: { cellWidth: 24, halign: 'right' },
+          9: { cellWidth: 'auto' },
         },
         didParseCell: (data) => {
           if (data.section === 'body') {
             const l = lignes[data.row.index];
-            if (l && parseFloat(l.ecart) !== 0) {
-              data.cell.styles.fillColor = [255, 251, 235];
+            if (l) {
+              const ecart = parseFloat(l.ecart) || 0;
+              if (ecart !== 0) {
+                data.cell.styles.fillColor = [255, 251, 235];
+              }
+              if (data.column.index === 7 && ecart !== 0) {
+                data.cell.styles.textColor = ecart < 0 ? [220, 38, 38] : [22, 163, 74];
+              }
             }
           }
         },
-        margin: { left: 14, right: 14 },
+        margin: { left: margin, right: margin },
       });
 
-      // Pied de page
+      // ═══════════════════════════════════════════════════════
+      // PIED DE PAGE
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+        doc.setDrawColor(pr, pg, pb);
+        doc.setLineWidth(0.4);
+        doc.line(margin, ph - 10, pw - margin, ph - 10);
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
         doc.text(
-          `Document généré le ${new Date().toLocaleString('fr-FR')} — ${config?.footerText || hospitalName}`,
-          14, ph - 5
+          `Généré le ${new Date().toLocaleString('fr-FR')}  —  ${config?.footerText || hospitalName}`,
+          margin, ph - 6
         );
-        doc.text(`Page ${i}/${totalPages}`, pw - 14, ph - 5, { align: 'right' });
+        doc.text(`Page ${i} / ${totalPages}`, pw - margin, ph - 6, { align: 'right' });
       }
 
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       doc.save(`Inventaire_Pharmacie_${dateStr}.pdf`);
       toast.success('PDF généré avec succès');
     } catch (e) {
+      console.error(e);
       toast.error('Erreur lors de la génération du PDF');
     }
   };

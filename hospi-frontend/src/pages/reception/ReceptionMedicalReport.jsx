@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { admissionService } from '../../services/admissionService';
 import { patientService } from '../../services/patientService';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { 
@@ -28,6 +31,7 @@ import {
 const ReceptionMedicalReport = () => {
   const { consultationId } = useParams();
   const navigate = useNavigate();
+  const { config } = useHospitalConfig();
   const [admission, setAdmission] = useState(null);
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -213,16 +217,20 @@ const ReceptionMedicalReport = () => {
       {/* Contenu du rapport */}
       <div className="max-w-[900px] mx-auto p-3 md:p-6 print:p-0">
         
-        {/* Bandeau d'en-tete INUA AFYA */}
+        {/* Bandeau d'en-tete hôpital */}
         <div className="bg-emerald-600 text-white rounded-t-lg p-3 md:p-4 print:rounded-none print:bg-emerald-600">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center shrink-0">
-                <Heart className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+                {config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false ? (
+                  <img src={resolveLogoUrl(config.hospitalLogoUrl, API_BASE_URL)} alt="logo" className="w-full h-full object-contain" onError={(e) => { e.target.style.display='none'; }} />
+                ) : (
+                  <Heart className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
+                )}
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-wide">INUA AFYA</h1>
-                <p className="text-xs md:text-sm text-emerald-100">Système de Gestion Hospitalière</p>
+                <h1 className="text-xl md:text-2xl font-bold tracking-wide">{config?.hospitalName || 'HÔPITAL'}</h1>
+                <p className="text-xs md:text-sm text-emerald-100">{config?.headerSubtitle || 'Système de Gestion Hospitalière'}</p>
               </div>
             </div>
             <div className="text-left sm:text-right">

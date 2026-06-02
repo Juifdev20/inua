@@ -1,5 +1,8 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import useHospitalConfig from '../../hooks/useHospitalConfig';
+import { resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +15,7 @@ import { useRef } from 'react';
 const ReceiptModal = ({ invoice, isOpen, onClose, onPrint }) => {
   const { t } = useTranslation();
   const printRef = useRef();
+  const { config: hospitalConfig } = useHospitalConfig();
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -39,18 +43,29 @@ const ReceiptModal = ({ invoice, isOpen, onClose, onPrint }) => {
             <div ref={printRef} className="max-w-md mx-auto">
               {/* Receipt Header */}
               <div className="text-center border-b pb-6 mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto flex items-center justify-center mb-4">
-                  <Printer className="w-10 h-10 text-white" />
-                </div>
+                {hospitalConfig?.hospitalLogoUrl && hospitalConfig?.enableLogoOnDocuments !== false ? (
+                  <img
+                    src={resolveLogoUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL)}
+                    alt="Logo"
+                    className="w-20 h-20 object-contain mx-auto mb-4"
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto flex items-center justify-center mb-4">
+                    <Printer className="w-10 h-10 text-white" />
+                  </div>
+                )}
                 <h1 className="text-2xl font-black uppercase tracking-wider text-primary mb-1">
-                  INUA AFYA
+                  {hospitalConfig?.hospitalName || 'HÔPITAL'}
                 </h1>
-                <p className="text-sm text-muted-foreground uppercase tracking-wide mb-6">
-                  Hôpital Universitaire
-                </p>
-                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                  <div>Tél: +243 999 123 456</div>
-                  <div>contact@inuafia.cd</div>
+                {hospitalConfig?.headerSubtitle && (
+                  <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
+                    {hospitalConfig.headerSubtitle}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-3">
+                  {hospitalConfig?.phoneNumber && <div>Tél: {hospitalConfig.phoneNumber}</div>}
+                  {hospitalConfig?.email && <div>{hospitalConfig.email}</div>}
                 </div>
               </div>
 
@@ -113,14 +128,14 @@ const ReceiptModal = ({ invoice, isOpen, onClose, onPrint }) => {
                 <p>Merci pour votre confiance</p>
                 <p>Ce reçu annule et remplace tout reçu contradictoire</p>
                 <div className="flex justify-center gap-4 mt-4 text-[10px] uppercase tracking-widest">
-                  <span>INUA AFYA Medical Center</span>
+                  <span>{hospitalConfig?.hospitalName || 'HÔPITAL'}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <DialogFooter className="p-6 border-t bg-muted/50 gap-3">
+          <DialogFooter className="p-6 border-t bg-muted/50 gap-3 flex-row">
             <Button variant="outline" onClick={onClose}>
               Fermer
             </Button>

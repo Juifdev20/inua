@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import financeApi from '../../services/financeApi/financeApi.js';
+import { useFinanceOffline } from '../../hooks/offline';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { hospitalConfigService, defaultHospitalConfig } from '../../services/hos
 const Tarifs = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { getTarifs, createTarif, updateTarif, isOnline } = useFinanceOffline();
   const isAdmin = user?.role === 'ADMIN';
   const [tarifs, setTarifs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,9 +43,10 @@ const Tarifs = () => {
     name: '', type: '', price: '', department: '',
   });
   const [hospitalConfig, setHospitalConfig] = useState(defaultHospitalConfig);
+  const [logoBase64, setLogoBase64] = useState(null);
 
-  useEffect(() => { 
-    loadTarifs(); 
+  useEffect(() => {
+    loadTarifs();
     loadHospitalConfig();
   }, []);
 
@@ -52,7 +54,18 @@ const Tarifs = () => {
     try {
       const config = await hospitalConfigService.getConfig();
       if (config) {
-        setHospitalConfig({ ...defaultHospitalConfig, ...config });
+        const merged = { ...defaultHospitalConfig, ...config };
+        setHospitalConfig(merged);
+        if (merged.hospitalLogoUrl && merged.enableLogoOnDocuments !== false) {
+          try {
+            const { loadLogoAsDataUrl } = await import('../../utils/printUtils');
+            const { API_BASE_URL } = await import('../../config/environment.js');
+            const dataUrl = await loadLogoAsDataUrl(merged.hospitalLogoUrl, API_BASE_URL);
+            if (dataUrl) setLogoBase64(dataUrl);
+          } catch (e) {
+            console.error('Logo load error:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('Erreur chargement config hôpital:', error);
@@ -62,8 +75,13 @@ const Tarifs = () => {
   const loadTarifs = async () => {
     try {
       setLoading(true);
-      const data = await financeApi.getTarifs();
+      const result = await getTarifs();
+      const data = result?.data || [];
       setTarifs(Array.isArray(data) ? data : data?.content || []);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : tarifs locaux chargés');
+      }
     } catch (error) {
       toast.error(t('errors.loadTarifs') || 'Erreur chargement tarifs');
       setTarifs([]);
@@ -102,11 +120,19 @@ const Tarifs = () => {
         isActive: true,
       };
       if (editingTarif?.id) {
-        await financeApi.updateTarif(editingTarif.id, payload);
+        const result = await updateTarif(editingTarif.id, payload);
         toast.success(t('finance.tarifUpdated') || 'Tarif mis à jour');
+        
+        if (!isOnline) {
+          toast.info('Mode hors ligne : tarif mis à jour localement');
+        }
       } else {
-        await financeApi.createTarif(payload);
+        const result = await createTarif(payload);
         toast.success('Tarif créé avec succès');
+        
+        if (!isOnline) {
+          toast.info('Mode hors ligne : tarif créé localement');
+        }
       }
       setShowEditModal(false);
       setEditingTarif(null);
@@ -162,36 +188,13 @@ const Tarifs = () => {
       margin: 0;
       padding: 0;
     }
-    .header {
-      text-align: center;
-      border-bottom: 3px solid ${hospitalConfig.primaryColor || '#059669'};
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-    .ministry {
-      font-size: 9pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #444;
-      margin-bottom: 5px;
-    }
-    .hospital-name {
-      font-size: 22pt;
-      font-weight: 900;
-      color: ${hospitalConfig.primaryColor || '#059669'};
-      margin: 8px 0;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .hospital-info {
-      font-size: 9pt;
-      color: #555;
-      margin-top: 8px;
-    }
-    .hospital-info span {
-      margin: 0 8px;
-    }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid ${hospitalConfig.primaryColor || '#059669'}; padding-bottom: 8px; margin-bottom: 12px; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .logo-img { max-height: 32px; max-width: 32px; object-fit: contain; }
+    .hospital-name { font-size: 12pt; font-weight: 900; color: ${hospitalConfig.primaryColor || '#059669'}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1.2; }
+    .hospital-info { font-size: 7pt; color: #666; margin: 1px 0 0 0; }
+    .header-right { text-align: right; line-height: 1.2; }
+    .ministry { font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #888; margin: 0; }
     .document-title {
       text-align: center;
       font-size: 16pt;
@@ -323,12 +326,16 @@ const Tarifs = () => {
 </head>
 <body>
   <div class="header">
-    <div class="ministry">${hospitalConfig.ministryName || 'MINISTÈRE DE LA SANTÉ'}</div>
-    <div class="hospital-name">${hospitalConfig.hospitalName || 'INUA AFYA'}</div>
-    <div class="hospital-info">
-      <span>📍 ${hospitalConfig.address || 'Adresse non définie'}</span>
-      <span>📞 ${hospitalConfig.phoneNumber || 'Tél: ---'}</span>
-      <span>✉ ${hospitalConfig.email || 'Email: ---'}</span>
+    <div class="header-left">
+      ${logoBase64 ? `<img src="${logoBase64}" class="logo-img" alt="" />` : ''}
+      <div>
+        <div class="hospital-name">${hospitalConfig.hospitalName || 'INUA AFYA'}</div>
+        <div class="hospital-info">${[hospitalConfig.address, hospitalConfig.phoneNumber, hospitalConfig.email].filter(Boolean).join(' | ')}</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="ministry">${hospitalConfig.ministryName || 'MINISTÈRE DE LA SANTÉ'}</div>
+      <div style="font-size: 7pt; color: #888;">${[hospitalConfig.departmentName, hospitalConfig.zoneName, hospitalConfig.region].filter(Boolean).join(' | ')}</div>
     </div>
   </div>
   
@@ -424,28 +431,13 @@ const Tarifs = () => {
       margin: 0;
       padding: 0;
     }
-    .header {
-      text-align: center;
-      border-bottom: 3px solid ${hospitalConfig.primaryColor || '#059669'};
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-    .ministry {
-      font-size: 9pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #444;
-      margin-bottom: 5px;
-    }
-    .hospital-name {
-      font-size: 20pt;
-      font-weight: 900;
-      color: ${hospitalConfig.primaryColor || '#059669'};
-      margin: 8px 0;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid ${hospitalConfig.primaryColor || '#059669'}; padding-bottom: 8px; margin-bottom: 12px; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .logo-img { max-height: 32px; max-width: 32px; object-fit: contain; }
+    .hospital-name { font-size: 11pt; font-weight: 900; color: ${hospitalConfig.primaryColor || '#059669'}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1.2; }
+    .hospital-info { font-size: 7pt; color: #666; margin: 1px 0 0 0; }
+    .header-right { text-align: right; line-height: 1.2; }
+    .ministry { font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #888; margin: 0; }
     .document-title {
       text-align: center;
       font-size: 14pt;
@@ -535,10 +527,16 @@ const Tarifs = () => {
 </head>
 <body>
   <div class="header">
-    <div class="ministry">${hospitalConfig.ministryName || 'MINISTÈRE DE LA SANTÉ'}</div>
-    <div class="hospital-name">${hospitalConfig.hospitalName || 'INUA AFYA'}</div>
-    <div style="font-size: 9pt; color: #555; margin-top: 5px;">
-      📍 ${hospitalConfig.address || '---'} | 📞 ${hospitalConfig.phoneNumber || '---'}
+    <div class="header-left">
+      ${logoBase64 ? `<img src="${logoBase64}" class="logo-img" alt="" />` : ''}
+      <div>
+        <div class="hospital-name">${hospitalConfig.hospitalName || 'INUA AFYA'}</div>
+        <div class="hospital-info">${[hospitalConfig.address, hospitalConfig.phoneNumber, hospitalConfig.email].filter(Boolean).join(' | ')}</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="ministry">${hospitalConfig.ministryName || 'MINISTÈRE DE LA SANTÉ'}</div>
+      <div style="font-size: 7pt; color: #888;">${[hospitalConfig.departmentName, hospitalConfig.zoneName, hospitalConfig.region].filter(Boolean).join(' | ')}</div>
     </div>
   </div>
   

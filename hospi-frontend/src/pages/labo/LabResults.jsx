@@ -23,7 +23,8 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { toast } from 'sonner';
-import { labApi } from '../../services/labApi';
+import { useLabOffline } from '../../hooks/offline';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 import api from '../../services/api';
 
 /**
@@ -40,6 +41,8 @@ const MAX_COMMENT_CHARS = 2000;
 const LabResults = () => {
   const navigate = useNavigate();
   const { patientId: urlPatientId } = useParams();
+  const { getLabExams, updateLabResult, isOnline } = useLabOffline();
+  const { execute } = useOfflineSync();
   
   // ═══════════════════════════════════════════════════════════════
   // ÉTATS - 3 niveaux de sélection
@@ -72,8 +75,8 @@ const LabResults = () => {
   const loadBoxes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await labApi.getQueue();
-      const data = response.data?.data || [];
+      const result = await getPendingExams();
+      const data = result?.data || [];
       
       const paidBoxes = data.filter(box => 
         box.consultationStatus === 'PAID' || 
@@ -83,6 +86,10 @@ const LabResults = () => {
       
       console.log('📦 Patients chargés:', paidBoxes.length);
       setBoxes(paidBoxes);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : patients locaux chargés');
+      }
       
       // Auto-sélectionner le patient depuis l'URL ou le premier
       if (urlPatientId && paidBoxes.length > 0) {
@@ -204,7 +211,7 @@ const LabResults = () => {
 
     setSubmitting(true);
     try {
-      const response = await labApi.enterResult(selectedExam.id, {
+      const result = await updateLabResult(selectedExam.id, {
         resultValue: resultValue,
         unit: unit || selectedExam.unit,
         referenceMin: selectedExam.referenceMin,
@@ -218,8 +225,12 @@ const LabResults = () => {
         technicianName: localStorage.getItem('user_name') || 'Technicien'
       });
 
-      if (response.data?.success) {
+      if (result.success) {
         toast.success('✅ Résultat enregistré');
+        
+        if (!isOnline) {
+          toast.info('Mode hors ligne : résultat enregistré localement');
+        }
         
         // Mettre à jour localement
         const updatedBoxes = boxes.map(box => {

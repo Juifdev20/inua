@@ -19,8 +19,8 @@ import { AppProvider } from './context/AppContext'
 // 🎨 Import du SplashScreen pour le chargement initial
 import SplashScreen from './components/SplashScreen'
 
-// ✅ PWA: Import du service worker
-import * as serviceWorkerRegistration from './serviceWorkerRegistration'
+// ✅ PWA: Vite Plugin PWA registration
+import { registerSW } from 'virtual:pwa-register'
 
 // 🔐 PWA: Persistance du stockage (empêche l'effacement sur mobile)
 import { initStoragePersistence } from './utils/storagePersistence.js' 
@@ -56,15 +56,27 @@ createRoot(document.getElementById('root')).render(
 )
 
 
-// ✅ PWA: Enregistrer le service worker
-serviceWorkerRegistration.register({
-  onUpdate: (registration) => {
-    console.log('Nouvelle version disponible!');
-    // Optionnel: afficher une notification à l'utilisateur
+// ✅ PWA: Enregistrer le service worker (Vite Plugin PWA)
+const updateSW = registerSW({
+  immediate: true,
+  onRegistered(r) {
+    if (r) {
+      console.log('[PWA] Service Worker enregistré:', r);
+    }
   },
-  onSuccess: (registration) => {
-    console.log('Service Worker activé avec succès!');
-  }
+  onRegisterError(error) {
+    console.error('[PWA] Erreur enregistrement SW:', error);
+  },
+  onNeedRefresh() {
+    console.log('[PWA] Nouvelle version disponible!');
+    // Optionnel: afficher une notification à l'utilisateur
+    if (confirm('Une nouvelle version est disponible. Recharger maintenant ?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('[PWA] Application prête pour le mode offline !');
+  },
 });
 
 // 🔐 PWA: Initialiser la persistance du stockage (important pour mobile)

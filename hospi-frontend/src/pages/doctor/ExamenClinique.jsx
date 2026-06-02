@@ -11,6 +11,8 @@ import { toast } from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 import { Badge } from '../../components/ui/badge';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { formatCurrencyPDF } from '../../utils/currencyFormat';
 
 // Imports PDF corrigés pour éviter l'erreur "doc.autoTable is not a function"
@@ -96,19 +98,16 @@ const ExamenClinique = () => {
   };
 
   // 2. Génération PDF avec config hospitalière
-  const generatePDF = () => {
+  const generatePDF = async () => {
     try {
       const doc = new jsPDF();
       const patientName = consultationData?.patientName || "Patient";
-      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105]; // Emerald default
+      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
       
       // Logo et en-tête
-      if (config.hospitalLogoUrl) {
-        try {
-          doc.addImage(config.hospitalLogoUrl, 'PNG', 10, 10, 30, 30);
-        } catch (e) {
-          // Si l'image ne charge pas, on continue sans
-        }
+      if (config.hospitalLogoUrl && config.enableLogoOnDocuments !== false) {
+        const logoDataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 10, 10, 30, 30);
       }
       
       // Nom de l'hôpital

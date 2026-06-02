@@ -20,6 +20,9 @@ import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -53,6 +56,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class LivreCaisseExportService {
+
+    @Value("${server.port:8080}")
+    private int serverPort;
+
+    @Value("${file.upload-dir:uploads}")
+    private String fileUploadDir;
 
     private final LivreCaisseService livreCaisseService;
     private final LivreCaisseRepository livreCaisseRepository;
@@ -110,6 +119,16 @@ public class LivreCaisseExportService {
         // Récupérer la configuration de l'hôpital
         Optional<HospitalConfig> configOpt = hospitalConfigService.getCurrentConfig();
         HospitalConfig config = configOpt.orElseGet(() -> createDefaultConfig());
+
+        // Fallback logo: utiliser AppConfig si HospitalConfig n'a pas de logo
+        if (config.getHospitalLogoUrl() == null || config.getHospitalLogoUrl().isBlank()) {
+            appConfigRepository.findById(1L).ifPresent(appCfg -> {
+                if (appCfg.getLogoUrl() != null && !appCfg.getLogoUrl().isBlank()) {
+                    config.setHospitalLogoUrl(appCfg.getLogoUrl());
+                    log.info("🔄 Logo fallback depuis AppConfig: {}", appCfg.getLogoUrl());
+                }
+            });
+        }
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4.rotate());
@@ -920,8 +939,48 @@ public class LivreCaisseExportService {
                     byte[] imageBytes = Base64.getDecoder().decode(base64Data);
                     logoImage = Image.getInstance(imageBytes);
                 } else if (hospitalLogoUrl.startsWith("http://") || hospitalLogoUrl.startsWith("https://")) {
-                    // URL
+                    // URL externe
                     logoImage = Image.getInstance(new URL(hospitalLogoUrl));
+                } else {
+                    // Chemin relatif (ex: /uploads/logo/xxx.png)
+                    // 1. Essayer via HTTP localhost (le serveur sert déjà /uploads/**)
+                    String relativePath = hospitalLogoUrl.startsWith("/") ? hospitalLogoUrl : "/" + hospitalLogoUrl;
+                    try {
+                        URL localUrl = new URL("http://localhost:" + serverPort + relativePath);
+                        logoImage = Image.getInstance(localUrl);
+                        log.info("✅ Logo chargé via localhost: {}", localUrl);
+                    } catch (Exception httpEx) {
+                        log.warn("⚠️ Échec HTTP localhost pour logo ({}): {}", relativePath, httpEx.getMessage());
+                        // 2. Fallback: système de fichiers - tenter plusieurs résolutions
+                        String filePath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+                        // Normaliser pour obtenir le chemin relatif à l'upload dir (ex: logo/xxx.png)
+                        String normalized = filePath.replaceFirst("^uploads/?", "");
+
+                        java.io.File logoFile = Paths.get(fileUploadDir, normalized).toFile();
+                        if (!logoFile.exists()) {
+                            logoFile = Paths.get(System.getProperty("user.dir"), fileUploadDir, normalized).toFile();
+                        }
+
+                        // Anciennes résolutions en fallback
+                        if (!logoFile.exists()) {
+                            logoFile = new java.io.File(filePath);
+                            if (!logoFile.exists()) {
+                                logoFile = new java.io.File(System.getProperty("user.dir"), filePath);
+                            }
+                        }
+
+                        if (logoFile.exists()) {
+                            logoImage = Image.getInstance(logoFile.getAbsolutePath());
+                            log.info("✅ Logo chargé depuis fichier: {}", logoFile.getAbsolutePath());
+                        } else {
+                            log.warn("⚠️ Fichier logo introuvable. user.dir={}, triedPaths={}", System.getProperty("user.dir"), new Object[]{
+                                Paths.get(fileUploadDir, normalized).toAbsolutePath().toString(),
+                                Paths.get(System.getProperty("user.dir"), fileUploadDir, normalized).toAbsolutePath().toString(),
+                                new java.io.File(filePath).getAbsolutePath(),
+                                new java.io.File(System.getProperty("user.dir"), filePath).getAbsolutePath()
+                            });
+                        }
+                    }
                 }
                 
                 if (logoImage != null) {

@@ -117,10 +117,8 @@ public class PricingServiceImpl implements PricingService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getFicheAmount(Long patientId) {
-        // Vérifier si c'est la première admission du patient
-        if (admissionRepository.existsByPatientId(patientId)) {
-            return BigDecimal.ZERO; // Patient déjà admis, pas de frais de dossier
-        }
+        // Toujours retourner le montant de la fiche configuré
+        // C'est au caller (hasActiveFile) de décider si elle doit être facturée ou non
         return getFicheAmountWithoutCheck(patientId);
     }
 
@@ -167,8 +165,37 @@ public class PricingServiceImpl implements PricingService {
     @Override
     @Transactional(readOnly = true)
     public boolean hasActiveFile(Long patientId) {
-        // Vérifier si le patient a déjà eu des admissions (nouvelle logique : une seule fois dans la vie)
-        return admissionRepository.existsByPatientId(patientId);
+        LocalDateTime twelveMonthsAgo = LocalDateTime.now().minusMonths(FICHE_VALIDITY_MONTHS);
+
+        // 1. Vérifier dans les admissions : une fiche a été facturée (registrationFee > 0)
+        //    et l'admission n'est pas annulée
+        List<Admission> admissions = admissionRepository.findByPatientId(patientId);
+        for (Admission a : admissions) {
+            if (a.getAdmissionDate() != null && a.getAdmissionDate().isAfter(twelveMonthsAgo)) {
+                if (a.getRegistrationFee() != null && a.getRegistrationFee().compareTo(BigDecimal.ZERO) > 0) {
+                    if (a.getStatus() != null && a.getStatus() != Admission.AdmissionStatus.ANNULE) {
+                        log.info("📋 Fiche active trouvée dans admission ID={} (registrationFee={})",
+                                a.getId(), a.getRegistrationFee());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 2. Vérifier dans les consultations (compatibilité legacy)
+        List<Consultation> consultations = consultationRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+        for (Consultation c : consultations) {
+            if (c.getCreatedAt() != null && c.getCreatedAt().isAfter(twelveMonthsAgo)) {
+                if (c.getFicheAmountPaid() != null && c.getFicheAmountPaid() > 0) {
+                    log.info("📋 Fiche active trouvée dans consultation ID={} (ficheAmountPaid={})",
+                            c.getId(), c.getFicheAmountPaid());
+                    return true;
+                }
+            }
+        }
+
+        log.info("📋 Aucune fiche active pour patientId={} - frais de fiche requis", patientId);
+        return false;
     }
 
     @Override

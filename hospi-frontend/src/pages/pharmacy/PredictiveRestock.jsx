@@ -21,6 +21,8 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -196,88 +198,131 @@ export default function PredictiveRestock() {
   // ═══════════════════════════════════════════════════════════
   // EXPORT FUNCTIONS
   // ═══════════════════════════════════════════════════════════
-  const exportToPDF = useCallback(() => {
-    const doc = new jsPDF();
-    
-    // Couleur depuis config
+  const exportToPDF = useCallback(async () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const margin = 14;
+
     const hexToRgb = (hex) => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [5, 150, 105];
+      const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return r ? [parseInt(r[1], 16), parseInt(r[2], 16), parseInt(r[3], 16)] : [5, 150, 105];
     };
     const primaryColor = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
     const hospitalName = config?.hospitalName || 'INUA AFYA';
-    
+
     // Logo
-    if (config?.hospitalLogoUrl) {
-      try {
-        doc.addImage(config.hospitalLogoUrl, 'PNG', 14, 5, 20, 20);
-      } catch (e) {
-        // Logo non chargé, on continue sans
+    if (config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false) {
+      const logoDataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+      if (logoDataUrl) {
+        const img = new Image();
+        img.src = logoDataUrl;
+        await new Promise(res => { img.onload = res; });
+        const logoH = 24;
+        const logoW = logoH * (img.width / img.height);
+        doc.addImage(logoDataUrl, 'PNG', margin, 4, logoW, logoH);
+        textStartX = margin + logoW + 5;
       }
     }
-    
-    // Nom de l'hôpital
-    doc.setFontSize(12);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont(undefined, 'bold');
-    doc.text(hospitalName.toUpperCase(), doc.internal.pageSize.width - 14, 12, { align: 'right' });
-    
-    // Header
-    doc.setFontSize(16);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('Bon de Commande - Réapprovisionnement Prédictif', 14, 32);
-    
-    doc.setFontSize(10);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(pr, pg, pb);
+    doc.text(hospitalName.toUpperCase(), textStartX, 14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 42);
-    doc.text(`Période couverte: ${monthsToCover} mois`, 14, 48);
-    doc.text(`Fournisseur: ${selectedSupplier === 'ALL' ? 'Tous' : selectedSupplier}`, 14, 54);
-    
-    // Summary box
-    doc.setFillColor(240, 248, 255);
-    doc.roundedRect(14, 60, 180, 25, 3, 3, 'F');
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.text(`Total médicaments: ${totalMedications}`, 18, 70);
-    doc.text(`Articles à commander: ${itemsToOrder.length}`, 18, 77);
-    doc.text(`Budget total: ${filteredTotalBudget.toFixed(2)} $`, 100, 70);
-    
-    // Table
+    doc.text(config?.headerSubtitle || 'Système de Gestion Hospitalière', textStartX, 20);
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(80, 80, 80);
+    const contactLines = [config?.address, [config?.phoneNumber, config?.email].filter(Boolean).join('  |  ')].filter(Boolean);
+    contactLines.forEach((line, i) => { doc.text(line, pw - margin, 12 + i * 6, { align: 'right' }); });
+
+    // ═══════════════════════════════════════════════════════
+    // ZONE B — BANDE TITRE (y: 33 → 47)
+    doc.setFillColor(pr, pg, pb);
+    doc.rect(0, 33, pw, 14, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('BON DE COMMANDE - RÉAPPROVISIONNEMENT PRÉDICTIF', pw / 2, 41, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Réf: CMD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')} — Période: ${monthsToCover} mois — Fournisseur: ${selectedSupplier === 'ALL' ? 'Tous' : selectedSupplier}`, pw / 2, 45.5, { align: 'center' });
+
+    // ═══════════════════════════════════════════════════════
+    // ZONE C — KPI CARDS (y: 50 → 64)
+    const kpiY = 50;
+    const kpiH = 14;
+    const kpiW = (pw - 2 * margin) / 3;
+    const kpiCards = [
+      { label: 'Médicaments suivis', value: String(totalMedications), color: [pr, pg, pb] },
+      { label: 'Articles à commander', value: String(itemsToOrder.length), color: itemsToOrder.length > 0 ? [220, 38, 38] : [22, 163, 74] },
+      { label: 'Budget total estimé', value: `${filteredTotalBudget.toFixed(2)} $`, color: [pr, pg, pb] },
+    ];
+    kpiCards.forEach((kpi, i) => {
+      const kx = margin + i * kpiW;
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.rect(kx, kpiY, kpiW - 2, kpiH, 'FD');
+      doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+      doc.rect(kx, kpiY, kpiW - 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+      doc.text(kpi.value, kx + (kpiW - 2) / 2, kpiY + 8, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 100, 100);
+      doc.text(kpi.label, kx + (kpiW - 2) / 2, kpiY + 12, { align: 'center' });
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // ZONE D — TABLEAU (y: 68+)
     const tableData = itemsToOrder.map(p => [
       p.medicationCode,
       p.medicationName,
       p.supplier || '-',
       p.cmm?.toFixed(1) || '0',
-      p.currentStock,
-      p.suggestedQuantity,
+      String(p.currentStock),
+      String(p.suggestedQuantity),
       `${p.unitPurchasePrice?.toFixed(2) || '0.00'} $`,
       `${p.estimatedSubtotal?.toFixed(2) || '0.00'} $`,
       STATUS_CONFIG[p.status]?.label || p.status
     ]);
-    
+
     autoTable(doc, {
-      startY: 92,
+      startY: 68,
       head: [['Code', 'Nom', 'Fournisseur', 'CMM', 'Stock', 'Qty', 'Prix U.', 'Total', 'Statut']],
       body: tableData,
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: primaryColor, textColor: 255 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
+      styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
+      headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [250, 252, 250] },
+      columnStyles: {
+        0: { cellWidth: 22 }, 1: { cellWidth: 44 }, 2: { cellWidth: 28 },
+        3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 14, halign: 'center' },
+        5: { cellWidth: 14, halign: 'center' }, 6: { cellWidth: 22, halign: 'right' },
+        7: { cellWidth: 22, halign: 'right' }, 8: { cellWidth: 'auto', halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
     });
-    
-    // Footer
+
+    // ═══════════════════════════════════════════════════════
+    // PIED DE PAGE
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `Page ${i} sur ${pageCount} — ${config?.footerText || hospitalName}`,
-        doc.internal.pageSize.width / 2,
-        doc.internal.pageSize.height - 10,
-        { align: 'center' }
-      );
+      doc.setDrawColor(pr, pg, pb);
+      doc.setLineWidth(0.4);
+      doc.line(margin, ph - 10, pw - margin, ph - 10);
+      doc.setFontSize(7);
+      doc.setTextColor(130, 130, 130);
+      doc.text(`Généré le ${new Date().toLocaleString('fr-FR')}  —  ${config?.footerText || hospitalName}`, margin, ph - 6);
+      doc.text(`Page ${i} / ${pageCount}`, pw - margin, ph - 6, { align: 'right' });
     }
-    
+
     doc.save(`bon-de-commande-${new Date().toISOString().split('T')[0]}.pdf`);
   }, [itemsToOrder, monthsToCover, selectedSupplier, totalMedications, filteredTotalBudget, config]);
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   History,
   FileText,
@@ -19,7 +20,8 @@ import {
   AlertCircle,
   Repeat,
   Clock,
-  DollarSign
+  DollarSign,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -33,6 +35,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API
  * Affiche les consultations passées avec prescriptions détaillées, examens et signes vitaux
  */
 const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescription }) => {
+  const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
@@ -70,6 +73,13 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
           religion: first.religion
         });
       }
+
+      // Expand all consultations by default
+      const allExpanded = pastConsultations.reduce((acc, c) => {
+        acc[c.id] = true;
+        return acc;
+      }, {});
+      setExpandedItems(allExpanded);
 
       setHistory(pastConsultations);
     } catch (error) {
@@ -148,22 +158,33 @@ const PatientHistoryPanel = ({ patientId, currentConsultationId, onRenewPrescrip
       {/* ─── FICHE PATIENT ─── */}
       {patientInfo && (
         <div className="rounded-xl border border-border bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20 shrink-0">
-              {patientInfo.photo ? (
-                <img src={`${BACKEND_URL}${patientInfo.photo}`} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-6 h-6 text-primary" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-foreground">{patientInfo.name || 'Patient'}</h3>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                {patientInfo.gender && <span>{patientInfo.gender === 'MALE' ? 'Homme' : patientInfo.gender === 'FEMALE' ? 'Femme' : patientInfo.gender}</span>}
-                {patientInfo.dateOfBirth && <span>{calculateAge(patientInfo.dateOfBirth)} ans</span>}
-                {patientInfo.phoneNumber && <span>Tél: {patientInfo.phoneNumber}</span>}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20 shrink-0">
+                {patientInfo.photo ? (
+                  <img src={`${BACKEND_URL}${patientInfo.photo}`} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-primary" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">{patientInfo.name || 'Patient'}</h3>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                  {patientInfo.gender && <span>{patientInfo.gender === 'MALE' ? 'Homme' : patientInfo.gender === 'FEMALE' ? 'Femme' : patientInfo.gender}</span>}
+                  {patientInfo.dateOfBirth && <span>{calculateAge(patientInfo.dateOfBirth)} ans</span>}
+                  {patientInfo.phoneNumber && <span>Tél: {patientInfo.phoneNumber}</span>}
+                </div>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-lg text-xs"
+              onClick={() => navigate(`/doctor/patients/${patientId}`)}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Voir fiche complète
+            </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-muted-foreground">
             {patientInfo.profession && <span><span className="font-medium">Profession:</span> {patientInfo.profession}</span>}

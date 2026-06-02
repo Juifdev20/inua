@@ -13,6 +13,8 @@ import { Button } from '../../components/ui/button';
 import { toast } from "sonner";
 import { cn } from '../../lib/utils';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 
 // Imports PDF corrigés pour éviter l'erreur TypeError
 import { jsPDF } from 'jspdf';
@@ -44,19 +46,16 @@ const PatientList = () => {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
       
       // Logo
-      if (config.hospitalLogoUrl) {
-        try {
-          doc.addImage(config.hospitalLogoUrl, 'PNG', 10, 10, 30, 30);
-        } catch (e) {
-          // Continuer sans logo
-        }
+      if (config.hospitalLogoUrl && config.enableLogoOnDocuments !== false) {
+        const logoDataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 10, 10, 30, 30);
       }
       
       // Nom de l'hôpital

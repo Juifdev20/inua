@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
-import { patientService } from '../../services/patientService';
+import { usePatientsOffline } from '../../hooks/offline';
 // ★ IMPORTS POUR LA CRÉATION AUTOMATIQUE DE COMPTES
 import accountCreationApi from '../../services/accountCreationApi';
 import SuccessAccountModal from '../../components/auth/SuccessAccountModal';
@@ -57,6 +57,7 @@ const resolvePhotoUrl = (photoPath) => {
  */
 const PatientsIntegrated = () => {
   const { theme } = useTheme();
+  const { getPatients, searchPatients, createPatient, updatePatient, isOnline } = usePatientsOffline();
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,9 +111,14 @@ const PatientsIntegrated = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const data = await patientService.getAllPatients();
+      const result = await getPatients(0, 500);
+      const data = result.data || [];
       const activePatients = data.filter(p => p.isArchived === showArchived);
       setPatients(activePatients);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : données locales chargées');
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des patients:', error);
       toast.error('Erreur lors du chargement des patients');
@@ -121,21 +127,33 @@ const PatientsIntegrated = () => {
     }
   };
 
-  const filterPatients = () => {
+  const filterPatients = async () => {
     if (!searchTerm.trim()) {
       setFilteredPatients(patients);
       return;
     }
     
-    const term = searchTerm.toLowerCase();
-    const filtered = patients.filter(patient => 
-      (patient.firstName?.toLowerCase().includes(term)) ||
-      (patient.lastName?.toLowerCase().includes(term)) ||
-      (patient.email?.toLowerCase().includes(term)) ||
-      (patient.phone?.includes(term)) ||
-      (patient.idNumber?.includes(term))
-    );
-    setFilteredPatients(filtered);
+    try {
+      const result = await searchPatients(searchTerm);
+      const filtered = result.data || [];
+      setFilteredPatients(filtered);
+      
+      if (!isOnline) {
+        toast.info('Recherche locale effectuée');
+      }
+    } catch (error) {
+      console.error('Erreur recherche patients:', error);
+      // Fallback sur la recherche locale si l'API échoue
+      const term = searchTerm.toLowerCase();
+      const filtered = patients.filter(patient => 
+        (patient.firstName?.toLowerCase().includes(term)) ||
+        (patient.lastName?.toLowerCase().includes(term)) ||
+        (patient.email?.toLowerCase().includes(term)) ||
+        (patient.phone?.includes(term)) ||
+        (patient.idNumber?.includes(term))
+      );
+      setFilteredPatients(filtered);
+    }
   };
 
   // ★ FONCTION POUR CRÉER UN COMPTE PATIENT

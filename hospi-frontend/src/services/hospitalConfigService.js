@@ -14,9 +14,15 @@ export const hospitalConfigService = {
     // Essayer d'abord l'API
     try {
       const response = await api.get(`/api/hospital-config`);
-      // Sauvegarder en local pour fallback
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(response.data.data));
-      return response.data.data;
+      const data = response.data.data;
+      // Sauvegarder en local sans le base64 pour éviter QuotaExceededError
+      try {
+        const toCache = { ...data, hospitalLogoUrl: data.hospitalLogoUrl?.startsWith('data:') ? null : data.hospitalLogoUrl };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toCache));
+      } catch (e) {
+        console.warn('localStorage indisponible:', e);
+      }
+      return data;
     } catch (error) {
       // Si 404 ou erreur, utiliser localStorage
       console.log('API non disponible, utilisation du stockage local');
@@ -33,12 +39,23 @@ export const hospitalConfigService = {
    * Met à jour la configuration (Admin uniquement)
    */
   updateConfig: async (configData) => {
-    // Sauvegarder toujours en localStorage
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(configData));
-    
+    // Sauvegarder en localStorage sans le base64 (évite QuotaExceededError)
+    try {
+      const toCache = { ...configData, hospitalLogoUrl: configData.hospitalLogoUrl?.startsWith('data:') ? null : configData.hospitalLogoUrl };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toCache));
+    } catch (e) {
+      console.warn('localStorage indisponible:', e);
+    }
+
     // Essayer l'API si disponible
     try {
-      const response = await api.put(`/api/hospital-config`, configData);
+      // Ne pas envoyer un base64 potentiellement volumineux dans le PUT
+      const payload = { ...configData };
+      if (typeof payload.hospitalLogoUrl === 'string' && payload.hospitalLogoUrl.startsWith('data:')) {
+        // Si le logo est encore en base64, on l'expurge : le formulaire doit utiliser l'endpoint /logo pour envoyer le fichier
+        payload.hospitalLogoUrl = null;
+      }
+      const response = await api.put(`/api/hospital-config`, payload);
       return response.data;
     } catch (error) {
       // Si 404, simuler un succès avec les données locales

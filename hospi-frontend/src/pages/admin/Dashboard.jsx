@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useAdminOffline } from '../../hooks/offline';
 import { 
   Users, UserCog, UserCheck, Building2, TrendingUp, 
   Calendar, Activity, DollarSign, Clock 
@@ -13,6 +13,7 @@ import {
 import { BACKEND_URL } from '../../config/environment.js';
 
 const Dashboard = () => {
+  const { getUsers, getDepartments, isOnline } = useAdminOffline();
   // ✅ Configuration environnementale centralisée
     const API_BASE_URL = BACKEND_URL;
   
@@ -35,42 +36,52 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  // 2. Récupération des données depuis Spring Boot
+  // 2. Récupération des données depuis hooks offline
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('token'); 
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        
-        // Appel parallèle pour les stats et les graphiques
-        const [statsRes, chartRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/admin/dashboard/stats`, config),
-          axios.get(`${API_BASE_URL}/api/admin/dashboard/charts`, config).catch(() => ({ data: null }))
+        // Appel parallèle pour les utilisateurs et départements
+        const [usersResult, departmentsResult] = await Promise.all([
+          getUsers(),
+          getDepartments()
         ]);
 
-        const s = statsRes.data || {};
+        const users = usersResult?.data || [];
+        const departments = departmentsResult?.data || [];
+        
+        // Calculer les stats localement
+        const doctors = users.filter(u => u.role === 'DOCTOR');
+        const patients = users.filter(u => u.role === 'PATIENT');
+        const currentMonth = new Date().getMonth();
+        const newUsersMonth = users.filter(u => new Date(u.createdAt).getMonth() === currentMonth).length;
+        const newDoctorsMonth = doctors.filter(d => new Date(d.createdAt).getMonth() === currentMonth).length;
+        const newPatientsMonth = patients.filter(p => new Date(p.createdAt).getMonth() === currentMonth).length;
         
         // Normalisation sans casser les noms de champs existants
         const normalizedStats = {
-          utilisateursTotal: s.totalUsers || 0,
-          newUsersMonth: s.newUsersMonth || 0,
-          docteurs: s.totalDoctors || 0,
-          newDoctorsMonth: s.newDoctorsMonth || 0,
-          patients: s.totalPatients || 0,
-          newPatientsMonth: s.newPatientsMonth || 0,
-          departements: s.totalDepartments || 0,
-          pendingAppointments: s.pendingAppointments || 0 
+          utilisateursTotal: users.length,
+          newUsersMonth: newUsersMonth,
+          docteurs: doctors.length,
+          newDoctorsMonth: newDoctorsMonth,
+          patients: patients.length,
+          newPatientsMonth: newPatientsMonth,
+          departements: departments.length,
+          pendingAppointments: 0 
         };
 
         setData({
           stats: normalizedStats,
-          consultations: chartRes?.data?.consultations || [],
-          patientsDept: chartRes?.data?.patientsParDepartement || [],
-          revenu: chartRes?.data?.revenuMensuel || [],
-          activities: Array.isArray(s.activities) ? s.activities : []
+          consultations: [], // Placeholder pour graphiques
+          patientsDept: [], // Placeholder pour graphiques
+          revenu: [], // Placeholder pour graphiques
+          activities: [] // Placeholder pour activités
         });
+        
+        if (!isOnline) {
+          console.log('Mode hors ligne : dashboard admin local chargé');
+        }
       } catch (error) {
-        console.error("Erreur Backend Dashboard:", error);
+        console.error("Erreur Dashboard Admin:", error);
       } finally {
         setLoading(false);
       }

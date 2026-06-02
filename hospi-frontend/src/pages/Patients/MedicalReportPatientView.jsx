@@ -366,7 +366,7 @@ const MedicalReportPatientView = () => {
               <div className="bg-white/20 backdrop-blur-sm rounded px-3 py-1.5 mb-2">
                 <p className="text-xs text-white/70 mb-0.5">N° DE FICHE</p>
                 <p className="text-lg font-bold">
-                  {report.numeroFiche || report.consultationCode || 'N/A'}
+                  {report.consultationCode || report.numeroFiche || 'N/A'}
                 </p>
               </div>
               <p className="text-sm font-medium">FICHE MEDICALE INDIVIDUELLE</p>
@@ -611,104 +611,121 @@ const MedicalReportPatientView = () => {
               <div className="bg-muted/50 px-3 sm:px-4 py-2 border-b border-border">
                 <h2 className="text-xs sm:text-sm font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-2">
                   <Wallet className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Facturation
+                  {report.isAbonne ? 'Couverture Entreprise' : 'Facturation'}
                 </h2>
               </div>
               <div className="p-3 sm:p-4">
-                {/* Tableau des transactions détaillées */}
-                <div className="overflow-x-auto mb-4 sm:mb-6">
-                  <table className="w-full border-collapse min-w-[400px] print-table">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Description</th>
-                        <th className="border border-border px-2 sm:px-3 py-2 text-right text-xs sm:text-sm font-semibold text-muted-foreground">Montant</th>
-                        <th className="border border-border px-2 sm:px-3 py-2 text-center text-xs sm:text-sm font-semibold text-muted-foreground">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Consultation</td>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.consultationAmount?.toLocaleString()} $</td>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-center">
-                          {report.billingSummary.consultationPaid ? (
-                            <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
-                          ) : (
-                            <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
-                          )}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Laboratoire</td>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.labAmount?.toLocaleString()} $</td>
-                        <td className="border border-border px-2 sm:px-3 py-2 text-center">
-                          {report.billingSummary.labPaid ? (
-                            <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
-                          ) : (
-                            <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
-                          )}
-                        </td>
-                      </tr>
-                      {report.billingSummary.otherAmounts?.map((item, index) => (
-                        <tr key={index} className={index % 2 === 1 ? 'bg-muted/30' : ''}>
-                          <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">
-                            <span className="font-medium">{item.label}</span>
-                          </td>
-                          <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">
-                            {item.amount?.toLocaleString()} $
-                          </td>
-                          <td className="border border-border px-2 sm:px-3 py-2 text-center">
-                            {item.isPaid ? (
-                              <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
-                            ) : (
-                              <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {report.isAbonne ? (
+                  // ✅ ABONNÉ → pas de montants, juste un message de couverture
+                  <div className="flex flex-col items-center justify-center py-6 sm:py-8 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <Building2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600 mb-3" />
+                    <p className="text-sm sm:text-base font-bold text-emerald-800 text-center">
+                      {report.companyName
+                        ? `Couvert à 100% par ${report.companyName}`
+                        : 'Couvert à 100% par votre entreprise'}
+                    </p>
+                    <p className="text-xs text-emerald-600 mt-1 text-center">
+                      Patient abonné — toutes les consommations sont prises en charge
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Tableau des transactions détaillées */}
+                    <div className="overflow-x-auto mb-4 sm:mb-6">
+                      <table className="w-full border-collapse min-w-[400px] print-table">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="border border-border px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-semibold text-muted-foreground">Description</th>
+                            <th className="border border-border px-2 sm:px-3 py-2 text-right text-xs sm:text-sm font-semibold text-muted-foreground">Montant</th>
+                            <th className="border border-border px-2 sm:px-3 py-2 text-center text-xs sm:text-sm font-semibold text-muted-foreground">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Consultation</td>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.consultationAmount?.toLocaleString()} $</td>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-center">
+                              {report.billingSummary.consultationPaid ? (
+                                <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
+                              ) : (
+                                <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Laboratoire</td>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.labAmount?.toLocaleString()} $</td>
+                            <td className="border border-border px-2 sm:px-3 py-2 text-center">
+                              {report.billingSummary.labPaid ? (
+                                <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
+                              ) : (
+                                <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
+                              )}
+                            </td>
+                          </tr>
+                          {report.billingSummary.otherAmounts?.map((item, index) => (
+                            <tr key={index} className={index % 2 === 1 ? 'bg-muted/30' : ''}>
+                              <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">
+                                <span className="font-medium">{item.label}</span>
+                              </td>
+                              <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">
+                                {item.amount?.toLocaleString()} $
+                              </td>
+                              <td className="border border-border px-2 sm:px-3 py-2 text-center">
+                                {item.isPaid ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800">Payé</Badge>
+                                ) : (
+                                  <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
-                {/* Récapitulatif des montants */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Colonne gauche - Totaux */}
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 sm:p-4">
-                    <h3 className="text-xs sm:text-sm font-bold text-emerald-800 mb-2 sm:mb-3 uppercase">Récapitulatif</h3>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <div className="flex justify-between text-xs sm:text-sm">
-                        <span className="text-muted-foreground">TOTAL</span>
-                        <span className="font-bold text-base sm:text-lg text-emerald-700">{report.billingSummary.totalAmount?.toLocaleString()} $</span>
+                    {/* Récapitulatif des montants */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Colonne gauche - Totaux */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 sm:p-4">
+                        <h3 className="text-xs sm:text-sm font-bold text-emerald-800 mb-2 sm:mb-3 uppercase">Récapitulatif</h3>
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <div className="flex justify-between text-xs sm:text-sm">
+                            <span className="text-muted-foreground">TOTAL</span>
+                            <span className="font-bold text-base sm:text-lg text-emerald-700">{report.billingSummary.totalAmount?.toLocaleString()} $</span>
+                          </div>
+                          <div className="h-px bg-emerald-200 my-1 sm:my-2"></div>
+                          <div className="flex justify-between text-xs sm:text-sm">
+                            <span className="text-muted-foreground">PAYÉ</span>
+                            <span className="font-semibold text-emerald-600">{report.billingSummary.totalPaid?.toLocaleString()} $</span>
+                          </div>
+                          <div className="flex justify-between text-xs sm:text-sm bg-background p-1.5 sm:p-2 rounded border border-emerald-200">
+                            <span className="text-foreground font-medium">RESTE</span>
+                            <span className={`font-bold ${report.billingSummary.balanceDue > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {report.billingSummary.balanceDue?.toLocaleString()} $
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="h-px bg-emerald-200 my-1 sm:my-2"></div>
-                      <div className="flex justify-between text-xs sm:text-sm">
-                        <span className="text-muted-foreground">PAYÉ</span>
-                        <span className="font-semibold text-emerald-600">{report.billingSummary.totalPaid?.toLocaleString()} $</span>
-                      </div>
-                      <div className="flex justify-between text-xs sm:text-sm bg-background p-1.5 sm:p-2 rounded border border-emerald-200">
-                        <span className="text-foreground font-medium">RESTE</span>
-                        <span className={`font-bold ${report.billingSummary.balanceDue > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                          {report.billingSummary.balanceDue?.toLocaleString()} $
-                        </span>
+
+                      {/* Colonne droite - Statut global */}
+                      <div className="flex flex-col justify-center items-center bg-muted/50 border border-border rounded-lg p-3 sm:p-4">
+                        <span className="text-xs sm:text-sm text-muted-foreground mb-2">Statut</span>
+                        <Badge className={`${getPaymentStatusColor(report.billingSummary.paymentStatus)} px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold`}>
+                          {report.billingSummary.paymentStatus === 'SOLDE' && <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+                          {report.billingSummary.paymentStatus === 'PARTIEL' && <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+                          {report.billingSummary.paymentStatus === 'NON_PAYE' && <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+                          {report.billingSummary.paymentStatus}
+                        </Badge>
+                        {report.billingSummary.lastPaymentDate && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Dernier paiement: {formatDate(report.billingSummary.lastPaymentDate)}
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Colonne droite - Statut global */}
-                  <div className="flex flex-col justify-center items-center bg-muted/50 border border-border rounded-lg p-3 sm:p-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground mb-2">Statut</span>
-                    <Badge className={`${getPaymentStatusColor(report.billingSummary.paymentStatus)} px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold`}>
-                      {report.billingSummary.paymentStatus === 'SOLDE' && <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
-                      {report.billingSummary.paymentStatus === 'PARTIEL' && <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
-                      {report.billingSummary.paymentStatus === 'NON_PAYE' && <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
-                      {report.billingSummary.paymentStatus}
-                    </Badge>
-                    {report.billingSummary.lastPaymentDate && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Dernier paiement: {formatDate(report.billingSummary.lastPaymentDate)}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           )}

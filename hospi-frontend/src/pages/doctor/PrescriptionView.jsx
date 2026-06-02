@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { BACKEND_URL } from '../../config/environment.js';
+import { useDoctorOffline } from '../../hooks/offline';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -33,6 +34,7 @@ const PrescriptionView = ({
   onCancel, 
   onSuccess 
 }) => {
+  const { createPrescription, isOnline } = useDoctorOffline();
   const [medications, setMedications] = useState([]);
   const [diagnostic, setDiagnostic] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -176,44 +178,46 @@ const PrescriptionView = ({
         status: 'PRESCRIPTION_ENVOYEE'
       };
 
-      // 1. Créer la prescription
-      const response = await fetch(`${BACKEND_URL}/api/prescriptions/create`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify(prescriptionData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        toast.error(`Erreur: ${errorText.substring(0, 100)}`);
+      // 1. Créer la prescription avec le hook offline
+      const result = await createPrescription(prescriptionData);
+      
+      if (!result.success) {
+        toast.error(`Erreur: ${result.message || 'Erreur création prescription'}`);
         return;
       }
 
-      // 2. Finaliser la consultation (endpoint POST avec /v1/)
-      const finalizeResponse = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/finaliser`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ 
-          patientId: selectedConsultation.patientId,
-          diagnosticFinal: diagnostic,
-          notes: diagnostic || selectedConsultation.globalInterpretation,
-          items: items
-        })
-      });
+      // 2. Finaliser la consultation (endpoint POST avec /v1/) - seulement si online
+      if (isOnline) {
+        try {
+          const finalizeResponse = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/finaliser`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ 
+              patientId: selectedConsultation.patientId,
+              diagnosticFinal: diagnostic,
+              notes: diagnostic || selectedConsultation.globalInterpretation,
+              items: items
+            })
+          });
 
-      if (!finalizeResponse.ok) {
-        const errorText = await finalizeResponse.text();
-        console.error('Erreur finalisation:', errorText);
-        // On continue même si la finalisation échoue
+          if (!finalizeResponse.ok) {
+            const errorText = await finalizeResponse.text();
+            console.error('Erreur finalisation:', errorText);
+            // On continue même si la finalisation échoue
+          }
+        } catch (err) {
+          console.error('Erreur finalisation consultation:', err);
+        }
       }
 
       toast.success('✅ Prescription validée et consultation clôturée');
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : prescription enregistrée localement');
+      }
       onSuccess();
     } catch (error) {
       console.error("❌ Erreur:", error);

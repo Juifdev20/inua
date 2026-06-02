@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, Calendar, FileText, CreditCard, Loader2, ArrowRight, Pill, Clock, Volume2, VolumeX } from 'lucide-react';
+import { Bell, CheckCircle, Calendar, FileText, CreditCard, Loader2, ArrowRight, Pill, Clock, Volume2, VolumeX, X, ClipboardList, User, Stethoscope } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { cn } from '../../lib/utils';
@@ -194,6 +194,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true); // 🔊 État du son
+  const [selectedDetail, setSelectedDetail] = useState(null); // 📋 Détail notification sélectionnée
   
   // 🚨 ÉTATS ALARME MEDICAMENT
   const [activeAlarm, setActiveAlarm] = useState(null); // Notification en cours d'alarme
@@ -426,7 +427,13 @@ const Notifications = () => {
       await markAsRead(notification.id);
     }
 
-    // 2. Redirection "Style Facebook" vers la ressource concernée
+    // 2. Pour les médicaments, ouvrir le modal de détail au lieu de naviguer directement
+    if (notification.type === 'PRISE_MEDICAMENT' || notification.type === 'PRESCRIPTION_PRETE') {
+      setSelectedDetail(notification);
+      return;
+    }
+
+    // 3. Redirection "Style Facebook" vers la ressource concernée
     if (notification.type === 'RENDEZ_VOUS') {
       // On utilise l'id contenu dans le message ou un champ de référence si disponible
       // Si votre backend envoie l'ID de la consultation dans referenceId :
@@ -438,8 +445,6 @@ const Notifications = () => {
       }
     } else if (notification.type === 'DOCUMENT') {
       navigate('/patient/documents');
-    } else if (notification.type === 'PRISE_MEDICAMENT' || notification.type === 'PRESCRIPTION_PRETE') {
-      navigate('/patient/prescriptions');
     } else if (notification.type === 'PAIEMENT' || notification.type === 'FACTURE') {
       // Redirection vers la page des factures et paiements
       navigate('/patient/billing');
@@ -651,6 +656,87 @@ const Notifications = () => {
           <Bell className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-foreground">Tout est à jour !</h3>
           <p className="text-muted-foreground mt-1">Vous n'avez aucune notification ici.</p>
+        </div>
+      )}
+
+      {/* 📋 MODAL DÉTAIL NOTIFICATION MÉDICAMENT */}
+      {selectedDetail && (
+        <div className="fixed inset-0 z-[9998] flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setSelectedDetail(null)}>
+          <div className="bg-card rounded-2xl max-w-md w-full shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in duration-200 mt-8 sm:mt-12 md:mt-16 mb-4" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-500 to-pink-500 p-5 text-white relative">
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="absolute top-3 right-3 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Pill className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg">Détail du rappel</h2>
+                  <p className="text-rose-100 text-sm">Médicament prescrit</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {/* Titre / Nom du médicament */}
+              <div className="bg-rose-50 dark:bg-rose-900/10 rounded-xl p-4">
+                <h3 className="font-bold text-foreground text-base mb-1">{selectedDetail.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{selectedDetail.message}</p>
+              </div>
+
+              {/* Infos complémentaires */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4 text-emerald-500" />
+                  <span>Reçu le <span className="font-semibold text-foreground">{new Date(selectedDetail.createdAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}</span></span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span>Heure de prise : <span className="font-semibold text-foreground">{new Date(selectedDetail.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span></span>
+                </div>
+                {selectedDetail.referenceId && (
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <ClipboardList className="w-4 h-4 text-violet-500" />
+                    <span>Référence : <span className="font-semibold text-foreground">#{selectedDetail.referenceId}</span></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={() => { setSelectedDetail(null); navigate('/patient/documents'); }}
+                  className="col-span-2 py-3 bg-emerald-500 text-white rounded-xl font-semibold text-sm hover:bg-emerald-600 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Voir mon ordonnance
+                </button>
+                <button
+                  onClick={() => {
+                    if (!selectedDetail.read && !selectedDetail.isRead) markAsRead(selectedDetail.id);
+                    setSelectedDetail(null);
+                  }}
+                  className="py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Marquer comme lu
+                </button>
+                <button
+                  onClick={() => setSelectedDetail(null)}
+                  className="py-2.5 border border-border text-muted-foreground rounded-xl font-medium text-sm hover:bg-muted active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

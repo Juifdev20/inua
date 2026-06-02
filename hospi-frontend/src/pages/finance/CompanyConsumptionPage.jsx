@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import {
-  Building2, Loader2, Download, Search, ArrowLeft,
+  Building2, Loader2, Download, Search, ArrowLeft, Printer,
   Users, DollarSign, Activity,
   Stethoscope, FlaskConical, Pill, RefreshCw,
 } from 'lucide-react';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { companyService } from '@/services/companyService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ const fmt = (amount) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount || 0);
 
 export default function CompanyConsumptionPage() {
+  const { config } = useHospitalConfig();
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [companies, setCompanies] = useState([]);
@@ -38,6 +40,7 @@ export default function CompanyConsumptionPage() {
   const [summaries, setSummaries] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [logoBase64, setLogoBase64] = useState(null);
 
   const summaryIntervalRef = useRef(null);
   const selectedCompanyRef = useRef(null);
@@ -112,6 +115,22 @@ export default function CompanyConsumptionPage() {
     }
   };
 
+  // Précharger le logo en base64 pour l'impression
+  useEffect(() => {
+    if (!config?.hospitalLogoUrl || config?.enableLogoOnDocuments === false) return;
+    const load = async () => {
+      try {
+        const { loadLogoAsDataUrl } = await import('../../utils/printUtils');
+        const { API_BASE_URL } = await import('../../config/environment.js');
+        const dataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (dataUrl) setLogoBase64(dataUrl);
+      } catch (e) {
+        console.error('Logo load error:', e);
+      }
+    };
+    load();
+  }, [config?.hospitalLogoUrl, config?.enableLogoOnDocuments]);
+
   const handleDownloadPDF = async () => {
     if (!selectedCompany) return;
     setDownloadingPDF(true);
@@ -123,6 +142,10 @@ export default function CompanyConsumptionPage() {
     } finally {
       setDownloadingPDF(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -153,9 +176,10 @@ export default function CompanyConsumptionPage() {
 
   if (selectedCompany) {
     return (
-      <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+      <>
+        <div className="space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" onClick={() => { stopSummaryPolling(); selectedCompanyRef.current = null; setSelectedCompany(null); refresh(); }} className="gap-2 rounded-xl font-bold">
               <ArrowLeft className="w-4 h-4" /> Retour
@@ -190,12 +214,12 @@ export default function CompanyConsumptionPage() {
               Actualiser
             </Button>
             <Button
-              onClick={handleDownloadPDF}
-              disabled={downloadingPDF || summaries.length === 0}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-9 self-end"
+              onClick={handlePrint}
+              disabled={summaries.length === 0}
+              variant="outline"
+              className="gap-2 rounded-xl h-9 self-end ml-2"
             >
-              {downloadingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Télécharger PDF
+              <Printer className="w-4 h-4" /> Imprimer
             </Button>
           </div>
         </div>
@@ -311,7 +335,122 @@ export default function CompanyConsumptionPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+
+        {/* ══════ ZONE D'IMPRESSION (Invisible à l'écran) ══════ */}
+        <div className="hidden print:block print-area">
+          <div style={{ background: 'white', color: 'black', padding: '16px', fontFamily: 'sans-serif', lineHeight: 1.2 }}>
+            {/* ENTÊTE COMPACTE */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `2px solid ${config?.primaryColor || '#059669'}`, paddingBottom: '8px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {logoBase64 && (
+                  <div style={{ width: '32px', height: '32px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <img src={logoBase64} alt="" style={{ maxHeight: '32px', maxWidth: '32px', objectFit: 'contain', display: 'block' }} />
+                  </div>
+                )}
+                <div>
+                  <h1 style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', margin: 0, lineHeight: 1.1, color: config?.primaryColor || '#059669' }}>
+                    {config?.hospitalName || 'CLINIQUE'}
+                  </h1>
+                  <p style={{ fontSize: '7px', color: '#6b7280', margin: 0, lineHeight: 1.2 }}>{[config?.phoneNumber, config?.email].filter(Boolean).join(' | ')}</p>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+                <p style={{ fontSize: '7px', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>{[config?.ministryName, config?.departmentName].filter(Boolean).join(' | ')}</p>
+                <p style={{ fontSize: '7px', color: '#9ca3af', margin: 0 }}>{[config?.zoneName, config?.region, config?.city].filter(Boolean).join(' | ')}</p>
+              </div>
+            </div>
+
+            {/* BANDE TITRE */}
+            <div style={{ textAlign: 'center', marginBottom: '10px', padding: '4px 0', backgroundColor: config?.primaryColor || '#059669' }}>
+              <h2 style={{ color: 'white', fontWeight: 900, fontSize: '12px', textTransform: 'uppercase', margin: 0, letterSpacing: '0.5px' }}>Feuille de Consommation Mensuelle</h2>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '7px', margin: '2px 0 0 0' }}>{selectedCompany?.name} — {selectedMonth}</p>
+            </div>
+
+            {/* INFOS ENTREPRISE */}
+            <div style={{ marginBottom: '10px', fontSize: '9px' }}>
+              <p style={{ margin: '0 0 2px 0' }}><strong>Entreprise :</strong> {selectedCompany?.name}</p>
+              <p style={{ margin: '0 0 2px 0' }}><strong>Période :</strong> {selectedMonth}</p>
+              <p style={{ margin: '0 0 2px 0' }}><strong>Contrat :</strong> {selectedCompany?.contractNumber || '—'}</p>
+              <p style={{ margin: 0 }}><strong>Taux de couverture :</strong> {selectedCompany?.coverageRate ?? 100}%</p>
+            </div>
+
+            {/* TABLEAU */}
+            <table style={{ width: '100%', fontSize: '8px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: config?.primaryColor || '#059669' }}>
+                  {['Date', 'Patient', 'Matricule', 'Consultation', 'Labo', 'Pharmacie', 'Total', 'Prise en charge', 'Ticket'].map((h) => (
+                    <th key={h} style={{ padding: '3px 3px', textAlign: h === 'Ticket' || h === 'Prise en charge' || h === 'Total' ? 'right' : 'left', color: 'white', fontWeight: 700, border: '1px solid rgba(255,255,255,0.2)', fontSize: '7px' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {summaries.map((s, idx) => (
+                  <tr key={s.admissionId} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>
+                      {s.admissionDate ? new Date(s.admissionDate).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb' }}>{s.patientName}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb' }}>{s.matricule || '—'}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(s.consultationAmount)}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(s.laboAmount)}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(s.pharmacieAmount)}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700 }}>{fmt((s.consultationAmount ?? 0) + (s.laboAmount ?? 0) + (s.pharmacieAmount ?? 0))}</td>
+                    <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right', color: '#059669', fontWeight: 700 }}>{fmt(s.totalCoverage)}</td>
+                    <td style={{ padding: '3px', textAlign: 'right', color: '#d97706', fontWeight: 700 }}>{fmt(s.totalSurplus)}</td>
+                  </tr>
+                ))}
+                {/* Ligne totaux */}
+                <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 700 }}>
+                  <td colSpan={3} style={{ padding: '3px', borderRight: '1px solid #e5e7eb' }}>TOTAL GÉNÉRAL</td>
+                  <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(grandTotals.consultation)}</td>
+                  <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(grandTotals.labo)}</td>
+                  <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(grandTotals.pharmacie)}</td>
+                  <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right' }}>{fmt(grandTotals.total)}</td>
+                  <td style={{ padding: '3px', borderRight: '1px solid #e5e7eb', textAlign: 'right', color: '#059669' }}>{fmt(grandTotals.coverage)}</td>
+                  <td style={{ padding: '3px', textAlign: 'right', color: '#d97706' }}>{fmt(grandTotals.surplus)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p style={{ marginTop: '8px', fontSize: '8px' }}>Nombre de patients : {summaries.length}</p>
+
+            {/* SIGNATURE */}
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#6b7280' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontStyle: 'italic', margin: '0 0 16px 0' }}>Le Caissier</p>
+                <div style={{ width: '120px', borderTop: '1px solid #9ca3af', paddingTop: '2px' }}>Signature</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontStyle: 'italic', margin: '0 0 16px 0' }}>Le Directeur</p>
+                <div style={{ width: '120px', borderTop: '1px solid #9ca3af', paddingTop: '2px' }}>Signature & Cachet</div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div style={{ marginTop: '16px', paddingTop: '4px', borderTop: `1px solid ${config?.primaryColor || '#059669'}`, textAlign: 'center', fontSize: '7px', color: '#9ca3af' }}>
+              <p style={{ margin: 0 }}>Document généré par {config?.hospitalName || 'INUA AFYA'} — {config?.footerText || 'Tous droits réservés'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* STYLE CSS POUR L'IMPRESSION */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body * { visibility: hidden; background: white !important; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+            @page { size: A4 landscape; margin: 10mm; }
+          }
+        `}} />
+      </>
     );
   }
 

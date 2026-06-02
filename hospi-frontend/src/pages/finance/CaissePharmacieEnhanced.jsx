@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { openPrintWindow, loadHospitalConfig } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import {
@@ -106,10 +108,10 @@ const CaissePharmacieEnhanced = () => {
 
   // Imprimer le reçu (format 80mm)
   const printReceipt = async (invoice) => {
+    const hospitalConfig = await loadHospitalConfig();
     const printContent = `
       <div style="font-family: monospace; padding: 10px; max-width: 300px; margin: 0 auto; font-size: 12px;">
-        <div style="text-align: center; margin-bottom: 15px;">
-          <h2 style="margin: 0; font-size: 16px; font-weight: bold;">HÔPITAL INUA AFYA</h2>
+        <div style="text-align: center; margin-bottom: 10px;">
           <p style="margin: 3px 0; font-size: 10px;">Pharmacie - Reçu de paiement</p>
           <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; margin: 8px 0;">
             <p style="margin: 0; font-weight: bold; font-size: 12px;">${invoice.invoiceCode}</p>
@@ -141,27 +143,13 @@ const CaissePharmacieEnhanced = () => {
       </div>
     `;
     
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Reçu - ${invoice.invoiceCode}</title>
-          <style>
-            body { margin: 0; padding: 5px; font-family: monospace; }
-            @media print {
-              body { margin: 0; padding: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    await openPrintWindow({
+      title: `Reçu - ${invoice.invoiceCode}`,
+      documentTitle: 'REÇU',
+      bodyContent: printContent,
+      config: hospitalConfig,
+      apiBaseUrl: API_BASE_URL,
+    });
   };
 
   // Ouvrir le dialogue de paiement

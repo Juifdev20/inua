@@ -11,11 +11,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/hospital-config")
@@ -41,10 +48,29 @@ public class HospitalConfigController {
     @Operation(summary = "Mettre à jour la configuration de l'hôpital (Admin uniquement)")
     public ResponseEntity<ApiResponse<HospitalConfigDTO>> updateConfig(
             @Valid @RequestBody HospitalConfigDTO dto) {
-        
-        log.info("🔍 [CONFIG DEBUG] Mise à jour config reçue - hospitalLogoUrl: {}",
-            dto.getHospitalLogoUrl() != null ? dto.getHospitalLogoUrl().substring(0, Math.min(50, dto.getHospitalLogoUrl().length())) : "NULL");
-        
+
+        log.info("🔍 [CONFIG DEBUG] hospitalLogoUrl reçu: {}",
+            dto.getHospitalLogoUrl() != null ? dto.getHospitalLogoUrl().substring(0, Math.min(60, dto.getHospitalLogoUrl().length())) : "NULL");
+
+        // Convertir le logo base64 en fichier pour éviter de stocker de gros blob en DB
+        if (dto.getHospitalLogoUrl() != null && dto.getHospitalLogoUrl().startsWith("data:image")) {
+            try {
+                String dataUrl = dto.getHospitalLogoUrl();
+                String base64Data = dataUrl.substring(dataUrl.indexOf(",") + 1);
+                byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+                String ext = dataUrl.contains("jpeg") || dataUrl.contains("jpg") ? "jpg" : "png";
+                String fileName = "hospital_logo_" + System.currentTimeMillis() + "." + ext;
+                Path dir = Paths.get("uploads/logo/");
+                Files.createDirectories(dir);
+                Files.write(dir.resolve(fileName), imageBytes);
+                String logoPath = "/uploads/logo/" + fileName;
+                dto.setHospitalLogoUrl(logoPath);
+                log.info("✅ Logo base64 converti en fichier: {}", logoPath);
+            } catch (Exception e) {
+                log.warn("⚠️ Impossible de convertir le logo base64 en fichier: {}", e.getMessage());
+            }
+        }
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long userId = getUserIdFromAuthentication(auth);
         
@@ -63,6 +89,60 @@ public class HospitalConfigController {
     public ResponseEntity<ApiResponse<HospitalConfigDTO>> initializeDefault() {
         HospitalConfig config = configService.initializeDefault();
         return ResponseEntity.ok(ApiResponse.success("Configuration initialisée", toDTO(config)));
+    }
+
+    @PostMapping(value = "/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Uploader le logo de l'hôpital (Admin uniquement)")
+    public ResponseEntity<ApiResponse<String>> uploadLogo(
+            @RequestPart("logo") MultipartFile logo) {
+        try {
+            String originalName = logo.getOriginalFilename() != null ? logo.getOriginalFilename().toLowerCase() : "";
+            String contentType = logo.getContentType() != null ? logo.getContentType().toLowerCase() : "";
+            boolean isSupportedFormat = originalName.endsWith(".png") || originalName.endsWith(".jpg")
+                    || originalName.endsWith(".jpeg") || originalName.endsWith(".gif")
+                    || contentType.contains("png") || contentType.contains("jpeg") || contentType.contains("gif");
+            if (!isSupportedFormat) {
+                log.warn("⚠️ Format logo non supporté: {} ({})", originalName, contentType);
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.<String>error("Format non supporté: '" + originalName + "'. Utilisez PNG ou JPEG (pas WEBP, AVIF, SVG)."));
+            }
+
+            String ext = originalName.endsWith(".png") ? ".png" : ".jpg";
+            String fileName = "hospital_logo_" + System.currentTimeMillis() + ext;
+            Path dir = Paths.get("uploads/logo/");
+            Files.createDirectories(dir);
+            Files.write(dir.resolve(fileName), logo.getBytes());
+            String logoUrl = "/uploads/logo/" + fileName;
+
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            Long userId = getUserIdFromAuthentication(auth);
+            HospitalConfig config = configService.getCurrentConfig().orElseGet(configService::initializeDefault);
+            config.setHospitalLogoUrl(logoUrl);
+            configService.saveOrUpdate(config, userId);
+
+            log.info("✅ Logo hôpital sauvegardé: {}", logoUrl);
+            return ResponseEntity.ok(ApiResponse.success("Logo mis à jour", logoUrl));
+        } catch (IOException e) {
+            log.error("❌ Erreur upload logo: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(ApiResponse.error("Erreur lors de l'upload du logo"));
+        }
+    }
+
+    @GetMapping("/logo-status")
+    @Operation(summary = "Statut du logo (diagnostic public)")
+    public ResponseEntity<String> logoStatus() {
+        String url = configService.getCurrentConfig()
+                .map(c -> c.getHospitalLogoUrl())
+                .orElse(null);
+        if (url == null || url.isBlank()) {
+            return ResponseEntity.ok("LOGO_NOT_CONFIGURED - aucun logo en base de données");
+        }
+        boolean isFile = url.startsWith("/uploads/");
+        java.io.File f = isFile ? new java.io.File(url.substring(1)) : null;
+        if (f != null && !f.exists()) f = new java.io.File(System.getProperty("user.dir"), url.substring(1));
+        String fileStatus = (f != null) ? (f.exists() ? "fichier OK" : "fichier INTROUVABLE à " + f.getAbsolutePath()) : "URL externe/base64";
+        return ResponseEntity.ok("LOGO_URL=" + url + " | " + fileStatus);
     }
 
     // === MAPPERS ===

@@ -4,6 +4,7 @@ import com.hospital.backend.dto.PatientDocumentDTO;
 import com.hospital.backend.dto.PatientDocumentAccessRequest;
 import com.hospital.backend.entity.Admission;
 import com.hospital.backend.entity.Consultation;
+import com.hospital.backend.entity.ConsultationStatus;
 import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.PatientDocument;
 import com.hospital.backend.entity.User;
@@ -82,7 +83,7 @@ public class PatientDocumentPatientController {
      * ═══════════════════════════════════════════════════════════════════════════════
      */
     @GetMapping
-    @Transactional(readOnly = true)
+    @Transactional
     @Operation(summary = "Liste mes documents médicaux", 
                description = "Récupère la liste des fiches médicales disponibles")
     public ResponseEntity<?> getMyDocuments() {
@@ -105,6 +106,26 @@ public class PatientDocumentPatientController {
 
             List<PatientDocument> documents = patientDocumentRepository.findByPatientIdOrderByCreatedAtDesc(patient.getId());
             log.info("📄 [PATIENT_DOCS] {} documents bruts trouvés en BDD", documents.size());
+
+            // ✅ AUTO-CORRECTION : pour chaque fiche avec crédit résiduel > 0,
+            // vérifier si la consultation est terminée et corriger en base
+            for (PatientDocument doc : documents) {
+                if (doc.getRemainingCredit() != null && doc.getRemainingCredit() > 0.01
+                        && doc.getConsultation() != null) {
+                    try {
+                        Consultation consult = consultationRepository
+                            .findById(doc.getConsultation().getId()).orElse(null);
+                        if (consult != null && isTerminalStatus(consult.getStatus())) {
+                            doc.setAmountPaid(doc.getTotalAmount() != null ? doc.getTotalAmount() : 0.0);
+                            doc.setRemainingCredit(0.0);
+                            patientDocumentRepository.save(doc);
+                            log.info("✅ [PATIENT_DOCS] Crédit corrigé à 0 pour fiche ID {}", doc.getId());
+                        }
+                    } catch (Exception e) {
+                        log.warn("⚠️ [PATIENT_DOCS] Erreur correction fiche {}: {}", doc.getId(), e.getMessage());
+                    }
+                }
+            }
             
             // Filtrer uniquement les documents de type DOSSIER_PATIENT (fiches médicales complètes)
             List<PatientDocumentDTO> dossiers = documents.stream()
@@ -401,53 +422,57 @@ public class PatientDocumentPatientController {
             
             Admission admission = consultation.getAdmission();
             if (admission != null) {
-                java.math.BigDecimal totalDue = java.math.BigDecimal.ZERO;
-                java.math.BigDecimal totalPaid = java.math.BigDecimal.ZERO;
-                
-                // ✅ CORRECTION: Utiliser les champs précis de Consultation pour éviter
-                // le double-comptage (admission.serviceFee peut déjà inclure les examens)
-                // Frais de fiche
-                if (consultation.getFicheAmountDue() != null) {
-                    totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountDue()));
-                }
-                
-                // Frais de consultation
-                if (consultation.getConsulAmountDue() != null) {
-                    totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountDue()));
-                }
-                
-                // Frais d'examens
-                if (consultation.getExamTotalAmount() != null) {
-                    totalDue = totalDue.add(consultation.getExamTotalAmount());
-                }
-                
-                // Montant payé
-                if (consultation.getFicheAmountPaid() != null) {
-                    totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountPaid()));
-                }
-                if (consultation.getConsulAmountPaid() != null) {
-                    totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountPaid()));
-                }
-                if (consultation.getExamAmountPaid() != null) {
-                    totalPaid = totalPaid.add(consultation.getExamAmountPaid());
-                }
-                
-                // Vérifier si tout est payé (avec marge de 0.01)
-                java.math.BigDecimal remaining = totalDue.subtract(totalPaid);
-                boolean isFullyPaid = totalPaid.compareTo(totalDue) >= 0 || 
-                                     remaining.compareTo(new java.math.BigDecimal("0.01")) <= 0;
-                
-                log.info("💰 [PATIENT_REPORT] Vérification paiement - Consultation: {}, Total dû: {}, Payé: {}, Reste: {}, Tout payé: {}",
-                    consultationId, totalDue, totalPaid, remaining, isFullyPaid);
-                
-                if (!isFullyPaid) {
-                    log.warn("⛔ [PATIENT_REPORT] Accès REFUSÉ - Paiement incomplet. Reste à payer: {} $", remaining);
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                            "error", "Accès refusé - Paiement incomplet",
-                            "message", "Vous devez régler l'intégralité de votre facture avant d'accéder à cette fiche",
-                            "remainingAmount", remaining.toString()
-                        ));
+                // ✅ Patient abonné → entreprise couvre tout, pas de vérification de paiement
+                if (Boolean.TRUE.equals(admission.getIsAbonne())) {
+                    log.info("✅ [PATIENT_REPORT] Patient abonné - accès direct sans vérification de paiement");
+                } else {
+                    java.math.BigDecimal totalDue = java.math.BigDecimal.ZERO;
+                    java.math.BigDecimal totalPaid = java.math.BigDecimal.ZERO;
+
+                    if (consultation.getFicheAmountDue() != null) {
+                        totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountDue()));
+                    }
+                    if (consultation.getConsulAmountDue() != null) {
+                        totalDue = totalDue.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountDue()));
+                    }
+                    if (consultation.getExamTotalAmount() != null) {
+                        totalDue = totalDue.add(consultation.getExamTotalAmount());
+                    }
+
+                    if (consultation.getFicheAmountPaid() != null) {
+                        totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getFicheAmountPaid()));
+                    }
+                    if (consultation.getConsulAmountPaid() != null) {
+                        totalPaid = totalPaid.add(java.math.BigDecimal.valueOf(consultation.getConsulAmountPaid()));
+                    }
+                    if (consultation.getExamAmountPaid() != null) {
+                        totalPaid = totalPaid.add(consultation.getExamAmountPaid());
+                    }
+
+                    java.math.BigDecimal remaining = totalDue.subtract(totalPaid);
+                    boolean isFullyPaid = totalPaid.compareTo(totalDue) >= 0
+                            || remaining.compareTo(new java.math.BigDecimal("0.01")) <= 0;
+
+                    // ✅ FALLBACK statut terminal : si la consultation est dans un état terminal,
+                    // tout est considéré réglé même si ficheAmountPaid n'a pas été mis à jour
+                    if (!isFullyPaid && isTerminalStatus(consultation.getStatus())) {
+                        isFullyPaid = true;
+                        log.info("✅ [PATIENT_REPORT] Statut terminal ({}) - paiement considéré complet (fallback)",
+                            consultation.getStatus());
+                    }
+
+                    log.info("💰 [PATIENT_REPORT] Consultation: {}, Dû: {}, Payé: {}, Reste: {}, OK: {}",
+                        consultationId, totalDue, totalPaid, remaining, isFullyPaid);
+
+                    if (!isFullyPaid) {
+                        log.warn("⛔ [PATIENT_REPORT] Accès REFUSÉ - Reste à payer: {} $", remaining);
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of(
+                                "error", "Accès refusé - Paiement incomplet",
+                                "message", "Vous devez régler l'intégralité de votre facture avant d'accéder à cette fiche",
+                                "remainingAmount", remaining.toString()
+                            ));
+                    }
                 }
             }
             
@@ -523,6 +548,19 @@ public class PatientDocumentPatientController {
             return ResponseEntity.internalServerError()
                 .body(Map.of("error", "Erreur lors de la vérification"));
         }
+    }
+
+    /**
+     * Vérifie si un statut de consultation correspond à un état terminal (tout payé/traité).
+     */
+    private boolean isTerminalStatus(ConsultationStatus status) {
+        if (status == null) return false;
+        return status == ConsultationStatus.TERMINE
+                || status == ConsultationStatus.COMPLETED
+                || status == ConsultationStatus.PAYEE
+                || status == ConsultationStatus.EXAMENS_PAYES
+                || status == ConsultationStatus.TREATED
+                || status == ConsultationStatus.PAID_COMPLETED;
     }
 
     /**

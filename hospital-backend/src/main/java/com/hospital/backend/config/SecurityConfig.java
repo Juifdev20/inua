@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws-hospital/**", "/ws-notifications/**").permitAll()
                         .requestMatchers("/api/ws-hospital/**", "/api/ws-notifications/**").permitAll()
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers("/api/hospital-config/logo-status").permitAll()
 
                         // PRIORITÉ ABSOLUE : /me pour patient connecté (AVANT toutes autres règles patients)
                         .requestMatchers("/api/v1/patients/me", "/api/patients/me", "/v1/patients/me", "/patients/me")

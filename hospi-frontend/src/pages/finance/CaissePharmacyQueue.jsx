@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { openPrintWindow, loadHospitalConfig } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { useTranslation } from 'react-i18next';
 import {
   Pill, DollarSign, Lock, Unlock, AlertCircle,
@@ -117,11 +119,11 @@ const CaissePharmacyQueue = () => {
   };
 
   // Print receipt
-  const printReceipt = (order) => {
+  const printReceipt = async (order) => {
+    const hospitalConfig = await loadHospitalConfig();
     const receiptContent = `
-      <div style="font-family: monospace; max-width: 300px; margin: 0 auto; padding: 20px;">
-        <h2 style="text-align: center; margin-bottom: 10px;">🧾 REÇU DE PAIEMENT</h2>
-        <h3 style="text-align: center; margin-bottom: 5px;">PHARMACIE - INUA AFYA</h3>
+      <div style="font-family: monospace; max-width: 300px; margin: 0 auto;">
+        <h2 style="text-align: center; margin-bottom: 10px;">REÇU DE PAIEMENT</h2>
         <p style="text-align: center; font-size: 10px; margin-bottom: 15px;">
           ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}
         </p>
@@ -155,15 +157,13 @@ const CaissePharmacyQueue = () => {
       </div>
     `;
     
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Reçu - ${order?.orderCode}</title></head>
-      <body onload="window.print(); setTimeout(() => window.close(), 1000);">${receiptContent}</body>
-      </html>
-    `);
-    printWindow.document.close();
+    await openPrintWindow({
+      title: `Reçu - ${order?.orderCode}`,
+      documentTitle: 'REÇU PHARMACIE',
+      bodyContent: receiptContent,
+      config: hospitalConfig,
+      apiBaseUrl: API_BASE_URL,
+    });
   };
 
   // Filter and sort orders

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { openPrintWindow, loadHospitalConfig } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { toast } from 'react-hot-toast';
 import { 
   X, 
@@ -78,13 +80,11 @@ const PrescriptionValidationModal = ({
     });
   };
 
-  const handlePrintPrescription = () => {
+  const handlePrintPrescription = async () => {
+    const hospitalConfig = await loadHospitalConfig();
     const printContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-        <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
-          <h1 style="margin: 0; color: #333; font-size: 24px;">ORDONNANCE MÉDICALE</h1>
-          <p style="margin: 5px 0; color: #666;">Hôpital Inua Afya</p>
-        </div>
+      <div style="max-width: 800px; margin: 0 auto;">
+        <h2 style="text-align:center;margin:0 0 20px 0;font-size:20px;letter-spacing:1px;">ORDONNANCE MÉDICALE</h2>
         
         <div style="margin-bottom: 20px;">
           <p><strong>Patient:</strong> ${prescription?.patientName || 'N/A'}</p>
@@ -124,27 +124,13 @@ const PrescriptionValidationModal = ({
       </div>
     `;
     
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Prescription - ${prescription?.prescriptionCode || 'N/A'}</title>
-          <style>
-            body { margin: 0; padding: 0; }
-            @media print {
-              body { margin: 0; padding: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    await openPrintWindow({
+      title: `Ordonnance - ${prescription?.prescriptionCode || 'N/A'}`,
+      documentTitle: 'ORDONNANCE',
+      bodyContent: printContent,
+      config: hospitalConfig,
+      apiBaseUrl: API_BASE_URL,
+    });
   };
 
   const handleRemoveItem = (itemId) => {

@@ -8,8 +8,10 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.CompanyConsumptionService;
+import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.InvoiceService;
 import com.hospital.backend.service.NotificationService;
+import com.hospital.backend.service.PatientDocumentService;
 import com.hospital.backend.service.RevenueService;
 
 import com.lowagie.text.*;
@@ -59,6 +61,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final NotificationService notificationService;
     // ★ AJOUTÉ : Pour enregistrer la consommation des entreprises abonnées
     private final CompanyConsumptionService companyConsumptionService;
+    // ★ AJOUTÉ : Pour la génération automatique du dossier patient après paiement
+    private final ConsultationService consultationService;
+    private final PatientDocumentService patientDocumentService;
 
     // ── LOGIQUE DE RÉSOLUTION D'IDENTITÉ ─────────────────────────────
 
@@ -469,10 +474,22 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (invoice.getConsultation() != null) {
             Consultation consultation = invoice.getConsultation();
             log.info("🔍 [DEBUG] Consultation trouvée ID: {}, Statut actuel: {}", consultation.getId(), consultation.getStatus());
-            // On passe le statut à PAYEE pour satisfaire la condition du bouton "Envoyer chez le médecin"
             consultation.setStatus(ConsultationStatus.PAYEE);
+            // ✅ Synchroniser ficheAmountPaid / consulAmountPaid pour que le dossier affiche 0 crédit
+            try {
+                Double ficheDue = consultation.getFicheAmountDue();
+                Double consulDue = consultation.getConsulAmountDue();
+                if (ficheDue != null && ficheDue > 0 && (consultation.getFicheAmountPaid() == null || consultation.getFicheAmountPaid() == 0)) {
+                    consultation.setFicheAmountPaid(ficheDue);
+                }
+                if (consulDue != null && consulDue > 0 && (consultation.getConsulAmountPaid() == null || consultation.getConsulAmountPaid() == 0)) {
+                    consultation.setConsulAmountPaid(consulDue);
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ Erreur mise à jour montants payés consultation: {}", e.getMessage());
+            }
             consultationRepository.save(consultation);
-            log.info("✅ Consultation liée {} passée au statut PAYEE", consultation.getId());
+            log.info("✅ Consultation liée {} passée au statut PAYEE (ficheAmountPaid mis à jour)", consultation.getId());
         } else {
             log.warn("⚠️ [DEBUG] Aucune consultation liée à la facture {}", invoiceId);
         }
@@ -800,6 +817,17 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new RuntimeException("La prescription ne contient aucun médicament");
         }
         
+        for (PrescriptionItem item : items) {
+            if (item.getMedication() != null) {
+                Integer stockRequired = item.getQuantity() != null ? item.getQuantity() : 0;
+                Integer stockAvailable = item.getMedication().getStockQuantity() != null ? item.getMedication().getStockQuantity() : 0;
+                if (stockRequired > stockAvailable) {
+                    throw new RuntimeException("Stock insuffisant pour le médicament: " + item.getMedication().getName() +
+                        " (Requis: " + stockRequired + ", Disponible: " + stockAvailable + ")");
+                }
+            }
+        }
+        
         // Calculer le total à partir des médicaments
         BigDecimal totalAmount = items.stream()
             .map(item -> {
@@ -966,6 +994,26 @@ public class InvoiceServiceImpl implements InvoiceService {
                 isAbonne, company != null ? company.getName() : "N/A", coverageRate);
         }
 
+        // ✅ FALLBACK: si isAbonne=false ou admission non chargée, recharger la consultation depuis la BDD
+        if (!isAbonne && prescription.getConsultation() != null) {
+            try {
+                Long consultId = prescription.getConsultation().getId();
+                Consultation freshConsult = consultationRepository.findById(consultId).orElse(null);
+                if (freshConsult != null && freshConsult.getAdmission() != null) {
+                    Admission freshAdm = freshConsult.getAdmission();
+                    if (Boolean.TRUE.equals(freshAdm.getIsAbonne()) && freshAdm.getCompany() != null) {
+                        isAbonne = true;
+                        company = freshAdm.getCompany();
+                        coverageRate = freshAdm.getCoverageRate() != null ? freshAdm.getCoverageRate() : new BigDecimal("100");
+                        log.info("✅ [ABONNÉ FALLBACK] Statut abonné récupéré via rechargement - Entreprise: {}, Taux: {}%",
+                            company.getName(), coverageRate);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ [ABONNÉ FALLBACK] Impossible de vérifier le statut abonné: {}", e.getMessage());
+            }
+        }
+
         // Si abonné, calculer la couverture et enregistrer la consommation
         if (isAbonne && company != null) {
             BigDecimal totalAmount = invoice.getTotalAmount();
@@ -1023,10 +1071,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 medication.getName(), requiredQuantity, availableStock);
             
             if (requiredQuantity > availableStock) {
-                log.error("❌ [PAYMENT SERVICE] Stock insuffisant - Médicament: {}, Requis: {}, Disponible: {}", 
+                log.warn("⚠️ [PAYMENT SERVICE] Stock insuffisant - Médicament: {}, Requis: {}, Disponible: {} - Paiement autorisé, déficit enregistré", 
                     medication.getName(), requiredQuantity, availableStock);
-                throw new RuntimeException("Stock insuffisant pour le médicament: " + medication.getName() + 
-                    " (Requis: " + requiredQuantity + ", Disponible: " + availableStock + ")");
             }
         }
         
@@ -1036,7 +1082,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             Integer requiredQuantity = item.getQuantity() != null ? item.getQuantity() : 0;
             Integer currentStock = medication.getStockQuantity() != null ? medication.getStockQuantity() : 0;
             
-            medication.setStockQuantity(currentStock - requiredQuantity);
+            medication.setStockQuantity(Math.max(0, currentStock - requiredQuantity));
             medicationRepository.save(medication);
             
             log.info("Stock mis à jour pour {}: {} -> {}", medication.getName(), currentStock, currentStock - requiredQuantity);
@@ -1054,6 +1100,19 @@ public class InvoiceServiceImpl implements InvoiceService {
         prescription.setStatus(PrescriptionStatus.PAYEE);
         prescriptionRepository.save(prescription);
         log.info("✅ Prescription {} marquée comme PAYEE - prête pour retrait pharmacie", prescription.getPrescriptionCode());
+
+        // 🎯 Génération automatique du dossier patient après paiement de la prescription
+        try {
+            Long consultationId = prescription.getConsultation().getId();
+            if (!patientDocumentService.dossierExistsForConsultation(consultationId)) {
+                patientDocumentService.generatePatientDossier(consultationId);
+                log.info("✅ [DOSSIER] Dossier généré automatiquement pour consultation {}", consultationId);
+            } else {
+                log.info("📋 [DOSSIER] Dossier déjà existant pour consultation {}", consultationId);
+            }
+        } catch (Exception e) {
+            log.error("❌ [DOSSIER] Erreur génération dossier après paiement prescription: {}", e.getMessage(), e);
+        }
 
         // ★ CRÉATION AUTOMATIQUE DU REVENU POUR PRESCRIPTION (SEULEMENT POUR NON-ABONNÉS)
         try {

@@ -5,7 +5,8 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.CompanyConsumptionService;
-import com.hospital.backend.service.PharmacyService;
+import com.hospital.backend.service.ConsultationService;
+import com.hospital.backend.service. PharmacyService;
 import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.RevenueService;
 import com.hospital.backend.service.NotificationService;
@@ -46,6 +47,8 @@ public class PharmacyServiceImpl implements PharmacyService {
     private final EmailService emailService;
     private final CompanyConsumptionService consumptionService;
     private final CompanyEmployeeRepository companyEmployeeRepository;
+    private final ConsultationRepository consultationRepository;
+    private final ConsultationService consultationService;
 
     // ══════════════════════════════════════════════════════════════════
     // ORDER MANAGEMENT
@@ -342,6 +345,25 @@ public class PharmacyServiceImpl implements PharmacyService {
         }
         
         log.info("✅ [FINANCE] Paiement confirmé pour commande {}. Statut: PAYEE", orderId);
+
+        // 🎯 GÉNÉRATION AUTOMATIQUE DU DOSSIER PATIENT après paiement pharmacie
+        try {
+            Patient patient = updatedOrder.getPatient();
+            if (patient != null) {
+                consultationRepository.findByPatientIdOrderByCreatedAtDesc(patient.getId()).stream()
+                    .filter(c -> c.getStatus() == ConsultationStatus.TERMINE
+                              || c.getStatus() == ConsultationStatus.COMPLETED)
+                    .forEach(c -> {
+                        try {
+                            consultationService.generateDossierIfFullyPaid(c);
+                        } catch (Exception ex) {
+                            log.error("❌ Erreur génération dossier consultation {}: {}", c.getId(), ex.getMessage());
+                        }
+                    });
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur génération dossier auto après pharmacie: {}", e.getMessage());
+        }
 
         // Enregistrer la consommation PHARMACIE pour les patients abonnés
         try {

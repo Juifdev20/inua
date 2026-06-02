@@ -23,6 +23,7 @@ import java.util.Map;
 import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.ConsultationService;
+import com.hospital.backend.service.LabAlertService;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.PatientDocumentService;
 import com.hospital.backend.service.RevenueService;
@@ -63,6 +64,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final LabAlertService labAlertService;
     private final MedicalServiceRepository serviceRepository;
     private final AdmissionRepository admissionRepository;
     private final PrescribedExamRepository prescribedExamRepository;
@@ -814,7 +816,8 @@ public class ConsultationServiceImpl implements ConsultationService {
 
         // Récupérer le prix de la fiche depuis la config
         BigDecimal fichePrice = getFichePriceFromConfig();
-        double ficheAmountDue = (isAbonne) ? 0.0 : (hasActiveFile ? 0.0 : fichePrice.doubleValue());
+        // ✅ La fiche est facturée pour tous (abonnés inclus) — la couverture entreprise s'en charge
+        double ficheAmountDue = hasActiveFile ? 0.0 : fichePrice.doubleValue();
         double consulAmountDue = (isAbonne) ? 0.0 : (service != null ? service.getPrix() : 0.0);
         double totalAmount = ficheAmountDue + consulAmountDue;
 
@@ -1253,6 +1256,23 @@ public class ConsultationServiceImpl implements ConsultationService {
         consultation.setUpdatedAt(LocalDateTime.now());
 
         consultationRepository.save(consultation);
+
+        // 🔔 Notifier le laboratoire des nouveaux examens prescrits
+        try {
+            List<String> examNames = newExams.stream()
+                    .map(PrescribedExam::getServiceName)
+                    .collect(Collectors.toList());
+            String doctorName = consultation.getDoctor() != null
+                    ? consultation.getDoctor().getFirstName() + " " + consultation.getDoctor().getLastName()
+                    : "Docteur";
+            String patientName = consultation.getPatient() != null
+                    ? consultation.getPatient().getFirstName() + " " + consultation.getPatient().getLastName()
+                    : "Patient";
+            labAlertService.notifyExamsPrescribed(doctorName, patientName, examNames, consultationId);
+            log.info("🔔 Notification labo envoyée - Examens: {}", examNames);
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de l'envoi de la notification labo: {}", e.getMessage(), e);
+        }
 
         return mapToDTO(consultation);
     }
@@ -1999,20 +2019,21 @@ public class ConsultationServiceImpl implements ConsultationService {
     @Override
     public void generateDossierIfFullyPaid(Consultation consultation) {
         try {
-            // Vérifier que la consultation est bien terminée (COMPLETED ou TERMINE)
-            if (consultation.getStatus() != ConsultationStatus.COMPLETED 
-                && consultation.getStatus() != ConsultationStatus.TERMINE) {
-                log.info("📋 [DOSSIER] Consultation {} non terminée (status: {}), pas de génération", 
-                    consultation.getId(), consultation.getStatus());
+            // Vérifier que la consultation est bien dans un état "terminé" ou "payé"
+            ConsultationStatus status = consultation.getStatus();
+            if (status != ConsultationStatus.COMPLETED
+                && status != ConsultationStatus.TERMINE
+                && status != ConsultationStatus.PAYEE
+                && status != ConsultationStatus.EXAMENS_PAYES) {
+                log.info("📋 [DOSSIER] Consultation {} statut non éligible ({}), pas de génération",
+                    consultation.getId(), status);
                 return;
             }
             
-            // Vérifier que l'admission existe
-            Admission admission = consultation.getAdmission();
-            if (admission == null) {
-                log.warn("⚠️ [DOSSIER] Pas d'admission liée à la consultation {}, impossible de vérifier le paiement", 
+            // Note: L'admission est optionnelle - la vérification du paiement utilise les champs directs
+            if (consultation.getAdmission() == null) {
+                log.warn("⚠️ [DOSSIER] Consultation {} sans admission - vérification du paiement via les champs directs",
                     consultation.getId());
-                return;
             }
             
             // Calculer le montant total dû (frais fiche + consultation + examens)
@@ -2050,6 +2071,15 @@ public class ConsultationServiceImpl implements ConsultationService {
             // Vérifier si tout est payé (avec marge de 0.01 pour les arrondis)
             boolean isFullyPaid = totalPaid.compareTo(totalDue) >= 0 || 
                                  totalDue.subtract(totalPaid).compareTo(new BigDecimal("0.01")) <= 0;
+
+            // ✅ FALLBACK: si la facture liée est PAYEE, considérer le paiement confirmé
+            // (cas où ficheAmountPaid/consulAmountPaid ne sont pas renseignés dans l'entité)
+            if (!isFullyPaid && consultation.getInvoice() != null
+                    && consultation.getInvoice().getStatus() == InvoiceStatus.PAYEE) {
+                isFullyPaid = true;
+                log.info("💰 [DOSSIER] Facture {} PAYEE - consultation {} considérée comme payée (fallback facture)",
+                    consultation.getInvoice().getInvoiceCode(), consultation.getId());
+            }
             
             log.info("💰 [DOSSIER] Consultation {} - Total dû: {}, Total payé: {}, Tout payé: {}", 
                 consultation.getId(), totalDue, totalPaid, isFullyPaid);
@@ -2226,6 +2256,21 @@ public class ConsultationServiceImpl implements ConsultationService {
         String generatedBy = auth != null ? auth.getName() : "System";
 
         // Construire le DTO
+        // ✅ Abonnement entreprise
+        Boolean isAbonne = false;
+        String companyName = null;
+        try {
+            if (consultation.getAdmission() != null) {
+                isAbonne = consultation.getAdmission().getIsAbonne() != null
+                        ? consultation.getAdmission().getIsAbonne() : false;
+                if (consultation.getAdmission().getCompany() != null) {
+                    companyName = consultation.getAdmission().getCompany().getName();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Erreur lecture abonnement pour patient journey: {}", e.getMessage());
+        }
+
         PatientJourneyDTO journey = PatientJourneyDTO.builder()
                 // Informations générales
                 .consultationId(consultation.getId())
@@ -2243,6 +2288,10 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .patientAddress(consultation.getPatient() != null ? consultation.getPatient().getAddress() : null)
                 .patientAge(getJourneyPatientAge(consultation.getPatient()))
                 .patientGender(consultation.getPatient() != null && consultation.getPatient().getGender() != null ? consultation.getPatient().getGender().name() : null)
+
+                // Abonnement
+                .isAbonne(isAbonne)
+                .companyName(companyName)
 
                 // Triage
                 .triageInfo(buildTriageInfo(consultation))
@@ -2613,16 +2662,28 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     /**
-     * ✅ Vérifie si le patient a une fiche active (payée dans les 12 derniers mois)
+     * ✅ Vérifie si le patient a une fiche active (facturée dans les 12 derniers mois).
+     * Vérifie à la fois les admissions (registrationFee > 0) et les consultations legacy.
      */
     private boolean hasActiveFiche(Long patientId) {
         LocalDateTime twelveMonthsAgo = LocalDateTime.now().minusMonths(12);
-        
+
+        // 1. Vérifier dans les admissions
+        List<Admission> admissions = admissionRepository.findByPatientId(patientId);
+        for (Admission a : admissions) {
+            if (a.getAdmissionDate() != null && a.getAdmissionDate().isAfter(twelveMonthsAgo)) {
+                if (a.getRegistrationFee() != null && a.getRegistrationFee().compareTo(BigDecimal.ZERO) > 0) {
+                    if (a.getStatus() != null && a.getStatus() != Admission.AdmissionStatus.ANNULE) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 2. Vérifier dans les consultations (compatibilité legacy)
         List<Consultation> consultations = consultationRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
-        
         for (Consultation c : consultations) {
             if (c.getCreatedAt() != null && c.getCreatedAt().isAfter(twelveMonthsAgo)) {
-                // Vérifier si le montant de la fiche a été payé
                 if (c.getFicheAmountPaid() != null && c.getFicheAmountPaid() > 0) {
                     return true;
                 }

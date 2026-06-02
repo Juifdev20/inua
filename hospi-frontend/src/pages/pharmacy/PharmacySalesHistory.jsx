@@ -28,7 +28,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import axios from '../../api/axios.js';
-import hospitalConfigService from '../../services/hospitalConfigService';
+import hospitalConfigService, { defaultHospitalConfig } from '../../services/hospitalConfigService';
+import { resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { getPaidPrescriptions } from '../../services/pharmacyApi/pharmacyApi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -122,28 +124,65 @@ const SaleDetailsModal = ({ sale, onClose }) => {
   };
 
   // ✅ Fonction pour générer PDF de la vente individuelle
-  const handlePrintPDF = () => {
+  const handlePrintPDF = async () => {
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
+      const hospitalConfig = await (async () => {
+        try { return await hospitalConfigService.getConfig() || defaultHospitalConfig; }
+        catch { return defaultHospitalConfig; }
+      })();
 
-      // En-tête
-      doc.setFontSize(20);
-      doc.setTextColor(16, 185, 129);
-      doc.text('REÇU DE VENTE', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+      const hexToRgb = (hex) => {
+        if (!hex) return [16, 185, 129];
+        const c = hex.replace('#', '');
+        const b = parseInt(c, 16);
+        return [(b >> 16) & 255, (b >> 8) & 255, b & 255];
+      };
+      const [r, g, b] = hexToRgb(hospitalConfig.primaryColor);
 
-      // Numéro de commande
-      doc.setFontSize(12);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Commande: ${sale.orderCode}`, doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = doc.internal.pageSize.getWidth();
+      let currentY = 10;
+
+      // Logo
+      if (hospitalConfig.enableLogoOnDocuments && hospitalConfig.hospitalLogoUrl) {
+        try {
+          const absUrl = resolveLogoUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL);
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = absUrl;
+          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width; canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          const logoH = 15, logoW = logoH * (img.width / img.height);
+          doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, currentY, logoW, logoH);
+        } catch { /* ignore */ }
+      }
+
+      // Nom hôpital
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(r, g, b);
+      doc.text(hospitalConfig.hospitalName || 'HÔPITAL', 15, currentY + 18);
+      if (hospitalConfig.phoneNumber || hospitalConfig.email) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+        doc.text([hospitalConfig.phoneNumber, hospitalConfig.email].filter(Boolean).join(' | '), 15, currentY + 23);
+      }
+      currentY += 28;
 
       // Ligne séparatrice
-      doc.setDrawColor(16, 185, 129);
-      doc.setLineWidth(0.5);
-      doc.line(20, 35, doc.internal.pageSize.getWidth() - 20, 35);
+      doc.setFillColor(r, g, b); doc.rect(0, currentY, pdfWidth, 1, 'F');
+      currentY += 6;
+
+      // Titre
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(r, g, b);
+      doc.text('REÇU DE VENTE', pdfWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+
+      // Numéro de commande
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Commande: ${sale.orderCode}`, pdfWidth / 2, currentY, { align: 'center' });
+      currentY += 8;
 
       // Informations générales
       doc.setFontSize(11);
@@ -151,7 +190,6 @@ const SaleDetailsModal = ({ sale, onClose }) => {
       
       const clientName = sale.patientName || sale.customerName || 'Client comptoir';
       const leftX = 20;
-      let currentY = 45;
 
       doc.text(`Date: ${sale.createdAt ? format(parseISO(sale.createdAt), 'dd/MM/yyyy HH:mm') : '-'}`, leftX, currentY);
       currentY += 8;
@@ -205,7 +243,7 @@ const SaleDetailsModal = ({ sale, onClose }) => {
 
       currentY += 10;
       doc.setFontSize(14);
-      doc.setTextColor(16, 185, 129);
+      doc.setTextColor(r, g, b);
       doc.setFont(undefined, 'bold');
       doc.text('TOTAL:', 120, currentY);
       doc.text(`${formatCurrencyPDF(sale.totalAmount)}`, 180, currentY, { align: 'right' });
@@ -213,7 +251,7 @@ const SaleDetailsModal = ({ sale, onClose }) => {
       if (sale.amountPaid) {
         currentY += 8;
         doc.setFontSize(10);
-        doc.setTextColor(16, 185, 129);
+        doc.setTextColor(r, g, b);
         doc.setFont(undefined, 'normal');
         doc.text(`Montant payé: ${formatCurrencyPDF(sale.amountPaid)}`, 120, currentY);
       }
@@ -835,7 +873,7 @@ const ExportModal = ({ sales, totalSales, totalItems, startDate, endDate, onClos
       try {
         hospitalConfig = await hospitalConfigService.getConfig();
       } catch (error) {
-        hospitalConfig = hospitalConfigService.getDefaultConfig();
+        hospitalConfig = defaultHospitalConfig;
       }
 
       // Conversion couleur hex en RGB
@@ -880,22 +918,24 @@ const ExportModal = ({ sales, totalSales, totalItems, startDate, endDate, onClos
       // Logo (si activé) - plus compact
       if (hospitalConfig.enableLogoOnDocuments && hospitalConfig.hospitalLogoUrl) {
         try {
+          const absoluteLogoUrl = resolveLogoUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL);
           const img = new Image();
-          img.src = hospitalConfig.hospitalLogoUrl;
+          img.crossOrigin = 'anonymous';
+          img.src = absoluteLogoUrl;
           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
           
-          const maxLogoHeight = 18; // mm - réduit
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/png');
+
+          const maxLogoHeight = 18;
           const imgRatio = img.width / img.height;
           const logoHeight = maxLogoHeight;
           const logoWidth = logoHeight * imgRatio;
           
-          let imgFormat = 'PNG';
-          if (hospitalConfig.hospitalLogoUrl.toLowerCase().includes('.jpg') || 
-              hospitalConfig.hospitalLogoUrl.toLowerCase().includes('.jpeg')) {
-            imgFormat = 'JPEG';
-          }
-          
-          doc.addImage(hospitalConfig.hospitalLogoUrl, imgFormat, margin, currentY, logoWidth, logoHeight);
+          doc.addImage(dataUrl, 'PNG', margin, currentY, logoWidth, logoHeight);
           currentY += logoHeight + 4;
         } catch (e) {
           // Continue sans logo
@@ -987,25 +1027,25 @@ const ExportModal = ({ sales, totalSales, totalItems, startDate, endDate, onClos
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       
-      // Colonne 1: Total Prescriptions (bleu)
+      // Colonne 1: Total Prescriptions
       doc.text('TOTAL PRESCRIPTIONS', startX + colWidth/2, summaryY, { align: 'center' });
       doc.setFontSize(14);
-      doc.setTextColor(59, 130, 246); // Bleu
+      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
       doc.text(`$${totalPrescriptions.toFixed(2)}`, startX + colWidth/2, summaryY + 6, { align: 'center' });
       doc.setFontSize(8);
       doc.text(`${prescriptionSales.length} vente(s)`, startX + colWidth/2, summaryY + 10, { align: 'center' });
 
-      // Colonne 2: Total Ventes Directes (vert)
+      // Colonne 2: Total Ventes Directes
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text('TOTAL VENTES DIRECTES', startX + colWidth + colWidth/2, summaryY, { align: 'center' });
       doc.setFontSize(14);
-      doc.setTextColor(16, 185, 129); // Vert
+      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
       doc.text(`$${totalDirectSales.toFixed(2)}`, startX + colWidth + colWidth/2, summaryY + 6, { align: 'center' });
       doc.setFontSize(8);
       doc.text(`${directSales.length} vente(s)`, startX + colWidth + colWidth/2, summaryY + 10, { align: 'center' });
 
-      // Colonne 3: Total Général (bleu foncé)
+      // Colonne 3: Total Général
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text('TOTAL GENERAL', startX + 2*colWidth + colWidth/2, summaryY, { align: 'center' });
@@ -1056,7 +1096,7 @@ const ExportModal = ({ sales, totalSales, totalItems, startDate, endDate, onClos
         body: tableData,
         theme: 'striped',
         headStyles: {
-          fillColor: [59, 130, 246],
+          fillColor: [primaryColor.r, primaryColor.g, primaryColor.b],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           fontSize: 9,

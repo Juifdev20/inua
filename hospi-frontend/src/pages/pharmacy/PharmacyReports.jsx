@@ -58,7 +58,9 @@ import {
   getPaymentMethods,
   getFinancialAnalysis
 } from '../../services/pharmacyApi/pharmacyApi.js';
-import hospitalConfigService from '../../services/hospitalConfigService';
+import hospitalConfigService, { defaultHospitalConfig } from '../../services/hospitalConfigService';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -1148,18 +1150,8 @@ const PharmacyReports = () => {
         }
       }
       
-      // Fallback aux valeurs par défaut
       if (!hospitalConfig) {
-        hospitalConfig = {
-          hospitalName: 'INUA AFYA',
-          ministryName: 'MINISTERE DE LA SANTE',
-          departmentName: 'DEPARTEMENT DE LA SANTE PUBLIQUE',
-          zoneName: 'ZONE RURALE DE BENI',
-          primaryColor: '#059669',
-          address: 'Boulevard du 30 Juin, Beni, RDC',
-          phoneNumber: '+243 000 000 000',
-          email: 'contact@inuafia.com'
-        };
+        hospitalConfig = defaultHospitalConfig;
       }
       
       // Debug: voir ce qui est chargé
@@ -1180,210 +1172,229 @@ const PharmacyReports = () => {
       const doc = new jsPDF('landscape');
       const pdfWidth = doc.internal.pageSize.getWidth();
       
-      // 🏥 EN-TÊTE ÉLÉGANT avec configuration admin complète
-      const margin = 15;
-      let currentY = 8;
-      
-      // Ligne ministère/departement/zone en HAUT et CENTRÉE
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(80, 80, 80);
-      const topInfo = [hospitalConfig.ministryName, hospitalConfig.departmentName, hospitalConfig.zoneName, hospitalConfig.region]
-        .filter(Boolean).join(' | ');
-      if (topInfo) {
-        doc.text(topInfo.toUpperCase(), pdfWidth / 2, currentY + 3, { align: 'center' });
-        currentY += 8; // Espace après la ligne du haut
-      }
-      
-      // Fonction helper pour charger l'image avec promesse
-      const loadImage = (url) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = url;
-        });
-      };
-      
-      // Logo si disponible et activé (meilleure qualité et ratio)
-      let hasLogo = false;
+      // ═══════════════════════════════════════════════════════
+      // ZONE A — EN-TÊTE COMPACT (y: 0 → 30)
+      const margin = 14;
+      const ph = doc.internal.pageSize.getHeight();
+      const hospitalName = hospitalConfig.hospitalName || 'HÔPITAL';
+
+      doc.setFillColor(247, 249, 250);
+      doc.rect(0, 0, pdfWidth, 30, 'F');
+      doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.setLineWidth(0.8);
+      doc.line(0, 30, pdfWidth, 30);
+
+      // Logo (gauche)
+      let textStartX = margin;
       if (hospitalConfig.hospitalLogoUrl && hospitalConfig.enableLogoOnDocuments !== false) {
-        try {
-          const logoUrl = hospitalConfig.hospitalLogoUrl;
-          
-          // Précharger l'image pour obtenir les dimensions réelles
-          const img = await loadImage(logoUrl);
-          
-          // Dimensions max - LOGO ENCORE PLUS GRAND
-          const maxLogoHeight = 45; // mm - ENCORE PLUS GRAND
-          const maxLogoWidth = 45;  // mm - ENCORE PLUS GRAND
-          
-          // Calculer dimensions en conservant le ratio
-          let logoWidth = maxLogoWidth;
-          let logoHeight = maxLogoHeight;
-          
-          if (img.width && img.height) {
-            const ratio = img.width / img.height;
-            if (ratio > 1) {
-              // Image plus large que haute
-              logoWidth = maxLogoWidth;
-              logoHeight = maxLogoWidth / ratio;
-            } else {
-              // Image plus haute que large
-              logoHeight = maxLogoHeight;
-              logoWidth = maxLogoHeight * ratio;
-            }
-          }
-          
-          // Détecter le format de l'image
-          let imgFormat = 'PNG';
-          if (logoUrl.toLowerCase().includes('.jpg') || logoUrl.toLowerCase().includes('.jpeg')) {
-            imgFormat = 'JPEG';
-          } else if (logoUrl.toLowerCase().includes('.webp')) {
-            imgFormat = 'PNG';
-          }
-          
-          // Ajouter le logo avec dimensions calculées
-          doc.addImage(logoUrl, imgFormat, margin, currentY, logoWidth, logoHeight);
-          hasLogo = true;
-          currentY += logoHeight + 3; // Petit espace après logo
-          
-          console.log('✅ Logo ajouté:', logoWidth.toFixed(1), 'x', logoHeight.toFixed(1), 'mm (ratio:', (img.width/img.height).toFixed(2), ')');
-        } catch (e) {
-          console.log('❌ Logo non chargé:', e.message);
-          hasLogo = false;
+        const logoDataUrl = await loadLogoAsDataUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL);
+        if (logoDataUrl) {
+          const img = new Image();
+          img.src = logoDataUrl;
+          await new Promise(res => { img.onload = res; });
+          const logoH = 22;
+          const logoW = logoH * (img.width / img.height);
+          doc.addImage(logoDataUrl, 'PNG', margin, 4, logoW, logoH);
+          textStartX = margin + logoW + 5;
         }
       }
-      
-      // Zone de texte alignée à GAUCHE comme le logo
-      const textX = margin; // Aligné à gauche avec le logo
-      const textAlign = 'left';
-      
-      // Titre de l'hôpital - GRAND et aligné gauche
+
+      // Nom hôpital + subtitle
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
+      doc.setFontSize(13);
       doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      const hospitalName = hospitalConfig.hospitalName || 'INUA AFYA';
-      doc.text(hospitalName.toUpperCase(), textX, currentY + 18, { align: textAlign });
-      
-      // Sous-titre / slogan
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(11);
+      doc.text(hospitalName.toUpperCase(), textStartX, 13);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      const subtitle = hospitalConfig.headerSubtitle || 'Système de Gestion Hospitalière';
-      doc.text(subtitle, textX, currentY + 26, { align: textAlign });
-      
-      // Code établissement si disponible
+      doc.text(hospitalConfig.headerSubtitle || 'Système de Gestion Hospitalière', textStartX, 19);
       if (hospitalConfig.hospitalCode) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`Code Établissement: ${hospitalConfig.hospitalCode}`, textX, currentY + 32, { align: textAlign });
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`Code: ${hospitalConfig.hospitalCode}`, textStartX, 24);
+      }
+
+      // Contacts (droite)
+      doc.setFontSize(7.5);
+      doc.setTextColor(80, 80, 80);
+      const contactLines = [
+        hospitalConfig.address,
+        [hospitalConfig.phoneNumber, hospitalConfig.email].filter(Boolean).join('  |  '),
+      ].filter(Boolean);
+      contactLines.forEach((line, i) => { doc.text(line, pdfWidth - margin, 12 + i * 6, { align: 'right' }); });
+
+      // ═══════════════════════════════════════════════════════
+      // ZONE B — BANDE TITRE (y: 31 → 45)
+      doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.rect(0, 31, pdfWidth, 14, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      const tabLabel = { sales: 'RAPPORT DES VENTES', stock: 'RAPPORT DES STOCKS', financial: 'RAPPORT FINANCIER' };
+      doc.text(tabLabel[activeTab] || 'RAPPORT PHARMACIE', pdfWidth / 2, 39, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(
+        `Période: ${format(dateRange.startDate, 'dd/MM/yyyy')} — ${format(dateRange.endDate, 'dd/MM/yyyy')}`,
+        pdfWidth / 2, 43.5, { align: 'center' }
+      );
+
+      const titleY = 48;
+      
+      // Tableau dynamique selon l'onglet
+      const tabData = reportData[activeTab] || {};
+      let tableStartY = titleY + 12;
+      const kpiW = (pdfWidth - 2 * margin) / 4;
+
+      if (activeTab === 'sales') {
+        const stats = tabData.stats || {};
+        const sales = tabData.sales || [];
+        [
+          { label: 'Ventes Totales', value: `$${(stats.totalSales || 0).toFixed(2)}` },
+          { label: 'Commandes', value: String(stats.totalOrders || 0) },
+          { label: 'Panier Moyen', value: `$${(stats.averageOrderValue || 0).toFixed(2)}` },
+          { label: 'Produits Vendus', value: String(stats.totalItems || 0) },
+        ].forEach((kpi, i) => {
+          const kx = margin + i * kpiW;
+          doc.setFillColor(248, 250, 252); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
+          doc.rect(kx, tableStartY, kpiW - 2, 14, 'FD');
+          doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.rect(kx, tableStartY, kpiW - 2, 2, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.text(kpi.value, kx + (kpiW - 2) / 2, tableStartY + 8, { align: 'center' });
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(100, 100, 100);
+          doc.text(kpi.label, kx + (kpiW - 2) / 2, tableStartY + 12, { align: 'center' });
+        });
+        tableStartY += 18;
+        const tableRows = sales.slice(0, 20).map(s => [
+          s.saleCode || s.id || '—',
+          s.patientName || s.customerName || '—',
+          s.medicationName || '—',
+          String(s.quantity || 0),
+          `$${(s.totalAmount || 0).toFixed(2)}`,
+          s.paymentMethod || '—',
+          s.status || '—',
+        ]);
+        autoTable(doc, {
+          startY: tableStartY,
+          head: [['Code', 'Client', 'Médicament', 'Qty', 'Montant', 'Paiement', 'Statut']],
+          body: tableRows,
+          styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
+          headStyles: { fillColor: [primaryColor.r, primaryColor.g, primaryColor.b], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
+          alternateRowStyles: { fillColor: [250, 252, 250] },
+          columnStyles: {
+            0: { cellWidth: 28 }, 1: { cellWidth: 38 }, 2: { cellWidth: 44 },
+            3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 22, halign: 'right' },
+            5: { cellWidth: 24, halign: 'center' }, 6: { cellWidth: 'auto', halign: 'center' },
+          },
+          margin: { left: margin, right: margin },
+        });
+      } else if (activeTab === 'stock') {
+        const stockMetrics = tabData.stockMetrics || {};
+        const alerts = tabData.stockAlerts || [];
+        [
+          { label: 'Valuation Stock', value: `$${(stockMetrics.stockValuation || 0).toLocaleString()}` },
+          { label: 'Articles', value: String(stockMetrics.totalItems || 0) },
+          { label: 'Alertes', value: String(stockMetrics.alertsCount || 0) },
+          { label: 'Rotation', value: stockMetrics.averageRotation || '—' },
+        ].forEach((kpi, i) => {
+          const kx = margin + i * kpiW;
+          doc.setFillColor(248, 250, 252); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
+          doc.rect(kx, tableStartY, kpiW - 2, 14, 'FD');
+          doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.rect(kx, tableStartY, kpiW - 2, 2, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.text(kpi.value, kx + (kpiW - 2) / 2, tableStartY + 8, { align: 'center' });
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(100, 100, 100);
+          doc.text(kpi.label, kx + (kpiW - 2) / 2, tableStartY + 12, { align: 'center' });
+        });
+        tableStartY += 18;
+        const tableRows = alerts.slice(0, 20).map(a => [
+          a.medicationCode || a.productCode || '—',
+          a.medicationName || a.productName || '—',
+          String(a.currentStock || 0),
+          String(a.minStock || 0),
+          String(a.recommendedQuantity || 0),
+          a.status || 'ALERTE',
+        ]);
+        autoTable(doc, {
+          startY: tableStartY,
+          head: [['Code', 'Produit', 'Stock', 'Min', 'Recommandé', 'Statut']],
+          body: tableRows,
+          styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
+          headStyles: { fillColor: [primaryColor.r, primaryColor.g, primaryColor.b], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
+          alternateRowStyles: { fillColor: [250, 252, 250] },
+          columnStyles: {
+            0: { cellWidth: 28 }, 1: { cellWidth: 'auto' },
+            2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 20, halign: 'center' },
+            4: { cellWidth: 24, halign: 'center' }, 5: { cellWidth: 24, halign: 'center' },
+          },
+          margin: { left: margin, right: margin },
+        });
+      } else {
+        const data = tabData.data || tabData;
+        const metrics = [
+          { label: 'Revenus', value: `$${(data.totalRevenue || 0).toFixed(2)}` },
+          { label: 'Dépenses', value: `$${(data.totalExpenses || 0).toFixed(2)}` },
+          { label: 'Bénéfice', value: `$${(data.profit || 0).toFixed(2)}` },
+          { label: 'Marge', value: `${(data.marginPercent || 0).toFixed(1)}%` },
+        ];
+        metrics.forEach((kpi, i) => {
+          const kx = margin + i * kpiW;
+          doc.setFillColor(248, 250, 252); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
+          doc.rect(kx, tableStartY, kpiW - 2, 14, 'FD');
+          doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.rect(kx, tableStartY, kpiW - 2, 2, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+          doc.text(kpi.value, kx + (kpiW - 2) / 2, tableStartY + 8, { align: 'center' });
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(100, 100, 100);
+          doc.text(kpi.label, kx + (kpiW - 2) / 2, tableStartY + 12, { align: 'center' });
+        });
+        tableStartY += 18;
+        autoTable(doc, {
+          startY: tableStartY,
+          head: [['Métrique', 'Valeur']],
+          body: metrics.map(m => [m.label, m.value]),
+          styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.2 },
+          headStyles: { fillColor: [primaryColor.r, primaryColor.g, primaryColor.b], textColor: 255, fontStyle: 'bold', fontSize: 9, cellPadding: 3 },
+          alternateRowStyles: { fillColor: [250, 252, 250] },
+          margin: { left: margin, right: margin },
+        });
       }
       
-      // Informations de contact alignées à gauche (AU DESSUS de la barre)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(60, 60, 60);
-      const address = hospitalConfig.address || 'Boulevard du 30 Juin, Beni, RDC';
-      const phone = hospitalConfig.phoneNumber || '+243 000 000 000';
-      const email = hospitalConfig.email || 'contact@inuafia.com';
-      const website = hospitalConfig.website || '';
-      const city = hospitalConfig.city || '';
-      const country = hospitalConfig.country || '';
-      const postalCode = hospitalConfig.postalCode || '';
-      
-      // Adresse complète alignée gauche (au dessus de la barre)
-      let fullAddress = address;
-      if (city) fullAddress += `, ${city}`;
-      if (country) fullAddress += `, ${country.toUpperCase()}`;
-      if (postalCode) fullAddress += ` - ${postalCode}`;
-      doc.text(fullAddress, textX, currentY + 40, { align: textAlign });
-      
-      // Contact aligné gauche (au dessus de la barre)
-      let contactLine = `Tél: ${phone}`;
-      if (email) contactLine += ` | Email: ${email}`;
-      if (website) contactLine += ` | Web: ${website}`;
-      doc.text(contactLine, textX, currentY + 48, { align: textAlign });
-      
-      // Ligne séparatrice épaisse (pleine largeur) - EN DESSOUS de l'adresse/contact
-      doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.setLineWidth(2);
-      const separatorY = currentY + 55;
-      doc.line(margin, separatorY, pdfWidth - margin, separatorY);
-      
-      // Titre du rapport (en dessous de la barre)
-      const titleY = separatorY + 12;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.text('RAPPORT PHARMACIE', pdfWidth / 2, titleY, { align: 'center' });
-      
-      // Période
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      const periodText = `Période: ${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`;
-      doc.text(periodText, pdfWidth / 2, titleY + 7, { align: 'center' });
-      
-      // Table
-      autoTable(doc, {
-        startY: titleY + 12,
-        head: [['Métrique', 'Valeur', 'Évolution']],
-        body: [
-          ['Ventes Totales', '$45,230', '+12%'],
-          ['Commandes', '156', '+8%'],
-          ['Panier Moyen', '$45.50', '+5%'],
-          ['Stock Faible', '23', '-15%']
-        ],
-        theme: 'striped',
-        headStyles: { 
-          fillColor: [primaryColor.r, primaryColor.g, primaryColor.b], 
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        styles: { fontSize: 10, cellPadding: 3 },
-        margin: { left: 15, right: 15 },
-        alternateRowStyles: { fillColor: [250, 250, 250] }
-      });
-      
-      // 📄 PIED DE PAGE avec branding (style facture)
-      const footerY = doc.internal.pageSize.getHeight() - 35;
-      
-      // Ligne de séparation horizontale en haut du footer
-      doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.setLineWidth(0.5);
-      doc.line(margin, footerY, pdfWidth - margin, footerY);
-      
-      // © Nom de l'application (INUA AFYA)
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
-      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-      doc.text('© INUA AFYA - Tous droits réservés', pdfWidth / 2, footerY + 8, { align: 'center' });
-      
-      // Nom de l'hôpital
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
-      doc.text(`- ${hospitalConfig.hospitalName || 'CLINIQUE CI UCBC'} -`, pdfWidth / 2, footerY + 16, { align: 'center' });
-      
-      // Lignes de signature
-      const signatureY = doc.internal.pageSize.getHeight() - 12;
-      
-      // Signature Client (gauche)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Signature Client', margin + 20, signatureY - 8);
-      // Ligne pour signature
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.3);
-      doc.line(margin + 20, signatureY - 2, margin + 80, signatureY - 2);
-      
-      // Signature & Cachet (droite)
-      doc.text('Signature & Cachet', pdfWidth - margin - 80, signatureY - 8);
-      // Ligne pour signature
-      doc.line(pdfWidth - margin - 80, signatureY - 2, pdfWidth - margin - 20, signatureY - 2);
+      // ═══════════════════════════════════════════════════════
+      // FOOTER & SIGNATURES — Position dynamique après le tableau
+      const finalY = (doc.lastAutoTable?.finalY || 120) + 14;
+      const sigY = finalY + 4;
+
+      if (sigY < doc.internal.pageSize.getHeight() - 30) {
+        doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setLineWidth(0.4);
+        doc.line(margin, sigY, pdfWidth - margin, sigY);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Signature Client', margin + 2, sigY + 8);
+        doc.text('Signature & Cachet', pdfWidth - margin - 2, sigY + 8, { align: 'right' });
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(margin + 2, sigY + 14, margin + 55, sigY + 14);
+        doc.line(pdfWidth - margin - 55, sigY + 14, pdfWidth - margin - 2, sigY + 14);
+      }
+
+      // Pied de page (toutes les pages)
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+        doc.setLineWidth(0.4);
+        doc.line(margin, ph - 10, pdfWidth - margin, ph - 10);
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Généré le ${new Date().toLocaleString('fr-FR')}  —  ${hospitalConfig.footerText || hospitalName}`, margin, ph - 6);
+        doc.text(`Page ${i} / ${pageCount}`, pdfWidth - margin, ph - 6, { align: 'right' });
+      }
       
       doc.save(`rapport_pharmacie_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
       toast.success('Rapport PDF généré avec succès !');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import financeApi from '../../services/financeApi/financeApi.js';
+import { useFinanceOffline } from '../../hooks/offline';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ const PAYMENT_METHODS = {
 const Revenues = () => {
   const { t } = useTranslation();
   const { config } = useHospitalConfig();
+  const { getRevenues, isOnline } = useFinanceOffline();
   const [revenues, setRevenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState('all');
@@ -60,6 +61,25 @@ const Revenues = () => {
     description: ''
   });
   const [stats, setStats] = useState({ today: { CDF: 0, USD: 0 }, monthly: { CDF: 0, USD: 0 }, total: { CDF: 0, USD: 0 } });
+  const [logoBase64, setLogoBase64] = useState(null);
+
+  // ═══════════════════════════════════════
+  // PRÉCHARGER LE LOGO EN BASE64 POUR L'IMPRESSION
+  // ═══════════════════════════════════════
+  useEffect(() => {
+    if (!config?.hospitalLogoUrl || config?.enableLogoOnDocuments === false) return;
+    const load = async () => {
+      try {
+        const { loadLogoAsDataUrl } = await import('../../utils/printUtils');
+        const { API_BASE_URL } = await import('../../config/environment.js');
+        const dataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (dataUrl) setLogoBase64(dataUrl);
+      } catch (e) {
+        console.error('Logo load error:', e);
+      }
+    };
+    load();
+  }, [config?.hospitalLogoUrl, config?.enableLogoOnDocuments]);
 
   // ═══════════════════════════════════════
   // CALCUL DES STATS
@@ -124,14 +144,15 @@ const Revenues = () => {
   const loadRevenues = async () => {
     try {
       setLoading(true);
-      const response = await financeApi.getRevenues({
-        source: sourceFilter !== 'all' ? sourceFilter : null,
-        size: 100
-      });
-      const arr = response?.content || response?.data?.content || response?.data || response || [];
+      const result = await getRevenues();
+      const arr = result?.data || [];
       const revenuesList = Array.isArray(arr) ? arr : [];
       setRevenues(revenuesList);
       calculateStats(revenuesList);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : revenus locaux chargés');
+      }
     } catch (error) {
       console.error('Error loading revenues:', error);
       toast.error(t('errors.loadRevenues') || 'Erreur de chargement des entrées');
@@ -651,94 +672,99 @@ const Revenues = () => {
 
       {/* ══════ ZONE D'IMPRESSION (Invisible à l'écran) ══════ */}
       <div className="hidden print:block print-area">
-        <div className="bg-white text-black p-8 font-serif leading-tight">
-          {/* ENTÊTE OFFICIELLE */}
-          <div className="text-center space-y-1 border-b-2 border-black pb-4 mb-6">
-            {config?.hospitalLogoUrl && (
-              <div className="flex justify-center mb-2">
-                <img src={config.hospitalLogoUrl} alt={config.hospitalName} className="h-16 object-contain" />
+        <div style={{ background: 'white', color: 'black', padding: '16px', fontFamily: 'sans-serif', lineHeight: 1.2 }}>
+          {/* ENTÊTE — UNE SEULE LIGNE HORIZONTALE */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `2px solid ${config?.primaryColor || '#059669'}`, paddingBottom: '8px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {logoBase64 && (
+                <div style={{ width: '32px', height: '32px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <img src={logoBase64} alt="" style={{ maxHeight: '32px', maxWidth: '32px', objectFit: 'contain', display: 'block' }} />
+                </div>
+              )}
+              <div>
+                <h1 style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', margin: 0, lineHeight: 1.1, color: config?.primaryColor || '#059669' }}>
+                  {config?.hospitalName || 'CLINIQUE'}
+                </h1>
+                <p style={{ fontSize: '7px', color: '#6b7280', margin: 0, lineHeight: 1.2 }}>{[config?.phoneNumber, config?.email].filter(Boolean).join(' | ')}</p>
               </div>
-            )}
-            <h1 className="text-xl font-bold uppercase">{config?.country || 'République Démocratique du Congo'}</h1>
-            <h2 className="text-lg font-semibold uppercase">{config?.departmentName || 'Ministère de la Santé Publique'}</h2>
-            <div className="flex justify-between text-xs font-medium px-4">
-              <span>PROVINCE : {config?.region || '........................'}</span>
-              <span>VILLE : {config?.city || '........................'}</span>
             </div>
-            <div className="flex justify-between text-xs font-medium px-4 mt-1">
-              <span>HÔPITAL : {config?.hospitalName || '........................'}</span>
-              <span>DATE : {format(new Date(), 'dd/MM/yyyy')}</span>
+            <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+              <p style={{ fontSize: '7px', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>{[config?.ministryName, config?.departmentName].filter(Boolean).join(' | ')}</p>
+              <p style={{ fontSize: '7px', color: '#9ca3af', margin: 0 }}>{[config?.zoneName, config?.region, config?.city].filter(Boolean).join(' | ')}</p>
             </div>
-            <div className="mt-4 inline-block border-2 border-black px-6 py-1 font-black text-lg">
-              RAPPORT DES REVENUS
-            </div>
+          </div>
+
+          {/* BANDE TITRE */}
+          <div style={{ textAlign: 'center', marginBottom: '10px', padding: '4px 0', backgroundColor: config?.primaryColor || '#059669' }}>
+            <h2 style={{ color: 'white', fontWeight: 900, fontSize: '12px', textTransform: 'uppercase', margin: 0, letterSpacing: '0.5px' }}>Rapport des Revenus</h2>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '7px', margin: '2px 0 0 0' }}>Généré le {format(new Date(), 'dd/MM/yyyy à HH:mm')}</p>
           </div>
 
           {/* RÉSUMÉ STATISTIQUE */}
-          <div className="mb-6 p-4 border-2 border-black">
-            <h3 className="font-bold text-sm uppercase mb-2 underline">Résumé Statistique</h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="font-bold text-emerald-600">Aujourd'hui</p>
-                <p>CDF: {formatCurrency(stats.today?.CDF || 0, 'CDF')}</p>
-                <p>USD: {formatCurrency(stats.today?.USD || 0, 'USD')}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+            {[
+              { label: "Aujourd'hui", data: stats.today },
+              { label: 'Ce Mois', data: stats.monthly },
+              { label: 'Total', data: stats.total },
+            ].map((s, i) => (
+              <div key={i} style={{ border: `1px solid ${config?.primaryColor || '#059669'}`, borderTopWidth: '2px', borderRadius: '4px', padding: '6px', textAlign: 'center' }}>
+                <p style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', margin: '0 0 2px 0' }}>{s.label}</p>
+                <p style={{ fontSize: '10px', fontWeight: 900, color: config?.primaryColor || '#059669', margin: 0, lineHeight: 1.2 }}>
+                  CDF {formatCurrency(s.data?.CDF || 0, 'CDF')}
+                </p>
+                <p style={{ fontSize: '8px', color: '#9ca3af', margin: '2px 0 0 0', lineHeight: 1.2 }}>
+                  USD {formatCurrency(s.data?.USD || 0, 'USD')}
+                </p>
               </div>
-              <div>
-                <p className="font-bold text-blue-600">Ce Mois</p>
-                <p>CDF: {formatCurrency(stats.monthly?.CDF || 0, 'CDF')}</p>
-                <p>USD: {formatCurrency(stats.monthly?.USD || 0, 'USD')}</p>
-              </div>
-              <div>
-                <p className="font-bold text-violet-600">Total</p>
-                <p>CDF: {formatCurrency(stats.total?.CDF || 0, 'CDF')}</p>
-                <p>USD: {formatCurrency(stats.total?.USD || 0, 'USD')}</p>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* TABLEAU DES REVENUS */}
-          <div className="border-2 border-black">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 border-b border-black">
-                  <th className="p-2 text-left border-r border-black">Date</th>
-                  <th className="p-2 text-left border-r border-black">Description</th>
-                  <th className="p-2 text-left border-r border-black">Source</th>
-                  <th className="p-2 text-left border-r border-black">Devise</th>
-                  <th className="p-2 text-right">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                {revenues.map((revenue) => {
-                  const srcConfig = REVENUE_SOURCES[revenue.source] || { label: revenue.source };
-                  return (
-                    <tr key={revenue.id} className="border-b border-black">
-                      <td className="p-2 border-r border-black">
-                        {revenue.date ? format(new Date(revenue.date), 'dd/MM/yyyy HH:mm') : '--'}
-                      </td>
-                      <td className="p-2 border-r border-black">
-                        {revenue.description || 'Sans description'}
-                      </td>
-                      <td className="p-2 border-r border-black">
-                        {srcConfig.label}
-                      </td>
-                      <td className="p-2 border-r border-black">
-                        {revenue.currency || 'CDF'}
-                      </td>
-                      <td className="p-2 text-right font-bold">
-                        {formatCurrency(revenue.amount, revenue.currency || 'CDF')}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <table style={{ width: '100%', fontSize: '9px', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: config?.primaryColor || '#059669' }}>
+                {['Date', 'Description', 'Source', 'Devise', 'Montant'].map((h) => (
+                  <th key={h} style={{ padding: '3px 4px', textAlign: 'left', color: 'white', fontWeight: 700, border: '1px solid rgba(255,255,255,0.2)', fontSize: '8px' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {revenues.map((revenue, idx) => {
+                const srcConfig = REVENUE_SOURCES[revenue.source] || { label: revenue.source };
+                return (
+                  <tr key={revenue.id} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                    <td style={{ padding: '3px 4px', borderRight: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>
+                      {revenue.date ? format(new Date(revenue.date), 'dd/MM/yy HH:mm') : '--'}
+                    </td>
+                    <td style={{ padding: '3px 4px', borderRight: '1px solid #e5e7eb' }}>{revenue.description || '—'}</td>
+                    <td style={{ padding: '3px 4px', borderRight: '1px solid #e5e7eb' }}>{srcConfig.label}</td>
+                    <td style={{ padding: '3px 4px', borderRight: '1px solid #e5e7eb' }}>{revenue.currency || 'CDF'}</td>
+                    <td style={{ padding: '3px 4px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                      {formatCurrency(revenue.amount, revenue.currency || 'CDF')}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
 
           {/* SIGNATURE */}
-          <div className="mt-12 text-center text-[10px] uppercase">
-            <p className="italic underline mb-8">Le Caissier</p>
-            <p className="border-t border-black pt-2 font-bold">Validé numériquement</p>
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#6b7280' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontStyle: 'italic', margin: '0 0 16px 0' }}>Le Caissier</p>
+              <div style={{ width: '120px', borderTop: '1px solid #9ca3af', paddingTop: '2px' }}>Signature</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontStyle: 'italic', margin: '0 0 16px 0' }}>Le Directeur</p>
+              <div style={{ width: '120px', borderTop: '1px solid #9ca3af', paddingTop: '2px' }}>Signature & Cachet</div>
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div style={{ marginTop: '16px', paddingTop: '4px', borderTop: `1px solid ${config?.primaryColor || '#059669'}`, textAlign: 'center', fontSize: '7px', color: '#9ca3af' }}>
+            <p style={{ margin: 0 }}>Document généré par {config?.hospitalName || 'INUA AFYA'} — {config?.footerText || 'Tous droits réservés'}</p>
           </div>
         </div>
       </div>
@@ -746,7 +772,7 @@ const Revenues = () => {
       {/* STYLE CSS POUR L'IMPRESSION */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body * { visibility: hidden; background: white !important; color: black !important; }
+          body * { visibility: hidden; background: white !important; }
           .print-area, .print-area * { visibility: visible; }
           .print-area { 
             position: absolute; 
@@ -754,7 +780,7 @@ const Revenues = () => {
             top: 0; 
             width: 100%; 
           }
-          @page { size: A4; margin: 1cm; }
+          @page { size: A4; margin: 12mm; }
         }
       `}} />
     </div>

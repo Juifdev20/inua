@@ -12,8 +12,8 @@ import {
   DialogPortal,
   DialogOverlay
 } from "@/components/ui/dialog";
-import { patientService } from '@/services/patientService';
-import { admissionService } from '@/services/admissionService';
+import { usePatientsOffline } from '@/hooks/offline';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 import pricingService from '@/services/pricingService';
 import {
   Plus,
@@ -71,6 +71,8 @@ const formatCurrency = (amount) =>
 
 export const Admissions = () => {
   const { theme } = useTheme();
+  const { getPatients, searchPatients, createPatient, updatePatient, isOnline } = usePatientsOffline();
+  const { execute } = useOfflineSync();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState([]);
@@ -117,6 +119,8 @@ export const Admissions = () => {
   const [companies, setCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [matricule, setMatricule] = useState('');
+  const [subscriberName, setSubscriberName] = useState('');
+  const [beneficiaryName, setBeneficiaryName] = useState('');
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [employeeInfo, setEmployeeInfo] = useState(null);
 
@@ -141,9 +145,21 @@ export const Admissions = () => {
   // ═══════════════════════════════════════
   const fetchDashboardData = async () => {
     try {
-      const response = await admissionService.getDashboardStats();
-      if (response && response.recentConsultations) {
-        setAdmissionsToday(response.recentConsultations || []);
+      const result = await execute({
+        apiCall: async () => {
+          const response = await fetch('/api/v1/admissions/dashboard');
+          return response.json();
+        },
+        tableName: 'admissions',
+        action: 'read',
+      });
+      
+      if (result.data && result.data.recentConsultations) {
+        setAdmissionsToday(result.data.recentConsultations || []);
+      }
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : admissions locales chargées');
       }
     } catch (error) {
       console.error('Erreur chargement dashboard:', error);
@@ -196,10 +212,10 @@ export const Admissions = () => {
 
   const fetchPatients = async (searchTerm = '') => {
     try {
-      const response = searchTerm.trim() !== ''
-        ? await patientService.searchPatients(searchTerm)
-        : await patientService.getPatients(0, 20);
-      const rawData = response?.content || response?.data || response || [];
+      const result = searchTerm.trim() !== ''
+        ? await searchPatients(searchTerm)
+        : await getPatients(0, 20);
+      const rawData = result?.data || [];
       setPatients(
         rawData.map((p) => ({
           ...p,
@@ -223,15 +239,29 @@ export const Admissions = () => {
   const loadReferences = async () => {
     try {
       setLoadingCompanies(true);
-      const [docsResp, svcsResp, compsResp] = await Promise.all([
-        admissionService.getDoctorsOnDuty(),
-        admissionService.getAvailableServices(),
-        companyService.getActive().catch(() => [])
+      
+      // Charger les médecins et services avec fallback offline
+      const [doctorsResult, servicesResult] = await Promise.all([
+        execute({
+          apiCall: async () => {
+            const response = await fetch('/api/v1/admissions/doctors-on-duty');
+            return response.json();
+          },
+          tableName: 'users',
+          action: 'read',
+        }),
+        execute({
+          apiCall: async () => {
+            const response = await fetch('/api/v1/admissions/services');
+            return response.json();
+          },
+          tableName: 'services',
+          action: 'read',
+        }),
       ]);
-      setCompanies(Array.isArray(compsResp) ? compsResp : []);
 
-      const doctorsList = Array.isArray(docsResp?.data || docsResp)
-        ? (docsResp?.data || docsResp)
+      const doctorsList = Array.isArray(doctorsResult?.data || doctorsResult)
+        ? (doctorsResult?.data || doctorsResult)
         : [];
       setDoctors(doctorsList);
 
@@ -240,7 +270,11 @@ export const Admissions = () => {
         setTriageData(prev => ({ ...prev, doctorId: doctorsList[0].id?.toString() }));
       }
 
-      setServices(svcsResp || []);
+      setServices(servicesResult?.data || servicesResult || []);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : données locales chargées');
+      }
     } catch (e) {
       console.error("Erreur chargement références:", e);
       toast.error("Erreur de chargement des services");
@@ -273,12 +307,17 @@ export const Admissions = () => {
       setIsAbonne(false);
       setSelectedCompanyId('');
       setMatricule('');
+      setSubscriberName('');
+      setBeneficiaryName('');
       setEmployeeInfo(null);
       const emp = await companyService.findEmployeeByPatient(patient.id);
       if (emp && emp.companyId) {
         setIsAbonne(true);
         setSelectedCompanyId(String(emp.companyId));
         setMatricule(emp.matricule || '');
+        // ✅ Auto-remplir le nom du travailleur (abonné) et le bénéficiaire (patient actuel)
+        setSubscriberName(emp.patientFullName || '');
+        setBeneficiaryName(patient.displayName || '');
         setEmployeeInfo(emp);
         toast.info(
           <div className="flex items-center gap-2">
@@ -377,8 +416,14 @@ export const Admissions = () => {
 
       // 3b) Préparer le payload abonné
       const abonnePayload = isAbonne && selectedCompanyId
-        ? { isAbonne: true, companyId: Number(selectedCompanyId), matricule: matricule || null }
-        : { isAbonne: false, companyId: null, matricule: null };
+        ? {
+            isAbonne: true,
+            companyId: Number(selectedCompanyId),
+            matricule: matricule || null,
+            subscriberName: subscriberName || null,
+            beneficiaryName: beneficiaryName || null
+          }
+        : { isAbonne: false, companyId: null, matricule: null, subscriberName: null, beneficiaryName: null };
 
       // 4️⃣ Créer l'admission
       // Le backend calcule registrationFee (frais de dossier) basé sur l'historique du patient
@@ -800,7 +845,13 @@ export const Admissions = () => {
                         checked={isAbonne}
                         onCheckedChange={(v) => {
                           setIsAbonne(v);
-                          if (!v) { setSelectedCompanyId(''); setMatricule(''); setEmployeeInfo(null); }
+                          if (!v) {
+                            setSelectedCompanyId('');
+                            setMatricule('');
+                            setSubscriberName('');
+                            setBeneficiaryName('');
+                            setEmployeeInfo(null);
+                          }
                         }}
                       />
                     </div>
@@ -831,7 +882,26 @@ export const Admissions = () => {
                           <input
                             value={matricule}
                             onChange={(e) => setMatricule(e.target.value)}
-                            placeholder="Ex: AGT-001"
+                            placeholder="Ex: AGT-001 (optionnel)"
+                            className="w-full h-9 px-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Nom du travailleur / responsable *</label>
+                          <input
+                            value={subscriberName}
+                            onChange={(e) => setSubscriberName(e.target.value)}
+                            placeholder="Nom de l'employé dont l'entreprise paie"
+                            className="w-full h-9 px-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-emerald-500"
+                            required={isAbonne}
+                          />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-medium text-muted-foreground">Nom du bénéficiaire</label>
+                          <input
+                            value={beneficiaryName}
+                            onChange={(e) => setBeneficiaryName(e.target.value)}
+                            placeholder="Nom de la personne réellement soignée (optionnel)"
                             className="w-full h-9 px-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-emerald-500"
                           />
                         </div>

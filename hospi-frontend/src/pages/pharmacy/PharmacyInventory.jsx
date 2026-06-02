@@ -47,8 +47,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { medicationAPI } from '../../api/medication';
-import hospitalConfigService from '../../services/hospitalConfigService';
+import { usePharmacyOffline } from '../../hooks/offline';
+import hospitalConfigService, { defaultHospitalConfig } from '../../services/hospitalConfigService';
+import { resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import MedicationForm from '../../components/pharmacy/MedicationForm';
 
 /* ═══════════════════════════════════════════
@@ -243,6 +245,7 @@ const MedicationCard = ({ medication, onEdit, onStockUpdate, onCheckStock }) => 
 const PharmacyInventory = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { getMedicines, updateStock, addInventoryMovement, isOnline } = usePharmacyOffline();
   const [loading, setLoading] = useState(true);
   const [medications, setMedications] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -293,9 +296,9 @@ const PharmacyInventory = () => {
     try {
       setLoading(true);
 
-      // Charger les médicaments depuis l'API existante
-      const response = await medicationAPI.getInventory();
-      const medicationsList = response.data || [];
+      // Charger les médicaments depuis le hook offline
+      const result = await getMedicines();
+      const medicationsList = result.data || [];
 
       // Transformer les données pour correspondre au format attendu
       const transformedMedications = medicationsList.map(med => ({
@@ -312,6 +315,10 @@ const PharmacyInventory = () => {
       }));
 
       setMedications(transformedMedications);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : inventaire local chargé');
+      }
 
     } catch (err) {
       console.error('Error loading inventory:', err);
@@ -414,7 +421,7 @@ const PharmacyInventory = () => {
       console.log('✅ Config admin chargée pour impression:', hospitalConfig);
     } catch (error) {
       console.warn('⚠️ Erreur chargement config admin, utilisation fallback:', error);
-      hospitalConfig = hospitalConfigService.getDefaultConfig();
+      hospitalConfig = defaultHospitalConfig;
     }
     
     // Créer une fenêtre d'impression
@@ -546,7 +553,7 @@ const PharmacyInventory = () => {
           <div style="flex: 1; text-align: left;">
             ${hospitalConfig?.enableLogoOnDocuments && hospitalConfig?.hospitalLogoUrl ? `
             <div style="margin-bottom: 8px;">
-              <img src="${hospitalConfig.hospitalLogoUrl}" alt="Logo" style="max-width: 120px; max-height: 120px; object-fit: contain;" onerror="this.style.display='none'" />
+              <img src="${resolveLogoUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL)}" alt="Logo" style="max-width: 120px; max-height: 120px; object-fit: contain;" onerror="this.style.display='none'" />
             </div>
             ` : ''}
             <div style="font-size: 20px; font-weight: bold; color: ${hospitalConfig?.primaryColor || '#009966'}; margin: 0;">

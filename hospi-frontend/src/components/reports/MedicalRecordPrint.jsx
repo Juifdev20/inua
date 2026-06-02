@@ -1,4 +1,6 @@
 import React, { forwardRef } from 'react';
+import { resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { Building2, User, Stethoscope, Activity, FlaskConical, FileText, Pill, Wallet } from 'lucide-react';
 
 /**
@@ -35,9 +37,10 @@ const MedicalRecordPrint = forwardRef(({ report, config }, ref) => {
           <div className="logo-container">
             {config?.hospitalLogoUrl ? (
               <img
-                src={config.hospitalLogoUrl}
+                src={resolveLogoUrl(config.hospitalLogoUrl, API_BASE_URL)}
                 alt={config.hospitalName}
                 className="hospital-logo"
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
             ) : (
               <Building2 className="default-logo" />

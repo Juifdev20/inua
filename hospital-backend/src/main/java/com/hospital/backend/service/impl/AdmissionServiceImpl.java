@@ -163,6 +163,8 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .isAbonne(isAbonne)
                 .company(company)
                 .matricule(isAbonne ? dto.getMatricule() : null)
+                .subscriberName(isAbonne ? dto.getSubscriberName() : null)
+                .beneficiaryName(isAbonne ? dto.getBeneficiaryName() : null)
                 .coverageRate(coverageRate)
                 .companyCoverage(companyCoverage)
                 .patientSurplus(patientSurplus)
@@ -267,6 +269,8 @@ public class AdmissionServiceImpl implements AdmissionService {
                 .companyId(admission.getCompany() != null ? admission.getCompany().getId() : null)
                 .companyName(admission.getCompany() != null ? admission.getCompany().getName() : null)
                 .matricule(admission.getMatricule())
+                .subscriberName(admission.getSubscriberName())
+                .beneficiaryName(admission.getBeneficiaryName())
                 .coverageRate(admission.getCoverageRate())
                 .companyCoverage(admission.getCompanyCoverage())
                 .patientSurplus(admission.getPatientSurplus())
@@ -276,19 +280,21 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
     /**
-     * Vérifie si le patient a une fiche active (payée dans les 12 derniers mois)
-     * Même logique que ConsultationServiceImpl pour harmonisation
+     * Vérifie si le patient a une fiche active (facturée dans les 12 derniers mois).
+     * Une fiche est active si une admission précédente a facturé des frais de fiche
+     * (registrationFee > 0) et que l'admission n'est pas annulée.
      */
     private boolean hasActiveFiche(Long patientId) {
         LocalDateTime twelveMonthsAgo = LocalDateTime.now().minusMonths(12);
-        
+
         List<Admission> admissions = admissionRepository.findByPatientId(patientId);
-        
+
         for (Admission a : admissions) {
             if (a.getAdmissionDate() != null && a.getAdmissionDate().isAfter(twelveMonthsAgo)) {
-                // Vérifier si le montant de la fiche a été payé
-                if (a.getAmountPaid() != null && a.getAmountPaid().compareTo(BigDecimal.ZERO) > 0) {
-                    return true;
+                if (a.getRegistrationFee() != null && a.getRegistrationFee().compareTo(BigDecimal.ZERO) > 0) {
+                    if (a.getStatus() != null && a.getStatus() != Admission.AdmissionStatus.ANNULE) {
+                        return true;
+                    }
                 }
             }
         }

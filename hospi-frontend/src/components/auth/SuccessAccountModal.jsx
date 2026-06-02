@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { loadHospitalConfig, resolveLogoUrl } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { CheckCircle, Copy, Printer, X, User, Lock, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,14 +26,19 @@ const SuccessAccountModal = ({ isOpen, onClose, credentials, userType = 'staff' 
     });
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const hospitalConfig = await loadHospitalConfig();
+    const logoUrl = hospitalConfig?.hospitalLogoUrl && hospitalConfig?.enableLogoOnDocuments !== false
+      ? resolveLogoUrl(hospitalConfig.hospitalLogoUrl, API_BASE_URL)
+      : null;
+    const primaryColor = hospitalConfig?.primaryColor || '#059669';
     const printWindow = window.open('', '_blank');
     const content = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Identifiants de Connexion - Inua Afya</title>
+        <title>Identifiants de Connexion - ${hospitalConfig?.hospitalName || 'Hôpital'}</title>
         <style>
           @page { size: A5; margin: 10mm; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,8 +135,8 @@ const SuccessAccountModal = ({ isOpen, onClose, credentials, userType = 'staff' 
       <body>
         <div class="card">
           <div class="header">
-            <img src="/inuaafya-logo-dark.svg" class="logo" alt="Inua Afya Logo" />
-            <div class="title">Inua Afya</div>
+            ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="Logo" onerror="this.style.display='none'" />` : ''}
+            <div class="title">${hospitalConfig?.hospitalName || 'H\u00f4pital'}</div>
           </div>
           
           <div style="text-align: center; margin-bottom: 20px;">

@@ -120,7 +120,7 @@ const Documents = () => {
                     "text-[10px] font-bold px-2 py-0.5 rounded-full",
                     doc.paymentStatus === 'SOLDE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
                   )}>
-                    {doc.paymentStatus === 'SOLDE' ? '✓ Payé' : 'Crédit'}
+                    {doc.paymentStatus === 'SOLDE' ? '✓ Couvert' : 'Crédit'}
                   </span>
                 </div>
               </div>
@@ -144,10 +144,14 @@ const Documents = () => {
                   <span className="font-medium text-foreground truncate max-w-[150px]">{doc.patientName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Montant:</span>
-                  <span className="font-medium text-emerald-500">
-                    {doc.totalAmount?.toLocaleString() || '0'} $
-                  </span>
+                  <span className="text-muted-foreground">Couverture:</span>
+                  {doc.paymentStatus === 'SOLDE' ? (
+                    <span className="font-bold text-emerald-600 text-xs">✓ 100% Couvert</span>
+                  ) : (
+                    <span className="font-medium text-amber-600 text-xs">
+                      Reste: {doc.remainingCredit?.toLocaleString() || doc.totalAmount?.toLocaleString() || '0'} $
+                    </span>
+                  )}
                 </div>
               </div>
 

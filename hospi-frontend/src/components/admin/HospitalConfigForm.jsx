@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import api from '../../api/axios.js';
+import { API_BASE_URL } from '../../config/environment.js';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -14,6 +16,7 @@ const HospitalConfigForm = () => {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -169,7 +172,7 @@ const HospitalConfigForm = () => {
                 {logoPreview || formData.hospitalLogoUrl ? (
                   <div className="relative w-32 h-32 mb-4 rounded-lg border-2 border-dashed border-gray-300 p-2">
                     <img
-                      src={logoPreview || formData.hospitalLogoUrl}
+                      src={logoPreview || (formData.hospitalLogoUrl?.startsWith('/') ? `${API_BASE_URL}${formData.hospitalLogoUrl}` : formData.hospitalLogoUrl)}
                       alt="Logo preview"
                       className="w-full h-full object-contain rounded"
                     />
@@ -195,22 +198,34 @@ const HospitalConfigForm = () => {
                     type="file"
                     ref={fileInputRef}
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files[0];
                       if (file) {
-                        // Vérifier la taille (max 2MB)
                         if (file.size > 2 * 1024 * 1024) {
                           toast.error('Image trop grande', { description: 'Taille maximum : 2MB' });
                           return;
                         }
-                        // Convertir en base64
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setLogoPreview(reader.result);
-                          setFormData(prev => ({ ...prev, hospitalLogoUrl: reader.result }));
-                          toast.success('Image chargée avec succès');
-                        };
-                        reader.readAsDataURL(file);
+                        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+                        if (!allowedTypes.includes(file.type)) {
+                          toast.error('Format non supporté', { description: `"${file.type || file.name}" n'est pas supporté. Utilisez PNG ou JPEG (convertissez le WEBP en PNG sur https://cloudconvert.com)` });
+                          return;
+                        }
+                        setLogoUploading(true);
+                        try {
+                          const formDataUpload = new FormData();
+                          formDataUpload.append('logo', file);
+                          const response = await api.post('/api/hospital-config/logo', formDataUpload, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                          });
+                          const logoUrl = response.data.data;
+                          setLogoPreview(URL.createObjectURL(file));
+                          setFormData(prev => ({ ...prev, hospitalLogoUrl: logoUrl }));
+                          toast.success('Logo uploadé avec succès');
+                        } catch (err) {
+                          toast.error('Erreur lors de l\'upload du logo');
+                        } finally {
+                          setLogoUploading(false);
+                        }
                       }
                     }}
                     className="hidden"
@@ -220,9 +235,10 @@ const HospitalConfigForm = () => {
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
                     className="flex-1"
+                    disabled={logoUploading}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choisir une image
+                    {logoUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    {logoUploading ? 'Upload en cours...' : 'Choisir une image'}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">

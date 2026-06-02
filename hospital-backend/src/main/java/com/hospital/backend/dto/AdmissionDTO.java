@@ -68,6 +68,12 @@ public class AdmissionDTO {
     @JsonProperty("matricule")
     private String matricule;
 
+    @JsonProperty("subscriberName")
+    private String subscriberName;
+
+    @JsonProperty("beneficiaryName")
+    private String beneficiaryName;
+
     // --- SURPLUS / TICKET MODESTE (Slice 2) ---
     @JsonProperty("coverageRate")
     private BigDecimal coverageRate;

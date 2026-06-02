@@ -58,6 +58,10 @@ public class PatientJourneyDTO {
     private LocalDateTime reportGeneratedAt;
     private String generatedBy;
 
+    // --- ABONNEMENT ENTREPRISE ---
+    private Boolean isAbonne;
+    private String companyName;
+
     // --- VALIDATION ET SIGNATURE ---
     private String numeroFiche;
     private LocalDateTime dateValidation;

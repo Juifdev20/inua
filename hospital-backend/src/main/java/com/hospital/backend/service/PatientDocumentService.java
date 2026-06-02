@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
@@ -46,7 +47,7 @@ public class PatientDocumentService {
      * @param consultationId ID de la consultation terminée
      * @return PatientDocumentDTO Le document créé
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PatientDocumentDTO generatePatientDossier(Long consultationId) {
         log.info("🎯 [PATIENT_DOCUMENT] Début de la génération du dossier patient pour consultation ID: {}", consultationId);
 
@@ -63,9 +64,27 @@ public class PatientDocumentService {
             // Vérifier si un document existe déjà pour cette consultation
             if (patientDocumentRepository.existsByConsultationId(consultationId)) {
                 log.warn("⚠️ [PATIENT_DOCUMENT] Un document existe déjà pour cette consultation: {}", consultationId);
-                return patientDocumentRepository.findByConsultationId(consultationId)
-                        .map(PatientDocumentDTO::fromEntity)
-                        .orElse(null);
+                // ✅ CORRECTION: si le crédit résiduel stocké est incorrect (> 0) mais la consultation
+                // est terminée, corriger automatiquement les montants sans régénérer le PDF
+                return patientDocumentRepository.findByConsultationId(consultationId).map(existing -> {
+                    try {
+                        Double storedCredit = existing.getRemainingCredit();
+                        if (storedCredit != null && storedCredit > 0.01) {
+                            Double recalcTotal = calculateTotalAmount(consultation);
+                            Double recalcPaid = calculateAmountPaidWithFallback(consultation);
+                            Double newCredit = Math.max(0.0, recalcTotal - recalcPaid);
+                            if (newCredit <= 0.01) {
+                                existing.setAmountPaid(recalcTotal);
+                                existing.setRemainingCredit(0.0);
+                                existing = patientDocumentRepository.save(existing);
+                                log.info("✅ [PATIENT_DOCUMENT] Crédit résiduel corrigé (0) pour consultation {}", consultationId);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warn("⚠️ [PATIENT_DOCUMENT] Erreur correction crédit: {}", e.getMessage());
+                    }
+                    return PatientDocumentDTO.fromEntity(existing);
+                }).orElse(null);
             }
 
             // Récupérer les données nécessaires
@@ -102,9 +121,8 @@ public class PatientDocumentService {
 
             // Calculer les informations financières
             Double totalAmount = calculateTotalAmount(consultation);
-            Double amountPaid = calculateAmountPaid(consultation);
-            Double remainingCredit = totalAmount - amountPaid;
-            if (remainingCredit < 0) remainingCredit = 0.0;
+            Double amountPaid = calculateAmountPaidWithFallback(consultation);
+            Double remainingCredit = Math.max(0.0, totalAmount - amountPaid);
 
             // Créer l'enregistrement du document avec contenu binaire
             PatientDocument document = PatientDocument.builder()
@@ -205,26 +223,36 @@ public class PatientDocumentService {
     }
 
     /**
-     * Calcule le montant déjà payé
+     * Calcule le montant déjà payé (valeurs directes)
      */
     private Double calculateAmountPaid(Consultation consultation) {
         double paid = 0.0;
-        
-        // Fiche payée
-        if (consultation.getFicheAmountPaid() != null) {
-            paid += consultation.getFicheAmountPaid();
+        if (consultation.getFicheAmountPaid() != null) paid += consultation.getFicheAmountPaid();
+        if (consultation.getExamAmountPaid() != null) paid += consultation.getExamAmountPaid().doubleValue();
+        if (consultation.getConsulAmountPaid() != null) paid += consultation.getConsulAmountPaid();
+        return paid;
+    }
+
+    /**
+     * Calcule le montant payé avec fallback pour les consultations terminées.
+     * Pour une consultation dans un état terminal (TERMINE, COMPLETED, PAYEE…),
+     * on considère que tous les frais fiche/consul sont réglés (par le patient ou l'entreprise),
+     * même si ficheAmountPaid n'a pas été mis à jour dans la BDD.
+     */
+    private Double calculateAmountPaidWithFallback(Consultation consultation) {
+        double paid = calculateAmountPaid(consultation);
+        double total = calculateTotalAmount(consultation);
+        if (paid < total) {
+            ConsultationStatus status = consultation.getStatus();
+            if (status == ConsultationStatus.TERMINE
+                    || status == ConsultationStatus.COMPLETED
+                    || status == ConsultationStatus.PAYEE
+                    || status == ConsultationStatus.EXAMENS_PAYES
+                    || status == ConsultationStatus.TREATED
+                    || status == ConsultationStatus.PAID_COMPLETED) {
+                paid = total;
+            }
         }
-        
-        // Examens payés
-        if (consultation.getExamAmountPaid() != null) {
-            paid += consultation.getExamAmountPaid().doubleValue();
-        }
-        
-        // Consultation payée
-        if (consultation.getConsulAmountPaid() != null) {
-            paid += consultation.getConsulAmountPaid();
-        }
-        
         return paid;
     }
 

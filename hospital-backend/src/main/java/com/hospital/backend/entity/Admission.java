@@ -89,6 +89,14 @@ public class Admission {
     @Column(name = "matricule", length = 80)
     private String matricule;
 
+    /** Nom du travailleur / responsable (l'employé dont l'entreprise paie). */
+    @Column(name = "subscriber_name", length = 200)
+    private String subscriberName;
+
+    /** Nom du bénéficiaire (la personne réellement soignée, peut être différente du travailleur). */
+    @Column(name = "beneficiary_name", length = 200)
+    private String beneficiaryName;
+
     /** Taux de couverture copié depuis l'entreprise au moment de l'admission (pour historique). */
     @Column(name = "coverage_rate", precision = 5, scale = 2)
     private java.math.BigDecimal coverageRate;

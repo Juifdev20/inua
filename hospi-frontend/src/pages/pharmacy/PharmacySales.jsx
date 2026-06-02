@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { openPrintWindow, loadHospitalConfig } from '../../utils/printUtils';
+import { API_BASE_URL } from '../../config/environment.js';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -33,11 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { medicationAPI } from '../../api/medication.js';
-import { 
-  createOrder,
-  getPendingOrders 
-} from '../../services/pharmacyApi/pharmacyApi.js';
+import { usePharmacyOffline } from '../../hooks/offline';
 import WebSocketService from '../../services/WebSocketService.js';
 
 /* =========================================
@@ -146,6 +144,7 @@ const MedicationCard = ({ medication, onAdd }) => {
 const PharmacySales = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { getMedicines, createSale, isOnline } = usePharmacyOffline();
   
   // States
   const [medications, setMedications] = useState([]);
@@ -169,16 +168,20 @@ const PharmacySales = () => {
   const loadMedications = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await medicationAPI.getMedications();
-      const meds = response?.data || response || [];
+      const result = await getMedicines();
+      const meds = result?.data || [];
       setMedications(meds);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : médicaments locaux chargés');
+      }
     } catch (error) {
       console.error('Error loading medications:', error);
       toast.error('Erreur lors du chargement des médicaments');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getMedicines, isOnline]);
 
   // Load recent sales
   const loadRecentSales = useCallback(async () => {
@@ -373,7 +376,7 @@ const PharmacySales = () => {
 
       console.log('🔴 [PharmacySales] Envoi vers Finance:', JSON.stringify(saleData, null, 2));
 
-      const result = await createOrder(saleData);
+      const result = await createSale(saleData);
       
       toast.success(
         <div>
@@ -383,6 +386,10 @@ const PharmacySales = () => {
         </div>,
         { duration: 5000 }
       );
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : vente enregistrée localement');
+      }
       
       // Print bon de commande (pas de reçu car pas encore payé)
       printOrderSlip(result?.orderCode);
@@ -400,10 +407,11 @@ const PharmacySales = () => {
   };
 
   // 🖨️ Imprimer le bon de commande (à présenter à la finance)
-  const printOrderSlip = (orderCode) => {
+  const printOrderSlip = async (orderCode) => {
+    const hospitalConfig = await loadHospitalConfig();
     const slipContent = `
-      <div style="font-family: monospace; max-width: 300px; margin: 0 auto; padding: 20px;">
-        <h2 style="text-align: center; margin-bottom: 10px;">🧾 BON DE COMMANDE</h2>
+      <div style="font-family: monospace; max-width: 300px; margin: 0 auto;">
+        <h2 style="text-align: center; margin-bottom: 10px;">BON DE COMMANDE</h2>
         <p style="text-align: center; font-size: 11px; color: #666; margin-bottom: 5px;">
           Présenter ce bon à la caisse
         </p>
@@ -430,30 +438,25 @@ const PharmacySales = () => {
           ⚠️ EN ATTENTE DE PAIEMENT
         </p>
         <p style="text-align: center; font-size: 9px; color: #666; margin-top: 15px;">
-          Direction de la caisse pour validation<br/>
-          Merci de votre confiance
+          Direction de la caisse pour validation<br/>Merci de votre confiance
         </p>
       </div>
     `;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Bon de Commande - ${orderCode}</title></head>
-      <body>${slipContent}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    await openPrintWindow({
+      title: `Bon de Commande - ${orderCode}`,
+      documentTitle: 'PHARMACIE',
+      bodyContent: slipContent,
+      config: hospitalConfig,
+      apiBaseUrl: API_BASE_URL,
+    });
   };
 
   // Print receipt
-  const printReceipt = () => {
+  const printReceipt = async () => {
+    const hospitalConfig = await loadHospitalConfig();
     const receiptContent = `
-      <div style="font-family: monospace; max-width: 300px; margin: 0 auto; padding: 20px;">
-        <h2 style="text-align: center; margin-bottom: 10px;">INUA AFYA PHARMACIE</h2>
-        <p style="text-align: center; font-size: 12px; margin-bottom: 20px;">
+      <div style="font-family: monospace; max-width: 300px; margin: 0 auto;">
+        <p style="text-align: center; font-size: 12px; margin-bottom: 10px;">
           ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}
         </p>
         <hr style="border: 1px dashed #ccc; margin: 10px 0;" />
@@ -487,15 +490,13 @@ const PharmacySales = () => {
         </p>
       </div>
     `;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head><title>Ticket - ${format(new Date(), 'dd-MM-yyyy')}</title></head>
-        <body onload="window.print(); window.close();">${receiptContent}</body>
-      </html>
-    `);
-    printWindow.document.close();
+    await openPrintWindow({
+      title: `Ticket - ${format(new Date(), 'dd-MM-yyyy')}`,
+      documentTitle: 'TICKET DE CAISSE',
+      bodyContent: receiptContent,
+      config: hospitalConfig,
+      apiBaseUrl: API_BASE_URL,
+    });
   };
 
   return (

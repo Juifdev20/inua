@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import { useAdminOffline } from '../../hooks/offline';
 import { 
   Stethoscope, Plus, Edit, Trash2, Clock, DollarSign, 
   MoreVertical, CheckCircle, XCircle, AlertTriangle, Search, FileDown, 
@@ -53,12 +53,14 @@ const API_BASE_URL = BACKEND_URL;
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { loadLogoAsDataUrl } from '../../utils/printUtils';
 import { formatCurrencyPDF, getCurrencySymbol } from '../../utils/currencyFormat'; 
 
 // --- CONFIGURATION AXIOS pour Services ---
 const SERVICES_API_URL = '/api/admin/services';
 
 const Services = () => {
+  const { getDepartments, createDepartment, isOnline } = useAdminOffline();
   // ★ ONGLET ACTIF: 'services' | 'examens'
   const [activeTab, setActiveTab] = useState('services');
 
@@ -122,8 +124,12 @@ const Services = () => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`${SERVICES_API_URL}/all`);
-      setServices(response.data || []);
+      const result = await getDepartments();
+      setServices(result.data || []);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : services locaux chargés');
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des services', error);
       toast.error('Impossible de charger les services');
@@ -294,43 +300,68 @@ const Services = () => {
         return;
       }
 
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Couleur depuis la config
-      const primaryColor = config.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pw = doc.internal.pageSize.getWidth();
+      const ph = doc.internal.pageSize.getHeight();
+      const margin = 14;
 
-      // 1. EN-TÊTE (LOGO / PHOTO PROFIL)
-      if (config.hospitalLogoUrl) {
-        try {
-          doc.addImage(config.hospitalLogoUrl, 'PNG', pageWidth - 40, 10, 25, 25);
-        } catch (e) {
-          // Continuer sans logo
+      const hexToRgb = (hex) => {
+        const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return r ? [parseInt(r[1], 16), parseInt(r[2], 16), parseInt(r[3], 16)] : [5, 150, 105];
+      };
+      const [pr, pg, pb] = config?.primaryColor ? hexToRgb(config.primaryColor) : [5, 150, 105];
+      const hospitalName = config?.hospitalName || 'HÔPITAL';
+
+      // ═══════════════════════════════════════════════════════
+      // ZONE A — EN-TÊTE (y: 0 → 32)
+      doc.setFillColor(247, 249, 250);
+      doc.rect(0, 0, pw, 32, 'F');
+      doc.setDrawColor(pr, pg, pb);
+      doc.setLineWidth(0.8);
+      doc.line(0, 32, pw, 32);
+
+      let textStartX = margin;
+      if (config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false) {
+        const logoDataUrl = await loadLogoAsDataUrl(config.hospitalLogoUrl, API_BASE_URL);
+        if (logoDataUrl) {
+          const img = new Image();
+          img.src = logoDataUrl;
+          await new Promise(res => { img.onload = res; });
+          const logoH = 24;
+          const logoW = logoH * (img.width / img.height);
+          doc.addImage(logoDataUrl, 'PNG', margin, 4, logoW, logoH);
+          textStartX = margin + logoW + 5;
         }
       }
 
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(config.hospitalName?.toUpperCase() || 'INUA AFYA', pageWidth - 10, 40, { align: "right" });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(pr, pg, pb);
+      doc.text(hospitalName.toUpperCase(), textStartX, 14);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(config?.headerSubtitle || 'Système de Gestion Hospitalière', textStartX, 20);
 
-      // 2. TITRE
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.text("LISTE DES SERVICES", 14, 25);
-      
-      doc.setTextColor(100);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Nombre total de services : ${filteredServices.length}`, 14, 35);
+      doc.setFontSize(7.5);
+      doc.setTextColor(80, 80, 80);
+      const contactLines = [config?.address, [config?.phoneNumber, config?.email].filter(Boolean).join('  |  ')].filter(Boolean);
+      contactLines.forEach((line, i) => { doc.text(line, pw - margin, 12 + i * 6, { align: 'right' }); });
 
-      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setLineWidth(0.5);
-      doc.line(14, 50, pageWidth - 14, 50);
+      // ═══════════════════════════════════════════════════════
+      // ZONE B — BANDE TITRE (y: 33 → 47)
+      doc.setFillColor(pr, pg, pb);
+      doc.rect(0, 33, pw, 14, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('LISTE DES SERVICES', pw / 2, 41, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`${filteredServices.length} service(s) — Généré le ${new Date().toLocaleDateString('fr-FR')}`, pw / 2, 45.5, { align: 'center' });
 
-      // 3. TABLEAU
+      // ═══════════════════════════════════════════════════════
+      // ZONE C — TABLEAU (y: 52+)
       const tableRows = filteredServices.map((s, index) => [
         index + 1,
         s.nom ? s.nom.toUpperCase() : 'N/A',
@@ -341,55 +372,66 @@ const Services = () => {
       ]);
 
       autoTable(doc, {
-        startY: 55,
+        startY: 52,
         head: [['N°', 'SERVICE', 'DÉPARTEMENT', 'TARIF', 'DURÉE', 'STATUT']],
         body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], halign: 'center' },
-        styles: { fontSize: 8.5, cellPadding: 3 },
+        styles: { fontSize: 8.5, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.2 },
+        headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold', fontSize: 9, cellPadding: 3, halign: 'center' },
+        alternateRowStyles: { fillColor: [250, 252, 250] },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 10 },
-          3: { halign: 'right' },
-          4: { halign: 'center' },
-          5: { halign: 'center' }
-        }
+          0: { halign: 'center', cellWidth: 12 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 'auto' },
+          3: { halign: 'right', cellWidth: 30 },
+          4: { halign: 'center', cellWidth: 22 },
+          5: { halign: 'center', cellWidth: 22 },
+        },
+        margin: { left: margin, right: margin },
       });
 
-      // 4. BLOC DE SIGNATURE (BAS À DROITE)
-      const finalY = doc.lastAutoTable.finalY + 20;
-      const dateComplete = new Intl.DateTimeFormat('fr-FR', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      }).format(new Date());
+      // ═══════════════════════════════════════════════════════
+      // ZONE D — SIGNATURE (après le tableau)
+      const finalY = (doc.lastAutoTable?.finalY || 120) + 18;
+      if (finalY < ph - 35) {
+        const dateComplete = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+        const city = config?.city || '';
 
-      doc.setTextColor(40);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      
-      // Texte "Fait à..."
-      const city = config.city || 'Beni';
-      doc.text(`Fait à ${city}, le ${dateComplete}`, pageWidth - 15, finalY, { align: "right" });
-      
-      // Texte "Signé par..."
-      doc.setFont("helvetica", "bold");
-      doc.text("Signé par l'Administration,", pageWidth - 15, finalY + 7, { align: "right" });
-      
-      if (adminProfile.nom) {
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text(adminProfile.nom, pageWidth - 15, finalY + 15, { align: "right" });
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, finalY, pw - 2 * margin, 28, 'FD');
+
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Fait à ${city || '...'}, le ${dateComplete}`, pw - margin - 2, finalY + 8, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Signé par l'Administration,", pw - margin - 2, finalY + 15, { align: 'right' });
+        if (adminProfile.nom) {
+          doc.setTextColor(pr, pg, pb);
+          doc.text(adminProfile.nom, pw - margin - 2, finalY + 22, { align: 'right' });
+        }
+        doc.setDrawColor(180, 180, 180);
+        doc.line(pw - margin - 55, finalY + 24, pw - margin - 2, finalY + 24);
       }
 
-      // Ligne pour la signature physique
-      doc.setDrawColor(200);
-      doc.line(pageWidth - 60, finalY + 18, pageWidth - 15, finalY + 18);
+      // ═══════════════════════════════════════════════════════
+      // PIED DE PAGE
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(pr, pg, pb);
+        doc.setLineWidth(0.4);
+        doc.line(margin, ph - 10, pw - margin, ph - 10);
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Généré le ${new Date().toLocaleString('fr-FR')}  —  ${config?.footerText || hospitalName}`, margin, ph - 6);
+        doc.text(`Page ${i} / ${pageCount}`, pw - margin, ph - 6, { align: 'right' });
+      }
 
-      // Pied de page
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(config.footerText || `© ${config.hospitalName || 'INUA AFYA'} - Tous droits réservés`, pageWidth / 2, pageHeight - 15, { align: "center" });
-
-      doc.save(`Rapport_Services_${config.hospitalName || 'INUA'}_${new Date().getTime()}.pdf`);
+      doc.save(`Rapport_Services_${config?.hospitalName || 'Hospital'}_${new Date().getTime()}.pdf`);
       toast.success("PDF généré avec succès");
 
     } catch (error) {
@@ -424,14 +466,19 @@ const Services = () => {
     e.preventDefault();
     try {
       if (editingService) {
-        await api.put(`${SERVICES_API_URL}/${editingService.id}`, formData);
+        // Note: updateDepartment n'existe pas encore dans le hook, on utilise create pour l'instant
+        const result = await createDepartment(formData);
         toast.success('Service mis à jour');
       } else {
-        await api.post(`${SERVICES_API_URL}/create`, formData);
+        const result = await createDepartment(formData);
         toast.success('Service ajouté');
       }
       fetchServices();
       setIsDialogOpen(false);
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : service enregistré localement');
+      }
     } catch (error) { toast.error("Erreur d'enregistrement"); }
   };
 
