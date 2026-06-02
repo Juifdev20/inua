@@ -167,8 +167,9 @@ public class CompanyController {
 
     @GetMapping(value = "/stats/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_FINANCE')")
-    @Operation(summary = "Statistiques de toutes les entreprises abonnées")
-    public ResponseEntity<ApiResponse<List<CompanyStatsDTO>>> getAllStats() {
-        return ResponseEntity.ok(ApiResponse.success(companyService.getAllCompaniesStats()));
+    @Operation(summary = "Statistiques de toutes les entreprises abonnées pour un mois donné")
+    public ResponseEntity<ApiResponse<List<CompanyStatsDTO>>> getAllStats(
+            @RequestParam(required = false) String month) {
+        return ResponseEntity.ok(ApiResponse.success(companyService.getAllCompaniesStats(month)));
     }
 }

@@ -56,9 +56,11 @@ public interface CompanyService {
     CompanyStatsDTO getCompanyStats(Long companyId);
 
     /**
-     * Statistiques de toutes les entreprises abonnées.
+     * Statistiques de toutes les entreprises abonnées pour un mois donné.
+     *
+     * @param yearMonth format "yyyy-MM", null = mois courant
      */
-    List<CompanyStatsDTO> getAllCompaniesStats();
+    List<CompanyStatsDTO> getAllCompaniesStats(String yearMonth);
 
     /**
      * Liste détaillée des enregistrements de consommation pour un mois donné.

@@ -92,8 +92,9 @@ export const companyService = {
     return unwrap(resp);
   },
 
-  getAllStats: async () => {
-    const resp = await api.get('/companies/stats/all');
+  getAllStats: async (month) => {
+    const params = month ? { month } : {};
+    const resp = await api.get('/companies/stats/all', { params });
     return unwrap(resp);
   },
 

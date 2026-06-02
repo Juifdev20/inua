@@ -577,28 +577,37 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CompanyStatsDTO> getAllCompaniesStats() {
+    public List<CompanyStatsDTO> getAllCompaniesStats(String yearMonth) {
         // ── Optimisation : ne charger que les entreprises actives pour éviter OOM ─────────
         return companyRepository.findBySubscriptionStatusOrderByCreatedAtDesc(
                 SubscriptionStatus.ACTIVE).stream()
-                .map(this::buildStats)
+                .map(c -> buildStats(c, yearMonth))
                 .collect(Collectors.toList());
     }
 
-    private CompanyStatsDTO buildStats(Company company) {
+    private CompanyStatsDTO buildStats(Company company, String yearMonth) {
         Long companyId = company.getId();
         List<CompanyEmployee> employees = employeeRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
         long activeEmployees = employees.stream().filter(e -> Boolean.TRUE.equals(e.getIsActive())).count();
 
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfMonth;
+        LocalDateTime endOfMonth;
+        if (yearMonth != null && !yearMonth.isBlank()) {
+            LocalDate startDate = LocalDate.parse(yearMonth + "-01");
+            startOfMonth = startDate.atStartOfDay();
+            endOfMonth = startDate.plusMonths(1).minusDays(1).atTime(23, 59, 59);
+        } else {
+            startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            endOfMonth = LocalDateTime.now();
+        }
 
-        long admissionCount = consumptionRecordRepository.countByCompanyIdAndConsumedAtBetween(companyId, startOfMonth, now);
+        long admissionCount = consumptionRecordRepository.countByCompanyIdAndConsumedAtBetween(companyId, startOfMonth, endOfMonth);
         BigDecimal totalCoverageCurrentMonth = consumptionRecordRepository
-                .sumCompanyCoverageByCompanyAndPeriod(companyId, startOfMonth, now);
+                .sumCompanyCoverageByCompanyAndPeriod(companyId, startOfMonth, endOfMonth);
         BigDecimal totalSurplusCurrentMonth = consumptionRecordRepository
-                .sumPatientSurplusByCompanyAndPeriod(companyId, startOfMonth, now);
+                .sumPatientSurplusByCompanyAndPeriod(companyId, startOfMonth, endOfMonth);
 
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime allTimeStart = LocalDateTime.of(2000, 1, 1, 0, 0);
         BigDecimal totalCoverageAllTime = consumptionRecordRepository
                 .sumCompanyCoverageByCompanyAndPeriod(companyId, allTimeStart, now);
@@ -631,6 +640,11 @@ public class CompanyServiceImpl implements CompanyService {
                 .totalCompanyCoverageCurrentMonth(totalCoverageCurrentMonth)
                 .totalPatientSurplusCurrentMonth(totalSurplusCurrentMonth)
                 .build();
+    }
+
+    // Overload for single-company stats (uses current month)
+    private CompanyStatsDTO buildStats(Company company) {
+        return buildStats(company, null);
     }
 
     @Override

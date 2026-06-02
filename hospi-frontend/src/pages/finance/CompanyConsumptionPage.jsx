@@ -42,14 +42,13 @@ export default function CompanyConsumptionPage() {
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [logoBase64, setLogoBase64] = useState(null);
 
-  const summaryIntervalRef = useRef(null);
   const selectedCompanyRef = useRef(null);
   const selectedMonthRef   = useRef(selectedMonth);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (month = selectedMonthRef.current) => {
     setLoading(true);
     try {
-      const data = await companyService.getAllStats();
+      const data = await companyService.getAllStats(month);
       setCompanies(data || []);
     } catch (e) {
       toast.error('Impossible de charger les entreprises');
@@ -60,13 +59,13 @@ export default function CompanyConsumptionPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Polling dashboard toutes les 30 s (actif uniquement sur la liste)
+  // Recharger la liste quand le mois change
   useEffect(() => {
-    const id = setInterval(() => {
-      if (!selectedCompanyRef.current) refresh();
-    }, 30000);
-    return () => clearInterval(id);
-  }, [refresh]);
+    if (!selectedCompany) {
+      refresh(selectedMonth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth, selectedCompany]);
 
   const loadSummaries = useCallback(async (company, month) => {
     setLoadingRecords(true);
@@ -81,37 +80,18 @@ export default function CompanyConsumptionPage() {
     }
   }, []);
 
-  const stopSummaryPolling = () => {
-    if (summaryIntervalRef.current) {
-      clearInterval(summaryIntervalRef.current);
-      summaryIntervalRef.current = null;
-    }
-  };
-
-  const startSummaryPolling = (company, month) => {
-    stopSummaryPolling();
-    summaryIntervalRef.current = setInterval(() => {
-      loadSummaries(company, month);
-    }, 300000);
-  };
-
   const openCompany = (company) => {
     selectedCompanyRef.current = company;
     setSelectedCompany(company);
     setSummaries([]);
     loadSummaries(company, selectedMonth);
-    startSummaryPolling(company, selectedMonth);
   };
-
-  // Cleanup sur unmount
-  useEffect(() => () => stopSummaryPolling(), []);
 
   const handleMonthChange = (newMonth) => {
     selectedMonthRef.current = newMonth;
     setSelectedMonth(newMonth);
     if (selectedCompany) {
       loadSummaries(selectedCompany, newMonth);
-      startSummaryPolling(selectedCompany, newMonth);
     }
   };
 
@@ -181,7 +161,7 @@ export default function CompanyConsumptionPage() {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => { stopSummaryPolling(); selectedCompanyRef.current = null; setSelectedCompany(null); refresh(); }} className="gap-2 rounded-xl font-bold">
+            <Button variant="outline" size="sm" onClick={() => { selectedCompanyRef.current = null; setSelectedCompany(null); refresh(); }} className="gap-2 rounded-xl font-bold">
               <ArrowLeft className="w-4 h-4" /> Retour
             </Button>
             <div>
