@@ -1,120 +1,153 @@
-import React, { useState } from 'react';
-import { Wifi, WifiOff, RefreshCw, CloudUpload, Database } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wifi, WifiOff, RefreshCw, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { useOfflineSync } from '../hooks/useOfflineSync';
+import { Card, CardContent } from './ui/card';
 import { toast } from 'sonner';
 
 const OfflineIndicator = () => {
-  const { isOnline, pendingCount, isSyncing, syncPending } = useOfflineSync();
-  const [expanded, setExpanded] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showOfflineMessage, setShowOfflineMessage] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  const handleSyncNow = async () => {
-    try {
-      const result = await syncPending();
-      if (result.synced > 0) {
-        toast.success(`${result.synced} éléments synchronisés`);
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setShowOfflineMessage(false);
+      toast.success('Connexion rétablie');
+      // Mettre à jour la dernière synchronisation
+      localStorage.setItem('lastSync', new Date().toISOString());
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowOfflineMessage(true);
+      toast.error('Connexion perdue - Mode hors ligne activé');
+    };
+
+    const handleConnectionChange = () => {
+      setIsOnline(navigator.onLine);
+      if (!navigator.onLine) {
+        setShowOfflineMessage(true);
       } else {
-        toast.info('Tout est à jour');
+        setShowOfflineMessage(false);
       }
-    } catch (err) {
-      toast.error('Erreur de synchronisation');
-    }
-  };
+    };
 
-  const handleReload = () => {
+    // Écouter les changements de connexion
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('connectionchange', handleConnectionChange);
+
+    // Vérifier l'état initial
+    if (!navigator.onLine) {
+      setShowOfflineMessage(true);
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('connectionchange', handleConnectionChange);
+    };
+  }, []);
+
+  const handleRetry = () => {
     window.location.reload();
   };
 
-  // Mode online : rien ou juste un petit badge vert si synchro en cours
-  if (isOnline && pendingCount === 0 && !isSyncing) {
+  const handleSyncData = async () => {
+    try {
+      // Simuler une synchronisation des données locales
+      const cachedData = localStorage.getItem('cachedAppointments');
+      const cachedProfile = localStorage.getItem('cachedProfile');
+      
+      if (cachedData || cachedProfile) {
+        toast.success('Données locales synchronisées');
+        localStorage.setItem('lastSync', new Date().toISOString());
+      } else {
+        toast.info('Aucune donnée locale à synchroniser');
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la synchronisation');
+    }
+  };
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+  };
+
+  const handleShowAgain = () => {
+    setIsDismissed(false);
+  };
+
+  // Ne pas afficher si connecté et pas de message offline, ou si dismissé
+  if ((isOnline && !showOfflineMessage) || isDismissed) {
+    // Si hors ligne mais dismissé, montrer juste une petite icône cliquable
+    if (!isOnline && isDismissed) {
+      return (
+        <button
+          onClick={handleShowAgain}
+          className="fixed bottom-4 right-4 z-50 p-2 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all animate-pulse"
+          title="Mode hors ligne - Cliquez pour voir les options"
+        >
+          <WifiOff className="w-5 h-5" />
+        </button>
+      );
+    }
     return null;
   }
 
-  // Mode online avec synchro en cours ou en attente
-  if (isOnline && (pendingCount > 0 || isSyncing)) {
-    return (
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-full shadow-lg hover:bg-emerald-600 transition-all"
-        title={isSyncing ? 'Synchronisation...' : `${pendingCount} en attente`}
-      >
-        <CloudUpload className="w-4 h-4" />
-        <span className="text-xs font-medium">
-          {isSyncing ? 'Sync...' : `${pendingCount} en attente`}
-        </span>
-      </button>
-    );
-  }
-
-  // Mode offline - expanded
-  if (expanded) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50 w-64">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <WifiOff className="w-5 h-5 text-amber-600" />
-              <span className="font-semibold text-sm text-amber-800">Mode hors ligne</span>
+  return (
+    <div className="fixed bottom-4 right-4 z-50 max-w-xs">
+      <Card className={`${
+        isOnline 
+          ? 'bg-green-50 border-green-200 text-green-800' 
+          : 'bg-amber-50 border-amber-200 text-amber-800'
+      } shadow-lg`}>
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-2">
+              {isOnline ? (
+                <Wifi className="w-4 h-4 text-green-600" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-amber-600" />
+              )}
+              <div>
+                <p className="font-semibold text-xs">
+                  {isOnline ? 'En ligne' : 'Hors ligne'}
+                </p>
+                <p className="text-[10px] opacity-75">
+                  {isOnline 
+                    ? 'Connexion active' 
+                    : 'Données locales'
+                  }
+                </p>
+              </div>
             </div>
+            
             <button
-              onClick={() => setExpanded(false)}
-              className="text-amber-400 hover:text-amber-600"
+              onClick={handleDismiss}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              title="Masquer"
             >
-              <span className="text-lg leading-none">×</span>
+              <X className="w-3 h-3" />
             </button>
           </div>
-
-          <p className="text-xs text-amber-700 mb-3">
-            Les données sont enregistrées localement et seront synchronisées dès que la connexion sera rétablie.
-          </p>
-
-          {pendingCount > 0 && (
-            <div className="mb-3 p-2 bg-amber-100 rounded-lg flex items-center gap-2">
-              <Database className="w-3 h-3 text-amber-600" />
-              <span className="text-xs font-medium text-amber-800">
-                {pendingCount} modification{pendingCount > 1 ? 's' : ''} en attente
-              </span>
+          
+          {!isOnline && (
+            <div className="mt-2 flex items-center space-x-1">
+              <Button
+                onClick={handleRetry}
+                size="sm"
+                className="h-6 px-2 text-[10px] bg-amber-600 hover:bg-amber-700"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Réessayer
+              </Button>
             </div>
           )}
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleReload}
-              size="sm"
-              variant="outline"
-              className="flex-1 h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
-            >
-              <RefreshCw className="w-3 h-3 mr-1" />
-              Recharger
-            </Button>
-            <Button
-              onClick={() => setExpanded(false)}
-              size="sm"
-              className="flex-1 h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
-            >
-              Fermer
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Mode offline - compact (badge cliquable)
-  return (
-    <button
-      onClick={() => setExpanded(true)}
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all animate-pulse"
-      title="Mode hors ligne - Cliquez pour plus d'options"
-    >
-      <WifiOff className="w-4 h-4" />
-      <span className="text-xs font-medium">Hors ligne</span>
-      {pendingCount > 0 && (
-        <span className="bg-white text-amber-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-          {pendingCount}
-        </span>
-      )}
-    </button>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAdminOffline } from '../../hooks/offline';
+import axios from 'axios';
 import { 
   Plus, Search, Filter, MoreVertical, Edit, Trash2, UserPlus,
   Mail, Phone, Calendar, CheckCircle, XCircle, AlertTriangle,
@@ -52,7 +52,6 @@ const ALL_ROLES = [
  * Remplacez votre Users.jsx par ce fichier pour activer la génération automatique
  */
 const UsersIntegrated = () => {
-  const { getUsers, getDepartments, createUser, isOnline } = useAdminOffline();
   const [users, setUsers] = useState([]);
   const [realDepartments, setRealDepartments] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -94,26 +93,26 @@ const UsersIntegrated = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      const [usersResult, departmentsResult] = await Promise.all([
-        getUsers(),
-        getDepartments()
+      const [userRes, deptRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/admin/users/all`, config),
+        axios.get(`${API_BASE_URL}/api/admin/departments/all`, config)
       ]);
       
-      console.log('📊 Users offline response:', usersResult);
-      console.log('📊 Departments offline response:', departmentsResult);
+      console.log('📊 Users response:', userRes.status, userRes.data);
+      console.log('📊 Departments response:', deptRes.status, deptRes.data);
 
-      if (usersResult?.data) {
-        const list = Array.isArray(usersResult.data) ? usersResult.data : (usersResult.data.content || []);
+      if (userRes.data) {
+        const payload = userRes.data;
+        const list = Array.isArray(payload) ? payload : (payload.content || []);
         setUsers(list);
       }
-      if (departmentsResult?.data) {
-        const list = Array.isArray(departmentsResult.data) ? departmentsResult.data : (departmentsResult.data.content || []);
+      if (deptRes.data) {
+        const payload = deptRes.data;
+        const list = Array.isArray(payload) ? payload : (payload.content || []);
         setRealDepartments(list);
-      }
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : utilisateurs et départements locaux chargés');
       }
     } catch (error) {
       console.error('❌ Erreur chargement données initiales:', error);

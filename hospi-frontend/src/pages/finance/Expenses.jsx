@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFinanceOffline } from '../../hooks/offline';
+import financeApi from '../../services/financeApi/financeApi.js';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,6 @@ const CATEGORIES = {
 const Expenses = () => {
   const { t } = useTranslation();
   const { config } = useHospitalConfig();
-  const { getExpenses, createExpense, isOnline } = useFinanceOffline();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -78,31 +77,13 @@ const Expenses = () => {
   // ═══════════════════════════════════════
   const loadBalances = async () => {
     try {
-      // Utiliser le hook offline pour les balances
-      const result = await getExpenses();
-      const expenses = result?.data || [];
+      const balanceData = await financeApi.getBalancesBySource();
+      setBalances(balanceData || {});
       
-      // S'assurer que expenses est un tableau
-      const expensesArray = Array.isArray(expenses) ? expenses : [];
-      
-      // Calculer les balances localement
-      const balancesBySource = expensesArray.reduce((acc, expense) => {
-        const source = expense.category || 'AUTRE';
-        acc[source] = (acc[source] || 0) + (expense.amount || 0);
-        return acc;
-      }, {});
-      
-      setBalances(balancesBySource);
-      setTotalBalance(Object.values(balancesBySource).reduce((sum, val) => sum + val, 0));
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : balances locales calculées');
-      }
+      const totalData = await financeApi.getTotalCashBalance();
+      setTotalBalance(totalData?.totalBalance || 0);
     } catch (error) {
       console.error('Error loading balances:', error);
-      // En cas d'erreur, initialiser avec des valeurs vides
-      setBalances({});
-      setTotalBalance(0);
     }
   };
 
@@ -169,16 +150,14 @@ const Expenses = () => {
   const loadExpenses = async () => {
     try {
       setLoading(true);
-      const result = await getExpenses();
-      const arr = result?.data || [];
+      const data = await financeApi.getExpenses({
+        category: categoryFilter !== 'all' ? categoryFilter : null
+      });
+      const arr = data?.content || data || [];
       const expensesList = Array.isArray(arr) ? arr : [];
       setExpenses(expensesList);
       // ★ Calcul des stats à partir des données chargées
       calculateStats(expensesList);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : dépenses locales chargées');
-      }
     } catch (error) {
       console.error('Error loading expenses:', error);
       toast.error(t('errors.loadExpenses') || 'Erreur de chargement');
@@ -198,27 +177,17 @@ const Expenses = () => {
   const loadPharmacyTransactions = async () => {
     try {
       // Charger les transactions en attente
-      const result = await getExpenses();
-      const pendingData = result?.data || [];
+      const pendingData = await financeApi.getPendingTransactions();
       const transactions = Array.isArray(pendingData) ? pendingData : [];
       setPharmacyTransactions(transactions);
       
-      // Calculer le total du jour localement
-      const today = new Date().toISOString().split('T')[0];
-      const pharmacyExpenses = transactions.filter(expense => 
-        expense.category === 'PHARMACIE' || expense.category === 'PHARMACY'
-      );
-      const todayPharmacyTotal = pharmacyExpenses
-        .filter(expense => expense.date?.startsWith(today))
-        .reduce((total, expense) => total + (expense.amount || 0), 0);
-      
-      setPharmacyTodayTotal({
-        CDF: todayPharmacyTotal,
-        USD: 0
-      });
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : transactions pharmacie locales chargées');
+      // Charger le total du jour (depuis FinanceTransaction)
+      const todayData = await financeApi.getTodayTotalFromTransactions();
+      if (todayData?.success) {
+        setPharmacyTodayTotal({
+          CDF: todayData.currency === 'CDF' ? (todayData.total || 0) : 0,
+          USD: todayData.currency === 'USD' ? (todayData.total || 0) : 0
+        });
       }
     } catch (error) {
       console.error('Erreur chargement transactions pharmacie:', error);
@@ -317,12 +286,8 @@ const Expenses = () => {
       if (editingExpense?.id) {
         toast.info('Mise à jour en développement');
       } else {
-        const result = await createExpense(formData);
+        await financeApi.createExpense(formData);
         toast.success(t('finance.expenseCreated') || 'Dépense enregistrée');
-        
-        if (!isOnline) {
-          toast.info('Mode hors ligne : dépense enregistrée localement');
-        }
       }
       setShowModal(false);
       setFormData({ amount: '', category: 'ADMINISTRATION', description: '' });
@@ -339,7 +304,7 @@ const Expenses = () => {
   const handleDelete = async (id) => {
     if (!window.confirm(t('finance.confirmDeleteExpense') || 'Supprimer cette dépense ?')) return;
     try {
-      await deleteExpense(id);
+      await financeApi.deleteExpense(id);
       toast.success(t('finance.expenseDeleted') || 'Dépense supprimée');
       loadExpenses();
       loadBalances(); // Reload balances after expense deletion

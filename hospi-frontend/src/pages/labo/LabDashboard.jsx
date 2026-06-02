@@ -14,7 +14,7 @@ import {
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { useLabOffline } from '../../hooks/offline';
+import { labApi } from '../../services/labApi';
 import { toast } from 'sonner';
 import api from '../../services/api/api';
 
@@ -53,7 +53,6 @@ const quickLinks = [
 ];
 
 const LabDashboard = () => {
-  const { getPendingExams, isOnline } = useLabOffline();
   const [stats, setStats] = useState(initialStats);
   const [queue, setQueue] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -81,9 +80,9 @@ const LabDashboard = () => {
 
     const fetchQueue = async () => {
       try {
-        const result = await getPendingExams();
-        if (result.data) {
-          const queueItems = result.data.slice(0, 5).map(item => ({
+        const response = await labApi.getQueue();
+        if (response.data?.data) {
+          const queueItems = response.data.data.slice(0, 5).map(item => ({
             id: item.consultationId,
             patient: item.patientName || 'Patient inconnu',
             code: item.patientCode || `LAB-${item.consultationId}`,
@@ -94,10 +93,6 @@ const LabDashboard = () => {
             priority: item.criticalExams > 0 ? 'URGENT' : 'NORMAL'
           }));
           setQueue(queueItems);
-          
-          if (!isOnline) {
-            toast.info('Mode hors ligne : file d\'attente locale chargée');
-          }
         }
       } catch (err) {
         console.error('Erreur file d\'attente:', err);

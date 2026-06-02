@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useDoctorOffline } from '../../hooks/offline';
+import { admissionService } from '../../services/admissionService';
 import api from '../../services/api';
 import { useLocation } from 'react-router-dom';
 import './Consultations.css';
@@ -120,7 +120,6 @@ const getStatusDisplay = (status) => {
 const Consultations = () => {
   const { token, user } = useAuth();
   const location = useLocation();
-  const { getConsultations, createConsultation, updateConsultation, isOnline } = useDoctorOffline();
   
   // ✅ Hook d'isolation par épisode de soin
   const {
@@ -219,9 +218,9 @@ const Consultations = () => {
 
   const fetchConsultations = async () => {
     try {
-      console.log("📡 Fetching consultations from offline hook");
-      const result = await getConsultations();
-      const data = result?.data || [];
+      console.log("📡 Fetching consultations from:", `${API}/consultations`);
+      const response = await api.get(`${API}/consultations`);
+      const data = response.data.data?.content || response.data.consultations || response.data || [];
       
       console.log("📊 Total consultations received:", data.length);
       console.log("📅 All consultation dates:", data.map(c => ({
@@ -231,10 +230,6 @@ const Consultations = () => {
       })));
       
       setConsultations(Array.isArray(data) ? data : []);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : consultations locales chargées');
-      }
     } catch (error) {
       console.error('Error fetching consultations:', error);
       setConsultations([]);

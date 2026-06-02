@@ -12,8 +12,8 @@ import {
   DialogPortal,
   DialogOverlay
 } from "@/components/ui/dialog";
-import { usePatientsOffline } from '@/hooks/offline';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { patientService } from '@/services/patientService';
+import { admissionService } from '@/services/admissionService';
 import pricingService from '@/services/pricingService';
 import {
   Plus,
@@ -71,8 +71,6 @@ const formatCurrency = (amount) =>
 
 export const Admissions = () => {
   const { theme } = useTheme();
-  const { getPatients, searchPatients, createPatient, updatePatient, isOnline } = usePatientsOffline();
-  const { execute } = useOfflineSync();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState([]);
@@ -145,21 +143,9 @@ export const Admissions = () => {
   // ═══════════════════════════════════════
   const fetchDashboardData = async () => {
     try {
-      const result = await execute({
-        apiCall: async () => {
-          const response = await fetch('/api/v1/admissions/dashboard');
-          return response.json();
-        },
-        tableName: 'admissions',
-        action: 'read',
-      });
-      
-      if (result.data && result.data.recentConsultations) {
-        setAdmissionsToday(result.data.recentConsultations || []);
-      }
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : admissions locales chargées');
+      const response = await admissionService.getDashboardStats();
+      if (response && response.recentConsultations) {
+        setAdmissionsToday(response.recentConsultations || []);
       }
     } catch (error) {
       console.error('Erreur chargement dashboard:', error);
@@ -212,10 +198,10 @@ export const Admissions = () => {
 
   const fetchPatients = async (searchTerm = '') => {
     try {
-      const result = searchTerm.trim() !== ''
-        ? await searchPatients(searchTerm)
-        : await getPatients(0, 20);
-      const rawData = result?.data || [];
+      const response = searchTerm.trim() !== ''
+        ? await patientService.searchPatients(searchTerm)
+        : await patientService.getPatients(0, 20);
+      const rawData = response?.content || response?.data || response || [];
       setPatients(
         rawData.map((p) => ({
           ...p,
@@ -239,29 +225,15 @@ export const Admissions = () => {
   const loadReferences = async () => {
     try {
       setLoadingCompanies(true);
-      
-      // Charger les médecins et services avec fallback offline
-      const [doctorsResult, servicesResult] = await Promise.all([
-        execute({
-          apiCall: async () => {
-            const response = await fetch('/api/v1/admissions/doctors-on-duty');
-            return response.json();
-          },
-          tableName: 'users',
-          action: 'read',
-        }),
-        execute({
-          apiCall: async () => {
-            const response = await fetch('/api/v1/admissions/services');
-            return response.json();
-          },
-          tableName: 'services',
-          action: 'read',
-        }),
+      const [docsResp, svcsResp, compsResp] = await Promise.all([
+        admissionService.getDoctorsOnDuty(),
+        admissionService.getAvailableServices(),
+        companyService.getActive().catch(() => [])
       ]);
+      setCompanies(Array.isArray(compsResp) ? compsResp : []);
 
-      const doctorsList = Array.isArray(doctorsResult?.data || doctorsResult)
-        ? (doctorsResult?.data || doctorsResult)
+      const doctorsList = Array.isArray(docsResp?.data || docsResp)
+        ? (docsResp?.data || docsResp)
         : [];
       setDoctors(doctorsList);
 
@@ -270,11 +242,7 @@ export const Admissions = () => {
         setTriageData(prev => ({ ...prev, doctorId: doctorsList[0].id?.toString() }));
       }
 
-      setServices(servicesResult?.data || servicesResult || []);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : données locales chargées');
-      }
+      setServices(svcsResp || []);
     } catch (e) {
       console.error("Erreur chargement références:", e);
       toast.error("Erreur de chargement des services");

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useFinanceOffline } from '../../hooks/offline';
+import financeApi from '../../services/financeApi/financeApi.js';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,6 @@ import { hospitalConfigService, defaultHospitalConfig } from '../../services/hos
 const Tarifs = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { getTarifs, createTarif, updateTarif, isOnline } = useFinanceOffline();
   const isAdmin = user?.role === 'ADMIN';
   const [tarifs, setTarifs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,13 +74,8 @@ const Tarifs = () => {
   const loadTarifs = async () => {
     try {
       setLoading(true);
-      const result = await getTarifs();
-      const data = result?.data || [];
+      const data = await financeApi.getTarifs();
       setTarifs(Array.isArray(data) ? data : data?.content || []);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : tarifs locaux chargés');
-      }
     } catch (error) {
       toast.error(t('errors.loadTarifs') || 'Erreur chargement tarifs');
       setTarifs([]);
@@ -120,19 +114,11 @@ const Tarifs = () => {
         isActive: true,
       };
       if (editingTarif?.id) {
-        const result = await updateTarif(editingTarif.id, payload);
+        await financeApi.updateTarif(editingTarif.id, payload);
         toast.success(t('finance.tarifUpdated') || 'Tarif mis à jour');
-        
-        if (!isOnline) {
-          toast.info('Mode hors ligne : tarif mis à jour localement');
-        }
       } else {
-        const result = await createTarif(payload);
+        await financeApi.createTarif(payload);
         toast.success('Tarif créé avec succès');
-        
-        if (!isOnline) {
-          toast.info('Mode hors ligne : tarif créé localement');
-        }
       }
       setShowEditModal(false);
       setEditingTarif(null);

@@ -47,7 +47,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { usePharmacyOffline } from '../../hooks/offline';
+import { 
+  getDashboardStats, 
+  getPendingOrders, 
+  getStockAlerts,
+  getUnpaidOrders,
+  processPayment
+} from '../../services/pharmacyApi/pharmacyApi.js';
 
 /* ═══════════════════════════════════════════
    COMPOSANT STAT CARD
@@ -92,7 +98,6 @@ const StatCard = ({ label, value, icon: Icon, color, trend, trendUp }) => (
 const PharmacyDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getMedicines, getStockAlerts, isOnline } = usePharmacyOffline();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -125,20 +130,22 @@ const PharmacyDashboard = () => {
     try {
       setLoading(true);
 
-      // 1️⃣ Charger les médicaments pour calculer les stats localement
-      let medicinesData = [];
+      // 1️⃣ Charger les stats du dashboard
+      let dashboardStats = null;
       try {
-        const result = await getMedicines();
-        medicinesData = result.data || [];
-      } catch (err) {
-        console.warn('Could not load medicines:', err);
+        const response = await getDashboardStats();
+        dashboardStats = response.data;
+      } catch {
+        console.warn('Dashboard stats endpoint not available');
       }
 
-      // 2️⃣ Charger les commandes en attente (placeholder pour l'instant)
+      // 2️⃣ Charger les commandes en attente
       let ordersData = [];
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : dashboard local chargé');
+      try {
+        const response = await getPendingOrders();
+        ordersData = response.data || [];
+      } catch (err) {
+        console.warn('Could not load pending orders:', err);
       }
 
       // 3️⃣ Charger les alertes de stock

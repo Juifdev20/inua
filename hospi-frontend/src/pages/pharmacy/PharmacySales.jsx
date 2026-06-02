@@ -35,7 +35,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { usePharmacyOffline } from '../../hooks/offline';
+import { medicationAPI } from '../../api/medication.js';
+import { 
+  createOrder,
+  getPendingOrders 
+} from '../../services/pharmacyApi/pharmacyApi.js';
 import WebSocketService from '../../services/WebSocketService.js';
 
 /* =========================================
@@ -144,7 +148,6 @@ const MedicationCard = ({ medication, onAdd }) => {
 const PharmacySales = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getMedicines, createSale, isOnline } = usePharmacyOffline();
   
   // States
   const [medications, setMedications] = useState([]);
@@ -168,20 +171,16 @@ const PharmacySales = () => {
   const loadMedications = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await getMedicines();
-      const meds = result?.data || [];
+      const response = await medicationAPI.getMedications();
+      const meds = response?.data || response || [];
       setMedications(meds);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : médicaments locaux chargés');
-      }
     } catch (error) {
       console.error('Error loading medications:', error);
       toast.error('Erreur lors du chargement des médicaments');
     } finally {
       setLoading(false);
     }
-  }, [getMedicines, isOnline]);
+  }, []);
 
   // Load recent sales
   const loadRecentSales = useCallback(async () => {
@@ -376,7 +375,7 @@ const PharmacySales = () => {
 
       console.log('🔴 [PharmacySales] Envoi vers Finance:', JSON.stringify(saleData, null, 2));
 
-      const result = await createSale(saleData);
+      const result = await createOrder(saleData);
       
       toast.success(
         <div>
@@ -386,10 +385,6 @@ const PharmacySales = () => {
         </div>,
         { duration: 5000 }
       );
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : vente enregistrée localement');
-      }
       
       // Print bon de commande (pas de reçu car pas encore payé)
       printOrderSlip(result?.orderCode);

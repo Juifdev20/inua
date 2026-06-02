@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
-import { useLabOffline } from '../../hooks/offline';
+import { labApi } from '../../services/labApi';
 
 // ✅ FIX: Suppression de la pagination - affichage sur une seule page
 const PAGE_SIZE_OPTIONS = [50, 100, 200];
@@ -27,7 +27,6 @@ const priorityStyles = {
 
 const LabQueue = () => {
   const navigate = useNavigate();
-  const { getLabExams, getPendingExams, isOnline } = useLabOffline();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('TOUS');
@@ -47,19 +46,17 @@ const LabQueue = () => {
     try {
       console.log('🔄 [LABQUEUE] Fetching lab queue...');
 
-      const result = await getPendingExams();
+      const res = await labApi.getQueue();
       
-      // La réponse de useLabOffline.getPendingExams a la structure: { success, data: [...] }
+      // La réponse de /api/lab/queue a la structure: { success, data: [...], message }
       let boxes = [];
-      if (result.data && Array.isArray(result.data)) {
-        boxes = result.data;
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        boxes = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        boxes = res.data;
       }
 
       console.log('📡 [LABQUEUE] Data received:', { boxCount: boxes.length });
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : file d\'attente locale chargée');
-      }
 
       // ✅ FIX: Transform boxes to rows format for display
       // Each box from /api/lab/queue is already grouped by patient (consultation)

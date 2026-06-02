@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { useDoctorOffline } from '../../hooks/offline';
 import { 
   Calendar, Users, Stethoscope, MessageSquare, Clock, 
   Activity, Plus, Search, FlaskConical, PlayCircle, ChevronRight, Trash2, RefreshCcw
@@ -46,7 +46,6 @@ const StatCard = ({ icon: Icon, label, value, color, bg, loading }) => (
 const Dashboard = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const { getConsultations, isOnline } = useDoctorOffline();
   
   const [dashboardData, setDashboardData] = useState({
     stats: { rdvs_today: 0, consultations_pending: 0, total_patients: 0, unread_messages: 0 },
@@ -74,36 +73,22 @@ const Dashboard = () => {
     console.log("📡 fetchDashboard - user.id:", user.id);
     
     try {
-      // ✅ Utilisation du hook offline pour les consultations
-      const result = await getConsultations();
-      const consultations = result?.data || [];
-      
-      // Calculer les stats localement
-      const today = new Date().toISOString().split('T')[0];
-      const todayConsultations = consultations.filter(c => 
-        c.consultation_date?.startsWith(today) || c.consultationDate?.startsWith(today)
-      );
-      const pendingConsultations = consultations.filter(c => 
-        ['en_cours', 'en_attente', 'in_progress'].includes(c.status?.toLowerCase())
-      );
-      
-      console.log("📊 DASHBOARD LOCAL:", { consultations: consultations.length });
-      console.log("📋 rdvs_today:", todayConsultations.length);
-      console.log("📋 recent_consultations:", consultations.slice(0, 5).length);
-      
-      setDashboardData({
-        stats: { 
-          rdvs_today: todayConsultations.length, 
-          consultations_pending: pendingConsultations.length, 
-          total_patients: new Set(consultations.map(c => c.patient_id)).size, 
-          unread_messages: 0 
-        },
-        rdvs_today: todayConsultations,
-        recent_consultations: consultations.slice(0, 5)
+      // ✅ Utilisation de l'endpoint original qui identifie le médecin via le token
+      const response = await axios.get(`${API_URL}/api/v1/doctors/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (!isOnline) {
-        toast.info('Mode hors ligne : dashboard local chargé');
+      if (response.data) {
+        console.log("📊 DASHBOARD REÇU:", response.data);
+        console.log("📋 rdvs_today:", response.data.rdvs_today?.length || 0);
+        console.log("📋 recent_consultations:", response.data.recent_consultations?.length || 0);
+        console.log("📈 stats:", response.data.stats);
+        
+        setDashboardData({
+          stats: response.data.stats || { rdvs_today: 0, consultations_pending: 0, total_patients: 0, unread_messages: 0 },
+          rdvs_today: response.data.rdvs_today || [],
+          recent_consultations: response.data.recent_consultations || []
+        });
       }
     } catch (err) {
       console.error('Erreur API Dashboard:', err);

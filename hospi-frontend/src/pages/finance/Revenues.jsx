@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFinanceOffline } from '../../hooks/offline';
+import financeApi from '../../services/financeApi/financeApi.js';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,6 @@ const PAYMENT_METHODS = {
 const Revenues = () => {
   const { t } = useTranslation();
   const { config } = useHospitalConfig();
-  const { getRevenues, isOnline } = useFinanceOffline();
   const [revenues, setRevenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState('all');
@@ -144,15 +143,14 @@ const Revenues = () => {
   const loadRevenues = async () => {
     try {
       setLoading(true);
-      const result = await getRevenues();
-      const arr = result?.data || [];
+      const response = await financeApi.getRevenues({
+        source: sourceFilter !== 'all' ? sourceFilter : null,
+        size: 100
+      });
+      const arr = response?.content || response?.data?.content || response?.data || response || [];
       const revenuesList = Array.isArray(arr) ? arr : [];
       setRevenues(revenuesList);
       calculateStats(revenuesList);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : revenus locaux chargés');
-      }
     } catch (error) {
       console.error('Error loading revenues:', error);
       toast.error(t('errors.loadRevenues') || 'Erreur de chargement des entrées');

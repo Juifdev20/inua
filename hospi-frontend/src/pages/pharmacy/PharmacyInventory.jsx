@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { usePharmacyOffline } from '../../hooks/offline';
+import { medicationAPI } from '../../api/medication';
 import hospitalConfigService, { defaultHospitalConfig } from '../../services/hospitalConfigService';
 import { resolveLogoUrl } from '../../utils/printUtils';
 import { API_BASE_URL } from '../../config/environment.js';
@@ -245,7 +245,6 @@ const MedicationCard = ({ medication, onEdit, onStockUpdate, onCheckStock }) => 
 const PharmacyInventory = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getMedicines, updateStock, addInventoryMovement, isOnline } = usePharmacyOffline();
   const [loading, setLoading] = useState(true);
   const [medications, setMedications] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -296,9 +295,9 @@ const PharmacyInventory = () => {
     try {
       setLoading(true);
 
-      // Charger les médicaments depuis le hook offline
-      const result = await getMedicines();
-      const medicationsList = result.data || [];
+      // Charger les médicaments depuis l'API existante
+      const response = await medicationAPI.getInventory();
+      const medicationsList = response.data || [];
 
       // Transformer les données pour correspondre au format attendu
       const transformedMedications = medicationsList.map(med => ({
@@ -315,10 +314,6 @@ const PharmacyInventory = () => {
       }));
 
       setMedications(transformedMedications);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : inventaire local chargé');
-      }
 
     } catch (err) {
       console.error('Error loading inventory:', err);

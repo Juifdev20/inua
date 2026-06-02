@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAdminOffline } from '../../hooks/offline';
+import api from '../../api/axios';
 import { 
   Stethoscope, Plus, Edit, Trash2, Clock, DollarSign, 
   MoreVertical, CheckCircle, XCircle, AlertTriangle, Search, FileDown, 
@@ -60,7 +60,6 @@ import { formatCurrencyPDF, getCurrencySymbol } from '../../utils/currencyFormat
 const SERVICES_API_URL = '/api/admin/services';
 
 const Services = () => {
-  const { getDepartments, createDepartment, isOnline } = useAdminOffline();
   // ★ ONGLET ACTIF: 'services' | 'examens'
   const [activeTab, setActiveTab] = useState('services');
 
@@ -124,12 +123,8 @@ const Services = () => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const result = await getDepartments();
-      setServices(result.data || []);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : services locaux chargés');
-      }
+      const response = await api.get(`${SERVICES_API_URL}/all`);
+      setServices(response.data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des services', error);
       toast.error('Impossible de charger les services');
@@ -466,19 +461,14 @@ const Services = () => {
     e.preventDefault();
     try {
       if (editingService) {
-        // Note: updateDepartment n'existe pas encore dans le hook, on utilise create pour l'instant
-        const result = await createDepartment(formData);
+        await api.put(`${SERVICES_API_URL}/${editingService.id}`, formData);
         toast.success('Service mis à jour');
       } else {
-        const result = await createDepartment(formData);
+        await api.post(`${SERVICES_API_URL}/create`, formData);
         toast.success('Service ajouté');
       }
       fetchServices();
       setIsDialogOpen(false);
-      
-      if (!isOnline) {
-        toast.info('Mode hors ligne : service enregistré localement');
-      }
     } catch (error) { toast.error("Erreur d'enregistrement"); }
   };
 
