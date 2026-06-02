@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/finance/expenses")
+@RequestMapping("/api/v1/finance/depenses")
 @RequiredArgsConstructor
 @Tag(name = "Expenses", description = "Gestion des dépenses")
 @SecurityRequirement(name = "bearerAuth")

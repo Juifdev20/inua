@@ -78,13 +78,31 @@ const Expenses = () => {
   // ═══════════════════════════════════════
   const loadBalances = async () => {
     try {
-      const balanceData = await financeApi.getBalancesBySource();
-      setBalances(balanceData || {});
+      // Utiliser le hook offline pour les balances
+      const result = await getExpenses();
+      const expenses = result?.data || [];
       
-      const totalData = await financeApi.getTotalCashBalance();
-      setTotalBalance(totalData?.totalBalance || 0);
+      // S'assurer que expenses est un tableau
+      const expensesArray = Array.isArray(expenses) ? expenses : [];
+      
+      // Calculer les balances localement
+      const balancesBySource = expensesArray.reduce((acc, expense) => {
+        const source = expense.category || 'AUTRE';
+        acc[source] = (acc[source] || 0) + (expense.amount || 0);
+        return acc;
+      }, {});
+      
+      setBalances(balancesBySource);
+      setTotalBalance(Object.values(balancesBySource).reduce((sum, val) => sum + val, 0));
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : balances locales calculées');
+      }
     } catch (error) {
       console.error('Error loading balances:', error);
+      // En cas d'erreur, initialiser avec des valeurs vides
+      setBalances({});
+      setTotalBalance(0);
     }
   };
 
@@ -180,17 +198,27 @@ const Expenses = () => {
   const loadPharmacyTransactions = async () => {
     try {
       // Charger les transactions en attente
-      const pendingData = await financeApi.getPendingTransactions();
+      const result = await getExpenses();
+      const pendingData = result?.data || [];
       const transactions = Array.isArray(pendingData) ? pendingData : [];
       setPharmacyTransactions(transactions);
       
-      // Charger le total du jour (depuis FinanceTransaction)
-      const todayData = await financeApi.getTodayTotalFromTransactions();
-      if (todayData?.success) {
-        setPharmacyTodayTotal({
-          CDF: todayData.currency === 'CDF' ? (todayData.total || 0) : 0,
-          USD: todayData.currency === 'USD' ? (todayData.total || 0) : 0
-        });
+      // Calculer le total du jour localement
+      const today = new Date().toISOString().split('T')[0];
+      const pharmacyExpenses = transactions.filter(expense => 
+        expense.category === 'PHARMACIE' || expense.category === 'PHARMACY'
+      );
+      const todayPharmacyTotal = pharmacyExpenses
+        .filter(expense => expense.date?.startsWith(today))
+        .reduce((total, expense) => total + (expense.amount || 0), 0);
+      
+      setPharmacyTodayTotal({
+        CDF: todayPharmacyTotal,
+        USD: 0
+      });
+      
+      if (!isOnline) {
+        toast.info('Mode hors ligne : transactions pharmacie locales chargées');
       }
     } catch (error) {
       console.error('Erreur chargement transactions pharmacie:', error);
@@ -311,7 +339,7 @@ const Expenses = () => {
   const handleDelete = async (id) => {
     if (!window.confirm(t('finance.confirmDeleteExpense') || 'Supprimer cette dépense ?')) return;
     try {
-      await financeApi.deleteExpense(id);
+      await deleteExpense(id);
       toast.success(t('finance.expenseDeleted') || 'Dépense supprimée');
       loadExpenses();
       loadBalances(); // Reload balances after expense deletion
