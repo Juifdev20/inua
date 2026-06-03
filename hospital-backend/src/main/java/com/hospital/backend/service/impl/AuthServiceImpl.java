@@ -47,7 +47,9 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
 
+            // 🔧 PERMET de récupérer l'utilisateur même s'il s'est connecté avec son email
             User user = userRepository.findByUsername(request.getUsername())
+                    .or(() -> userRepository.findByEmail(request.getUsername()))
                     .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
             log.info("✅ [AUTH SUCCESS] User: {} | Role: {}", user.getUsername(), user.getRole().getNom());
