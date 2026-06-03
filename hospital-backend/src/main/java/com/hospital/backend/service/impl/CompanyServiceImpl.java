@@ -601,11 +601,47 @@ public class CompanyServiceImpl implements CompanyService {
             endOfMonth = LocalDateTime.now();
         }
 
-        long admissionCount = consumptionRecordRepository.countByCompanyIdAndConsumedAtBetween(companyId, startOfMonth, endOfMonth);
-        BigDecimal totalCoverageCurrentMonth = consumptionRecordRepository
-                .sumCompanyCoverageByCompanyAndPeriod(companyId, startOfMonth, endOfMonth);
-        BigDecimal totalSurplusCurrentMonth = consumptionRecordRepository
-                .sumPatientSurplusByCompanyAndPeriod(companyId, startOfMonth, endOfMonth);
+        // ── Calcul cohérent avec getPatientConsumptionSummaries (utilise admissionDate) ──
+        List<Admission> admissions = admissionRepository
+                .findByCompanyIdAndAdmissionDateBetween(companyId, startOfMonth, endOfMonth);
+        long admissionCount = admissions.size();
+
+        BigDecimal totalCoverageCurrentMonth = BigDecimal.ZERO;
+        BigDecimal totalSurplusCurrentMonth = BigDecimal.ZERO;
+
+        for (Admission adm : admissions) {
+            // Consultation (montants stockés directement sur l'admission)
+            totalCoverageCurrentMonth = totalCoverageCurrentMonth.add(
+                    adm.getCompanyCoverage() != null ? adm.getCompanyCoverage() : BigDecimal.ZERO);
+            totalSurplusCurrentMonth = totalSurplusCurrentMonth.add(
+                    adm.getPatientSurplus() != null ? adm.getPatientSurplus() : BigDecimal.ZERO);
+
+            // Labo : records liés à l'admission
+            List<CompanyConsumptionRecord> laboRecs = consumptionRecordRepository.findByAdmissionId(adm.getId());
+            for (CompanyConsumptionRecord r : laboRecs) {
+                if (r.getFluxType() != CompanyConsumptionRecord.FluxType.LABO) continue;
+                totalCoverageCurrentMonth = totalCoverageCurrentMonth.add(
+                        r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                totalSurplusCurrentMonth = totalSurplusCurrentMonth.add(
+                        r.getPatientSurplus() != null ? r.getPatientSurplus() : BigDecimal.ZERO);
+            }
+
+            // Pharmacie : records par patient + entreprise + mois
+            Long patientId = adm.getPatient() != null ? adm.getPatient().getId() : null;
+            if (patientId != null) {
+                List<CompanyConsumptionRecord> pharmRecs = consumptionRecordRepository
+                        .findByCompanyIdAndPatientIdAndFluxTypeAndConsumedAtBetween(
+                                companyId, patientId,
+                                CompanyConsumptionRecord.FluxType.PHARMACIE,
+                                startOfMonth, endOfMonth);
+                for (CompanyConsumptionRecord r : pharmRecs) {
+                    totalCoverageCurrentMonth = totalCoverageCurrentMonth.add(
+                            r.getCompanyCoverage() != null ? r.getCompanyCoverage() : BigDecimal.ZERO);
+                    totalSurplusCurrentMonth = totalSurplusCurrentMonth.add(
+                            r.getPatientSurplus() != null ? r.getPatientSurplus() : BigDecimal.ZERO);
+                }
+            }
+        }
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime allTimeStart = LocalDateTime.of(2000, 1, 1, 0, 0);

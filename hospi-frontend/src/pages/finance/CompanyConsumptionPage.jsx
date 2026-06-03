@@ -148,7 +148,7 @@ export default function CompanyConsumptionPage() {
   const AmtCell = ({ amount }) => {
     const n = Number(amount ?? 0);
     return (
-      <TableCell className={`text-right font-bold text-sm ${n === 0 ? 'text-muted-foreground/50' : ''}`}>
+      <TableCell className={`text-center font-bold text-sm ${n === 0 ? 'text-muted-foreground/50' : ''}`}>
         {fmt(n)}
       </TableCell>
     );
@@ -298,19 +298,20 @@ export default function CompanyConsumptionPage() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {/* Ligne TOTAUX */}
+                    <TableRow className="border-t-2 border-border bg-muted/40">
+                      <TableCell colSpan={3} className="pl-4 py-3 font-black uppercase tracking-wider text-[11px]">
+                        TOTAL GÉNÉRAL
+                      </TableCell>
+                      <TableCell className="text-center py-3 font-black">{fmt(grandTotals.consultation)}</TableCell>
+                      <TableCell className="text-center py-3 font-black">{fmt(grandTotals.labo)}</TableCell>
+                      <TableCell className="text-center py-3 font-black">{fmt(grandTotals.pharmacie)}</TableCell>
+                      <TableCell className="text-right py-3 font-black text-emerald-600">{fmt(grandTotals.coverage)}</TableCell>
+                      <TableCell className="text-right py-3 font-black text-amber-600">{fmt(grandTotals.surplus)}</TableCell>
+                      <TableCell className="text-right pr-4 py-3" />
+                    </TableRow>
                   </TableBody>
                 </Table>
-
-                {/* Ligne TOTAUX */}
-                <div className="flex items-center gap-0 border-t-2 border-border bg-muted/40 text-sm">
-                  <div className="flex-1 px-4 py-3 font-black uppercase tracking-wider text-[11px]">TOTAL GÉNÉRAL</div>
-                  <div className="w-28 text-center py-3 font-black">{fmt(grandTotals.consultation)}</div>
-                  <div className="w-24 text-center py-3 font-black">{fmt(grandTotals.labo)}</div>
-                  <div className="w-28 text-center py-3 font-black">{fmt(grandTotals.pharmacie)}</div>
-                  <div className="w-28 text-right py-3 font-black text-emerald-600 pr-4">{fmt(grandTotals.coverage)}</div>
-                  <div className="w-28 text-right py-3 font-black text-amber-600 pr-4">{fmt(grandTotals.surplus)}</div>
-                  <div className="w-28 pr-4" />
-                </div>
               </div>
             )}
           </CardContent>
