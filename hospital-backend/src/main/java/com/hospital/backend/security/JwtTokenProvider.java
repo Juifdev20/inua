@@ -143,4 +143,28 @@ public class JwtTokenProvider {
     public Long getAccessTokenExpiration() {
         return jwtExpiration;
     }
+
+    /**
+     * ★ Expose l'email contenu dans le claim "email" du token.
+     * Utilisé par JwtService et l'AuditorAware.
+     */
+    public String getEmailFromToken(String token) {
+        return getClaims(token).get("email", String.class);
+    }
+
+    /**
+     * ★ Retourne la date d'expiration du token.
+     * Utile pour le contrôle de session côté client.
+     */
+    public Date getExpirationDateFromToken(String token) {
+        return getClaims(token).getExpiration();
+    }
+
+    /**
+     * ★ Expose les claims bruts pour les services wrappers (JwtService).
+     * Attention : usage interne / lecture seule.
+     */
+    public Claims extractClaims(String token) {
+        return getClaims(token);
+    }
 }

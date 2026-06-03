@@ -7,6 +7,24 @@ import { useAuth } from "../context/AuthContext";
 const normalizeRole = (r) =>
   String(r || "").toUpperCase().replace("ROLE_", "").trim();
 
+/**
+ * 🔐 Vérifie si un token JWT est expiré côté client (sans validation de signature).
+ * C'est une barrière rapide avant que le backend ne rejette la requête.
+ */
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const payloadBase64 = token.split(".")[1];
+    if (!payloadBase64) return true;
+    const payload = JSON.parse(atob(payloadBase64));
+    if (!payload.exp) return false; // Pas d'exp = on laisse passer (backend décide)
+    // On ajoute une marge de 60 secondes pour éviter les rejets en vol
+    return payload.exp * 1000 < Date.now() + 60000;
+  } catch {
+    return true;
+  }
+};
+
 const getDashboardPathByRole = (rawRole) => {
   const role = normalizeRole(rawRole);
 
@@ -44,10 +62,19 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   // Sécurise les "race conditions" juste après login
-  const hasToken = isAuthenticated || !!localStorage.getItem("token");
+  const rawToken = localStorage.getItem("token");
+  const hasToken = isAuthenticated || !!rawToken;
 
   if (!hasToken) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // 🛡️ RENFORCEMENT : Si le token existe mais est expiré, on force le logout/redirection
+  if (rawToken && isTokenExpired(rawToken)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    console.warn("[ProtectedRoute] Token expiré détecté, redirection vers login.");
+    return <Navigate to="/login" replace state={{ from: location, expired: true }} />;
   }
 
   // Rôle courant (context d'abord, puis fallback localStorage)
