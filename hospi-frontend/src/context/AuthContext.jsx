@@ -170,6 +170,8 @@ export const AuthProvider = ({ children }) => {
       // Rediriger vers le dashboard approprié
       const role = userData.role.toUpperCase();
       const redirectMap = {
+        SUPERADMIN: '/superadmin',
+        SUPER_ADMIN: '/superadmin',
         ADMIN: '/admin/dashboard',
         RECEPTION: '/reception/dashboard',
         DOCTOR: '/doctor/dashboard',

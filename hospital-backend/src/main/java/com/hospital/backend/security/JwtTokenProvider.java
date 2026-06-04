@@ -48,6 +48,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(username)
                 .claim("type", "setup")
+                .claim("tokenVersion", 0L) // Setup token n'a pas besoin de version
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -74,6 +75,7 @@ public class JwtTokenProvider {
                 .claim("role", roleName)
                 .claim("firstName", user.getFirstName())
                 .claim("lastName", user.getLastName())
+                .claim("tokenVersion", user.getTokenVersion())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -113,6 +115,14 @@ public class JwtTokenProvider {
 
     public String getRoleFromToken(String token) {
         return getClaims(token).get("role", String.class);
+    }
+
+    public Long getTokenVersionFromToken(String token) {
+        Object version = getClaims(token).get("tokenVersion");
+        if (version instanceof Number) {
+            return ((Number) version).longValue();
+        }
+        return 0L;
     }
 
     private Claims getClaims(String token) {

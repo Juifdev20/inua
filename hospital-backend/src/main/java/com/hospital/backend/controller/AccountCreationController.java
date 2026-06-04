@@ -111,6 +111,12 @@ public class AccountCreationController {
             String searchName = (roleName == null || roleName.trim().isEmpty())
                     ? "ROLE_PATIENT" : "ROLE_" + roleName.trim().toUpperCase();
 
+            // 🛡️ BLOCAGE SÉCURITÉ : un admin hospitalier ne peut PAS créer de SUPERADMIN
+            if ("ROLE_SUPERADMIN".equals(searchName)) {
+                log.warn("🚨 [SECURITE] Tentative d'assignation ROLE_SUPERADMIN bloquée par AccountCreationController");
+                searchName = "ROLE_PATIENT";
+            }
+
             roleRepository.findByNom(searchName).ifPresent(user::setRole);
 
             // Sauvegarder

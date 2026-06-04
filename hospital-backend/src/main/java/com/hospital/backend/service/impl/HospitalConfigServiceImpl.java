@@ -57,16 +57,26 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
     @Override
     @Transactional(readOnly = true)
     public boolean exists() {
-        return configRepository.count() > 0;
+        try {
+            return configRepository.count() > 0;
+        } catch (Exception e) {
+            log.warn("⚠️ Table hospital_config inaccessible (premier démarrage): {}", e.getMessage());
+            return false;
+        }
     }
 
     @Override
     @Transactional
     public HospitalConfig initializeDefault() {
-        if (exists()) {
-            return getCurrentConfig().orElseThrow();
+        try {
+            if (exists()) {
+                return getCurrentConfig().orElseThrow();
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Impossible de vérifier hospital_config, création ignorée pour le moment");
+            return null;
         }
-        
+
         HospitalConfig defaultConfig = HospitalConfig.builder()
                 .hospitalName("INUA AFYA")
                 .hospitalCode("HOSP-001")
@@ -104,8 +114,13 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         
-        HospitalConfig saved = configRepository.save(defaultConfig);
-        log.info("✅ Configuration hospitalière par défaut créée");
-        return saved;
+        try {
+            HospitalConfig saved = configRepository.save(defaultConfig);
+            log.info("✅ Configuration hospitalière par défaut créée");
+            return saved;
+        } catch (Exception e) {
+            log.warn("⚠️ Impossible de créer hospital_config (table inexistante): {}", e.getMessage());
+            return null;
+        }
     }
 }

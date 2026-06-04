@@ -143,6 +143,14 @@ public class User {
     @JsonIgnore
     private LocalDateTime codeExpiry;  // Expiration du code (10 min)
 
+    /**
+     * 🔐 Version du token JWT. Incrémenté par le SuperAdmin pour forcer
+     * la déconnexion globale d'un utilisateur (invalidation de tous ses tokens).
+     */
+    @Column(name = "token_version", nullable = true)
+    @Builder.Default
+    private Long tokenVersion = 0L;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

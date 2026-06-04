@@ -135,16 +135,18 @@ const LoginPage = () => {
     const userRole = String(role || '').toUpperCase().replace('ROLE_', '').trim();
 
     const redirectMap = {
+      SUPERADMIN: '/superadmin',
+      SUPER_ADMIN: '/superadmin',
       ADMIN: '/admin/dashboard',
       RECEPTION: '/reception/dashboard',
       DOCTOR: '/doctor/dashboard',
       DOCTEUR: '/doctor/dashboard',
       FINANCE: '/finance/dashboard',
       CAISSIER: '/finance/dashboard',
-      LABORATOIRE: '/laboratory/dashboard', // ✅ IMPORTANT
-      LABO: '/laboratory/dashboard',        // ✅ sécurité
-      PHARMACY: '/pharmacy/dashboard',      // ✅ IMPORTANT
-      PHARMACIE: '/pharmacy/dashboard'      // ✅ sécurité
+      LABORATOIRE: '/laboratory/dashboard',
+      LABO: '/laboratory/dashboard',
+      PHARMACY: '/pharmacy/dashboard',
+      PHARMACIE: '/pharmacy/dashboard'
     };
 
     return redirectMap[userRole] || '/patient/dashboard';

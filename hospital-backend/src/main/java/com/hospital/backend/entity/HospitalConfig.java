@@ -30,7 +30,7 @@ public class HospitalConfig {
     @Column(name = "hospital_code", unique = true)
     private String hospitalCode;
 
-    @Column(name = "hospital_logo_url", columnDefinition = "LONGTEXT")
+    @Column(name = "hospital_logo_url", columnDefinition = "TEXT")
     private String hospitalLogoUrl;
 
     // === INFORMATIONS ADMINISTRATIVES ===

@@ -194,6 +194,8 @@ export const getRedirectPathByRole = (role) => {
   const userRole = String(role || '').toUpperCase().replace('ROLE_', '').trim();
 
   const redirectMap = {
+    SUPERADMIN: '/superadmin',
+    SUPER_ADMIN: '/superadmin',
     ADMIN: '/admin/dashboard',
     RECEPTION: '/reception/dashboard',
     DOCTOR: '/doctor/dashboard',

@@ -1,5 +1,7 @@
 package com.hospital.backend;
 
+import com.hospital.backend.entity.Role;
+import com.hospital.backend.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -40,6 +42,27 @@ public class HospitalBackendApplication {
                 log.info("  {} -> {}", key, value);
             });
             log.info("========================================");
+        };
+    }
+
+    /**
+     * 🛡️ Initialise le rôle SUPERADMIN au premier démarrage.
+     * Les développeurs doivent ensuite assigner ce rôle à leur compte manuellement
+     * (UPDATE users SET role_id = (SELECT id FROM roles WHERE nom = 'ROLE_SUPERADMIN') WHERE email = 'dev@example.com';)
+     */
+    @Bean
+    public CommandLineRunner initSuperAdminRole(RoleRepository roleRepository) {
+        return args -> {
+            if (!roleRepository.existsByNom("ROLE_SUPERADMIN")) {
+                Role superAdmin = new Role();
+                superAdmin.setNom("ROLE_SUPERADMIN");
+                superAdmin.setDescription("Administrateur technique du système — accès complet à la gouvernance et à la sécurité");
+                roleRepository.save(superAdmin);
+                log.info("✅ [BOOT] Rôle ROLE_SUPERADMIN créé automatiquement.");
+                log.info("⚠️  [BOOT] Assignez ce rôle à vos comptes développeurs via la base de données.");
+            } else {
+                log.info("✅ [BOOT] Rôle ROLE_SUPERADMIN déjà présent.");
+            }
         };
     }
 }

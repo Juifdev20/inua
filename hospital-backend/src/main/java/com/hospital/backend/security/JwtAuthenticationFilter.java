@@ -1,5 +1,10 @@
 package com.hospital.backend.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hospital.backend.entity.User;
+import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.service.DeviceSessionService;
+import com.hospital.backend.service.SystemConfigService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -22,6 +28,10 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
+    private final SystemConfigService systemConfigService;
+    private final DeviceSessionService deviceSessionService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -79,14 +89,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (username != null && role != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-        // ✅ CORRECTION: Ajouter le préfixe ROLE_ pour la cohérence avec Spring Security
-        // Si le rôle ne commence pas déjà par ROLE_, on l'ajoute
-        String formattedRole = role.toUpperCase().trim();
-        if (!formattedRole.startsWith("ROLE_")) {
-            formattedRole = "ROLE_" + formattedRole;
-        }
-        
-        log.info("🔍 [JWT DEBUG] Rôle formaté: {} (original: {})", formattedRole, role);
+            // 🔐 VÉRIFICATION tokenVersion (force-logout SuperAdmin)
+            Long tokenVersion = jwtTokenProvider.getTokenVersionFromToken(token);
+            User user = userRepository.findByUsername(username)
+                    .or(() -> userRepository.findByEmail(username))
+                    .orElse(null);
+
+            if (user != null && !tokenVersion.equals(user.getTokenVersion())) {
+                log.warn("🚪 [JWT] TokenVersion mismatch pour {} — token={}, base={}. Déconnexion forcée.",
+                        username, tokenVersion, user.getTokenVersion());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"Session révoquée par l'administrateur\",\"code\":401}");
+                return;
+            }
+
+            // ✅ CORRECTION: Ajouter le préfixe ROLE_ pour la cohérence avec Spring Security
+            String formattedRole = role.toUpperCase().trim();
+            if (!formattedRole.startsWith("ROLE_")) {
+                formattedRole = "ROLE_" + formattedRole;
+            }
+
+            log.info("🔍 [JWT DEBUG] Rôle formaté: {} (original: {})", formattedRole, role);
 
             SimpleGrantedAuthority authority = new SimpleGrantedAuthority(formattedRole);
 
@@ -103,6 +127,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             log.info("🔍 [JWT DEBUG] Authentification établie pour: {} avec autorité: {}", username, authority);
+
+            // 📱 DEVICE FINGERPRINT — enregistre l'appareil et vérifie le blocage
+            // Les Super Admins sont exemptés pour éviter le verrouillage total
+            boolean isSuperAdmin = formattedRole.contains("SUPERADMIN");
+            String deviceId = request.getHeader("X-Device-Id");
+            if (deviceId != null && !deviceId.isBlank() && user != null) {
+                deviceSessionService.registerDevice(
+                        deviceId,
+                        user.getId(),
+                        user.getUsername(),
+                        request.getRemoteAddr(),
+                        request.getHeader("User-Agent")
+                );
+
+                if (!isSuperAdmin && deviceSessionService.isDeviceBlocked(deviceId)) {
+                    log.warn("🚫 [DEVICE] Appareil {} BLOQUÉ pour user {}", deviceId, username);
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+                    response.setContentType("application/json");
+                    response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+                            "error", "Cet appareil a été bloqué par l'administrateur.",
+                            "code", 403,
+                            "deviceBlocked", true
+                    )));
+                    return;
+                }
+            }
+
+            // 🛠️ MODE MAINTENANCE — après authentification, on bloque les non-admin
+            if (systemConfigService.isMaintenanceMode()) {
+                boolean isAdmin = formattedRole.contains("ADMIN");
+                if (!isAdmin) {
+                    log.warn("🚧 [MAINTENANCE] Accès refusé pour {} — mode maintenance actif", username);
+                    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE); // 503
+                    response.setContentType("application/json");
+                    response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+                            "error", "Mode maintenance en cours. Seuls les administrateurs peuvent accéder.",
+                            "code", 503,
+                            "maintenance", true
+                    )));
+                    return;
+                }
+            }
         }
 
         filterChain.doFilter(request, response);

@@ -157,6 +157,12 @@ public class AdminController {
             String roleName = (String) userData.get("role");
             String searchName = (roleName == null || roleName.trim().isEmpty()) ? "PATIENT" : roleName.trim().toUpperCase();
 
+            // 🛡️ BLOCAGE SÉCURITÉ : un admin hospitalier ne peut PAS créer de SUPERADMIN
+            if ("SUPERADMIN".equals(searchName) || "ROLE_SUPERADMIN".equals(searchName)) {
+                log.warn("🚨 [SECURITE] Tentative d'assignation ROLE_SUPERADMIN bloquée par AdminController (user={})", userData.get("email"));
+                searchName = "PATIENT"; // Forcer un rôle sûr
+            }
+
             roleRepository.findByNom(searchName).ifPresentOrElse(
                     user::setRole,
                     () -> roleRepository.findByNom("PATIENT").ifPresent(user::setRole)
@@ -193,7 +199,13 @@ public class AdminController {
 
                 String roleName = (String) userDetails.get("role");
                 if (roleName != null) {
-                    roleRepository.findByNom(roleName.toUpperCase()).ifPresent(user::setRole);
+                    String upperRole = roleName.toUpperCase();
+                    // 🛡️ BLOCAGE SÉCURITÉ : un admin hospitalier ne peut PAS promouvoir en SUPERADMIN
+                    if ("SUPERADMIN".equals(upperRole) || "ROLE_SUPERADMIN".equals(upperRole)) {
+                        log.warn("🚨 [SECURITE] Tentative de promotion vers ROLE_SUPERADMIN bloquée (userId={})", id);
+                    } else {
+                        roleRepository.findByNom(upperRole).ifPresent(user::setRole);
+                    }
                 }
 
                 userRepository.save(user);

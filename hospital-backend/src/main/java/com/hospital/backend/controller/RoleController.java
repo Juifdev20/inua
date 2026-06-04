@@ -4,15 +4,18 @@ import com.hospital.backend.entity.Role;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.service.ActivityService; // Import du service
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/roles")
 @CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
+@Slf4j
 public class RoleController {
 
     @Autowired
@@ -24,10 +27,12 @@ public class RoleController {
     @Autowired
     private ActivityService activityService; // Injection pour le Dashboard
 
-    // Récupérer tous les rôles
+    // Récupérer tous les rôles (SUPERADMIN exclu — réservé aux développeurs)
     @GetMapping("/all")
     public List<Role> getAllRoles() {
-        List<Role> roles = roleRepository.findAll();
+        List<Role> roles = roleRepository.findAll().stream()
+                .filter(r -> !"ROLE_SUPERADMIN".equals(r.getNom()) && !"SUPERADMIN".equals(r.getNom()))
+                .toList();
         for (Role role : roles) {
             long count = userRepository.countByRole(role);
             role.setUtilisateursCount((int) count);
@@ -37,24 +42,35 @@ public class RoleController {
 
     // Créer un nouveau rôle + Log
     @PostMapping("/create")
-    public Role createRole(@RequestBody Role role) {
+    public ResponseEntity<?> createRole(@RequestBody Role role) {
         if (role.getNom() != null) {
             role.setNom(role.getNom().toUpperCase());
+        }
+        // 🛡️ BLOCAGE SÉCURITÉ : un admin hospitalier ne peut PAS créer de SUPERADMIN
+        if ("SUPERADMIN".equals(role.getNom()) || "ROLE_SUPERADMIN".equals(role.getNom())) {
+            log.warn("🚨 [SECURITE] Tentative de création du rôle SUPERADMIN bloquée par RoleController");
+            return ResponseEntity.status(403).body(Map.of("error", "Ce rôle est réservé aux développeurs du système"));
         }
         Role savedRole = roleRepository.save(role);
 
         // Enregistrement de l'activité
         activityService.log("Nouveau Rôle", "Création du rôle " + savedRole.getNom(), "success");
 
-        return savedRole;
+        return ResponseEntity.ok(savedRole);
     }
 
     // Modifier un rôle + Log
     @PutMapping("/{id}")
-    public ResponseEntity<Role> updateRole(@PathVariable Long id, @RequestBody Role roleDetails) {
+    public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody Role roleDetails) {
+        String newNom = roleDetails.getNom() != null ? roleDetails.getNom().toUpperCase() : "";
+        // 🛡️ BLOCAGE SÉCURITÉ
+        if ("SUPERADMIN".equals(newNom) || "ROLE_SUPERADMIN".equals(newNom)) {
+            log.warn("🚨 [SECURITE] Tentative de renommage vers SUPERADMIN bloquée par RoleController");
+            return ResponseEntity.status(403).body(Map.of("error", "Ce rôle est réservé aux développeurs du système"));
+        }
         return roleRepository.findById(id)
                 .map(role -> {
-                    role.setNom(roleDetails.getNom().toUpperCase());
+                    role.setNom(newNom);
                     role.setDescription(roleDetails.getDescription());
                     role.setCouleur(roleDetails.getCouleur());
                     role.setPermissions(roleDetails.getPermissions());
@@ -75,6 +91,11 @@ public class RoleController {
     public ResponseEntity<?> deleteRole(@PathVariable Long id) {
         return roleRepository.findById(id)
                 .map(role -> {
+                    // 🛡️ BLOCAGE SÉCURITÉ
+                    if ("ROLE_SUPERADMIN".equals(role.getNom()) || "SUPERADMIN".equals(role.getNom())) {
+                        log.warn("🚨 [SECURITE] Tentative de suppression du rôle SUPERADMIN bloquée");
+                        return ResponseEntity.status(403).body(Map.of("error", "Ce rôle est réservé aux développeurs du système"));
+                    }
                     String roleName = role.getNom();
                     roleRepository.delete(role);
 

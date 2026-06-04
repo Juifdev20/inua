@@ -104,6 +104,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/patient/services-catalog/**", "/api/patient/services-catalog/**")
                         .permitAll()
 
+                        // 🔧 Statut public du système (maintenance, santé serveur)
+                        .requestMatchers("/api/public/**")
+                        .permitAll()
+
                         // Patient (singulier) - Routes de facturation et profil patient
                         .requestMatchers("/api/v1/patient/**", "/api/patient/**")
                         .hasAnyAuthority("ROLE_PATIENT", "ROLE_ADMIN", "ROLE_DOCTEUR", "ROLE_RECEPTION")
@@ -139,6 +143,7 @@ public class SecurityConfig {
 
                         // Admin et Divers
                         .requestMatchers("/api/v1/admin/**", "/api/v1/audit/**", "/api/audit/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/superadmin/**").hasAuthority("ROLE_SUPERADMIN")
                         .requestMatchers("/api/v1/admissions/**", "/api/admissions/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RECEPTION", "ROLE_DOCTEUR", "ROLE_FINANCE", "ROLE_CAISSIER")
                         .requestMatchers("/api/v1/reception/**")
@@ -192,7 +197,7 @@ public class SecurityConfig {
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Device-Id", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Total-Count"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -228,8 +233,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:5173"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
-        config.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Device-Id", "X-Requested-With", "Accept", "Origin"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Device-Id"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

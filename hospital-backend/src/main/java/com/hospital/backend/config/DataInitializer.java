@@ -53,11 +53,17 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     private void initializeHospitalConfig() {
-        if (!hospitalConfigService.exists()) {
-            hospitalConfigService.initializeDefault();
-            log.info("🏥 Configuration hospitalière initialisée");
-        } else {
-            log.info("🏥 Configuration hospitalière existe déjà");
+        try {
+            if (!hospitalConfigService.exists()) {
+                var config = hospitalConfigService.initializeDefault();
+                if (config != null) {
+                    log.info("🏥 Configuration hospitalière initialisée");
+                }
+            } else {
+                log.info("🏥 Configuration hospitalière existe déjà");
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Table hospital_config non disponible (premier démarrage), ignoré");
         }
     }
 

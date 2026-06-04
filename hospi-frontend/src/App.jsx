@@ -1,3 +1,4 @@
+import "./api/apiDeviceHeader.js"; // 📱 Injection X-Device-Id sur toutes les requêtes Axios — doit être en 1er
 import React, { useState, useEffect, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -8,6 +9,7 @@ import { AdminProvider } from "./context/AdminContext";
 
 import FinanceRoute from "./routes/FinanceRoute";
 import AdminRoute from "./routes/AdminRoute";
+import SuperAdminRoute from "./routes/SuperAdminRoute";
 import ReceptionRoute from "./routes/ReceptionRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -16,6 +18,7 @@ import { cn } from "./lib/utils";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import AppLauncher from "./components/AppLauncher";
+import MaintenanceBanner from "./components/MaintenanceBanner";
 import AuthWrapper from "./components/auth/AuthWrapper";
 import PasswordChangeWrapper from "./components/auth/PasswordChangeWrapper";
 
@@ -31,6 +34,7 @@ import OAuth2Callback from "./pages/auth/OAuth2Callback";
 
 /* 🔐 Admin layout + pages */
 import AdminLayout from "./components/admin/AdminLayout";
+import SuperAdminLayout from "./components/superadmin/SuperAdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Patients from "./pages/admin/PatientList";
 import PatientDetails from "./pages/admin/PatientDetails";
@@ -41,6 +45,7 @@ import Services from "./pages/admin/Services";
 import Departments from "./pages/admin/Departments";
 import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
+import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import Profile from "./pages/admin/Profile";
 import HospitalSettings from "./pages/admin/HospitalSettings";
 import CompaniesPage from "./pages/admin/CompaniesPage";
@@ -452,10 +457,30 @@ function App() {
                   <Route path="profil" element={<Profile />} />
                 </Route>
 
+                {/* 🛡️ ROUTES SUPER ADMIN — Développeurs uniquement */}
+                <Route
+                  path="/superadmin"
+                  element={
+                    <SuperAdminRoute>
+                      <SuperAdminLayout />
+                    </SuperAdminRoute>
+                  }
+                >
+                  <Route index element={<SecurityDashboard />} />
+                  <Route path="alerts" element={<SecurityDashboard />} />
+                  <Route path="users" element={<SecurityDashboard />} />
+                  <Route path="sessions" element={<SecurityDashboard />} />
+                  <Route path="devices" element={<SecurityDashboard />} />
+                  <Route path="system" element={<SecurityDashboard />} />
+                  <Route path="devs" element={<SecurityDashboard />} />
+                  <Route path="logs" element={<SecurityDashboard />} />
+                </Route>
+
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
               </AuthWrapper>
 
+                <MaintenanceBanner />
                 <PWAInstallPrompt />
                 <OfflineIndicator />
               </BrowserRouter>
