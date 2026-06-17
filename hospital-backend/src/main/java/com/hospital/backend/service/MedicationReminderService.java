@@ -56,7 +56,7 @@ public class MedicationReminderService {
      * Executee toutes les minutes pour vérifier si un patient doit prendre
      * un médicament à l'heure actuelle.
      *
-     * Cron: 0 */5 * * * * (toutes les 5 minutes)
+     * Cron: 0 0/5 * * * * (toutes les 5 minutes)
      * =========================================================================
      */
     @Scheduled(cron = "0 */5 * * * *")
