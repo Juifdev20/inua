@@ -33,7 +33,7 @@ RUN mvn clean package -DskipTests -B -Dproject.build.sourceEncoding=UTF-8 -Dproj
 FROM eclipse-temurin:21-jre-alpine
 
 # Ajustement de la mémoire pour les conteneurs (75% de la RAM disponible sur Render)
-ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=128m -XX:+ExitOnOutOfMemoryError"
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Installer curl pour healthcheck (optionnel mais utile)

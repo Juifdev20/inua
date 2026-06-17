@@ -56,10 +56,10 @@ public class MedicationReminderService {
      * Executee toutes les minutes pour vérifier si un patient doit prendre
      * un médicament à l'heure actuelle.
      *
-     * Cron: 0 * * * * * (toutes les minutes)
+     * Cron: 0 */5 * * * * (toutes les 5 minutes)
      * =========================================================================
      */
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void checkMedicationReminders() {
         LocalDateTime now = LocalDateTime.now();
@@ -320,9 +320,11 @@ public class MedicationReminderService {
      * Cette méthode est appelée périodiquement.
      */
     private void cleanupOldNotifications() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+        String todayStr = today.toString();
         String yesterdayStr = yesterday.toString();
 
-        sentNotifications.removeIf(key -> key.endsWith(yesterdayStr));
+        sentNotifications.removeIf(key -> !key.endsWith(todayStr) && !key.endsWith(yesterdayStr));
     }
 }
