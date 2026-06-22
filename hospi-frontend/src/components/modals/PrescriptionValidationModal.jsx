@@ -229,7 +229,14 @@ const PrescriptionValidationModal = ({
       onClose();
     } catch (error) {
       console.error('❌ [VALIDATION] Erreur:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Erreur inconnue';
+      let errorMsg = error.response?.data?.message || error.message || 'Erreur inconnue';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMsg = 'Le serveur met trop de temps à répondre (timeout). Veuillez réessayer.';
+      } else if (error.message?.includes('Network Error')) {
+        errorMsg = 'Erreur réseau. Vérifiez votre connexion au serveur.';
+      }
+      
       toast.error(`Erreur: ${errorMsg}`);
     } finally {
       setLoading(false);

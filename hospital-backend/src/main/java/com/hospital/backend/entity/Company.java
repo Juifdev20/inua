@@ -1,6 +1,7 @@
 package com.hospital.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -57,6 +58,12 @@ public class Company {
     @Column(name = "surplus_rate", precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal surplusRate = new BigDecimal("35.00");
+
+    // ★ MULTI-TENANT: Hôpital associé
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
 
     @Column(name = "created_at", updatable = false)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

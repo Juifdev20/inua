@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -78,6 +79,12 @@ public class Medication {
     @Builder.Default
     @Column(name = "requires_prescription")
     private Boolean requiresPrescription = true;
+
+    // ★ MULTI-TENANT: Hôpital propriétaire du stock
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "categorie_abc", length = 1)

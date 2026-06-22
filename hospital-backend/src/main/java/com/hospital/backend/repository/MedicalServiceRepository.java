@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface MedicalServiceRepository extends JpaRepository<MedicalService, Long> {
     List<MedicalService> findByIsActiveTrue();
+
+    // ★ MULTI-TENANT: filtrer par hôpital
+    List<MedicalService> findByHospitalId(Long hospitalId);
+    List<MedicalService> findByHospitalIdAndIsActiveTrue(Long hospitalId);
 }

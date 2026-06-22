@@ -19,6 +19,7 @@ import com.hospital.backend.service.LabAlertService;
 import com.hospital.backend.service.PatientDocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.hospital.backend.security.HospitalTenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
@@ -269,53 +270,57 @@ public class ReceptionController {
     @GetMapping("/dashboard/stats")
     public ResponseEntity<com.hospital.backend.dto.DashboardStatsDTO> getDashboardStats() {
         try {
-            log.info("📊 [RECEPTION] Récupération des statistiques du dashboard");
+            Long hId = HospitalTenantContext.getHospitalId();
             
             // Calculer les dates du jour
             LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
             LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
             log.info("📅 [RECEPTION] Période: {} à {}", startOfDay, endOfDay);
             
-            // 1. Admissions du jour (compter toutes les consultations créées aujourd'hui)
-            Long admissionsJourObj = consultationRepository.countAdmissionsToday(startOfDay, endOfDay);
+            // 1. Admissions du jour
+            Long admissionsJourObj = (hId != null)
+                    ? consultationRepository.countAdmissionsTodayByHospital(startOfDay, endOfDay, hId)
+                    : consultationRepository.countAdmissionsToday(startOfDay, endOfDay);
             long admissionsJour = admissionsJourObj != null ? admissionsJourObj : 0L;
             log.info("📊 [RECEPTION] Admissions du jour: {}", admissionsJour);
             
-            // 2. En attente (statut EN_ATTENTE) - utilise la méthode existante countByStatus
-            Long enAttenteObj = consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
+            // 2. En attente (statut EN_ATTENTE)
+            Long enAttenteObj = (hId != null)
+                    ? consultationRepository.countByStatusAndHospitalId(ConsultationStatus.EN_ATTENTE, hId)
+                    : consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
             long enAttente = enAttenteObj != null ? enAttenteObj : 0L;
             log.info("📊 [RECEPTION] En attente: {}", enAttente);
             
-            // 3. Fiches transmises (statuts: EN_COURS, LABORATOIRE_EN_ATTENTE, PENDING_PAYMENT, PAID_PENDING_LAB)
+            // 3. Fiches transmises
             List<ConsultationStatus> transmittedStatuses = List.of(
                 ConsultationStatus.EN_COURS,
                 ConsultationStatus.LABORATOIRE_EN_ATTENTE,
                 ConsultationStatus.PENDING_PAYMENT,
                 ConsultationStatus.PAID_PENDING_LAB
             );
-            log.info("📊 [RECEPTION] Statuts transmis: {}", transmittedStatuses);
-            Long fichesTransmisesObj = consultationRepository.countFichesTransmises(transmittedStatuses);
+            Long fichesTransmisesObj = (hId != null)
+                    ? consultationRepository.countFichesTransmisesByHospital(transmittedStatuses, hId)
+                    : consultationRepository.countFichesTransmises(transmittedStatuses);
             long fichesTransmises = fichesTransmisesObj != null ? fichesTransmisesObj : 0L;
             log.info("📊 [RECEPTION] Fiches transmises: {}", fichesTransmises);
             
-            // 4. Terminées aujourd'hui (statuts: TERMINE, COMPLETED)
+            // 4. Terminées aujourd'hui
             List<ConsultationStatus> terminatedStatuses = List.of(
                 ConsultationStatus.TERMINE,
                 ConsultationStatus.COMPLETED
             );
-            log.info("📊 [RECEPTION] Statuts terminés: {}", terminatedStatuses);
-            Long termineesObj = consultationRepository.countTermineesToday(terminatedStatuses, startOfDay, endOfDay);
+            Long termineesObj = (hId != null)
+                    ? consultationRepository.countTermineesTodayByHospital(terminatedStatuses, startOfDay, endOfDay, hId)
+                    : consultationRepository.countTermineesToday(terminatedStatuses, startOfDay, endOfDay);
             long terminees = termineesObj != null ? termineesObj : 0L;
             log.info("📊 [RECEPTION] Terminées aujourd'hui: {}", terminees);
             
-            // 5. Revenu du jour (somme des examAmountPaid aujourd'hui)
-            // Pour simplifier, on utilise les consultations terminées
             Double todayRevenue = 0.0;
             
-            // 6. Dernières consultations (5 dernières du jour)
-            List<Consultation> recentConsultations = consultationRepository.findRecentAdmissionsToday(
-                startOfDay, endOfDay, PageRequest.of(0, 5)
-            );
+            // 5. Dernières consultations (5 dernières du jour)
+            List<Consultation> recentConsultations = (hId != null)
+                    ? consultationRepository.findRecentAdmissionsTodayByHospital(startOfDay, endOfDay, hId, PageRequest.of(0, 5))
+                    : consultationRepository.findRecentAdmissionsToday(startOfDay, endOfDay, PageRequest.of(0, 5));
             
             List<com.hospital.backend.dto.DashboardStatsDTO.RecentConsultationDTO> recentDTOs = recentConsultations.stream()
                 .map(c -> com.hospital.backend.dto.DashboardStatsDTO.RecentConsultationDTO.builder()
@@ -390,7 +395,7 @@ public class ReceptionController {
             }
             
             // Mettre à jour le paiement et envoyer au laboratoire
-            consultationService.updateExamPaymentAndSendToLab(id, examAmountPaid);
+            consultationService.updateExamPaymentAndSendToLab(id, examAmountPaid, null);
             
             log.info("✅ [RECEPTION] Paiement labo traité avec succès - Montant: {}, Statut: {}", examAmountPaid, status);
             

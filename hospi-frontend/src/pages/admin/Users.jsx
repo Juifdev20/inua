@@ -536,7 +536,7 @@ const UsersIntegrated = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALL_ROLES.filter(r => r.nom !== 'ROLE_PATIENT').map(role => (
+                  {(editingUser ? ALL_ROLES : ALL_ROLES.filter(r => r.nom !== 'ROLE_PATIENT')).map(role => (
                     <SelectItem key={role.id} value={role.nom}>
                       {role.label}
                     </SelectItem>

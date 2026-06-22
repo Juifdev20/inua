@@ -15,6 +15,7 @@ import com.hospital.backend.repository.ConsultationRepository;
 import com.hospital.backend.repository.PharmacyOrderRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.security.CustomUserDetails;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.entity.MedicalService;
 import com.hospital.backend.entity.Examen;
 import com.hospital.backend.repository.MedicalServiceRepository;
@@ -87,8 +88,13 @@ public class FinanceController {
     @Operation(summary = "Liste des services médicaux et examens laboratoire (grille tarifaire)")
     public ResponseEntity<Map<String, Object>> getAllMedicalServices() {
         try {
-            List<MedicalService> services = medicalServiceRepository.findByIsActiveTrue();
-            List<Examen> examens = examenRepository.findByActifTrue();
+            Long hId = HospitalTenantContext.getHospitalId();
+            List<MedicalService> services = (hId != null)
+                    ? medicalServiceRepository.findByHospitalIdAndIsActiveTrue(hId)
+                    : medicalServiceRepository.findByIsActiveTrue();
+            List<Examen> examens = (hId != null)
+                    ? examenRepository.findByHospitalIdAndActifTrue(hId)
+                    : examenRepository.findByActifTrue();
 
             // Convertir MedicalServices
             List<Map<String, Object>> result = services.stream()
@@ -166,6 +172,10 @@ public class FinanceController {
     public ResponseEntity<Map<String, Object>> createMedicalService(@RequestBody MedicalService service) {
         try {
             if (service.getIsActive() == null) service.setIsActive(true);
+            Long hId = HospitalTenantContext.getHospitalId();
+            if (hId != null) {
+                service.setHospital(com.hospital.backend.entity.Hospital.builder().id(hId).build());
+            }
             MedicalService saved = medicalServiceRepository.save(service);
             log.info("✅ [FINANCE] Service créé: {} ({})", saved.getNom(), saved.getId());
             return ResponseEntity.ok(Map.of(
@@ -290,6 +300,7 @@ public class FinanceController {
         log.info("📥 [FINANCE CTRL] Récupération des paiements laboratoire - Date: {}", date);
 
         try {
+            Long hId = HospitalTenantContext.getHospitalId();
             List<ConsultationStatus> targetStatuses = List.of(
                 ConsultationStatus.EN_ATTENTE,
                 ConsultationStatus.EXAMENS_PRESCRITS,
@@ -346,8 +357,11 @@ public class FinanceController {
                     consultations.size());
             }
 
-            // Filtrer uniquement celles qui ont des examens prescrits
-            List<Consultation> withExams = consultations.stream()
+            // Filtrer par hôpital puis par examens prescrits
+            List<Consultation> hospitalFiltered = consultations.stream()
+                .filter(c -> hId == null || (c.getPatient() != null && c.getPatient().getHospital() != null && c.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
+            List<Consultation> withExams = hospitalFiltered.stream()
                 .filter(c -> c.getPrescribedExams() != null && !c.getPrescribedExams().isEmpty())
                 .collect(Collectors.toList());
 
@@ -642,8 +656,15 @@ public class FinanceController {
                 amountPaid = totalAmount.doubleValue();
             }
 
+            // Extraire la méthode de paiement depuis la requête
+            String paymentMethodStr = null;
+            if (paymentData != null && paymentData.containsKey("paymentMethod")) {
+                Object pmObj = paymentData.get("paymentMethod");
+                if (pmObj != null) paymentMethodStr = pmObj.toString();
+            }
+
             // Appeler le service de paiement qui applique la couverture abonné
-            consultationService.updateExamPaymentAndSendToLab(consultationId, amountPaid);
+            consultationService.updateExamPaymentAndSendToLab(consultationId, amountPaid, paymentMethodStr);
 
             // 🔔 Notifier le laboratoire du paiement confirmé
             try {

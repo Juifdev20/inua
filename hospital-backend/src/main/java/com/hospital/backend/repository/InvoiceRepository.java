@@ -67,6 +67,13 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     BigDecimal calculateTotalPending();
 
     List<Invoice> findByStatusAndDepartmentSource(InvoiceStatus status, DepartmentSource departmentSource);
+
+    // ★ MULTI-TENANT: filtrer par hôpital du patient
+    @Query("SELECT i FROM Invoice i WHERE i.status = :status AND i.departmentSource = :source AND i.patient.hospital.id = :hospitalId")
+    List<Invoice> findByStatusAndDepartmentSourceAndHospitalId(
+            @Param("status") InvoiceStatus status,
+            @Param("source") DepartmentSource source,
+            @Param("hospitalId") Long hospitalId);
     
     // --- MÉTHODES POUR LE FLUX PHARMACIE PRESCRIPTION ---
     Optional<Invoice> findByPrescriptionId(Long prescriptionId);

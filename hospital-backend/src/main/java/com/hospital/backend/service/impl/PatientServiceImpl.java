@@ -8,6 +8,7 @@ import com.hospital.backend.repository.*;
 import com.hospital.backend.service.PatientService;
 import com.hospital.backend.mapper.PatientMapper;
 import lombok.RequiredArgsConstructor;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,7 +46,9 @@ public class PatientServiceImpl implements PatientService {
     @Transactional(readOnly = true)
     public List<PatientSimpleDTO> getAllSimpleList() {
         log.info("Récupération de la liste simplifiée des patients pour la réception");
+        Long hId = HospitalTenantContext.getHospitalId();
         return patientRepository.findAllActivePatients().stream()
+                .filter(p -> hId == null || p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
                 .map(patientMapper::toSimpleDTO)
                 .collect(Collectors.toList());
     }
@@ -56,8 +59,10 @@ public class PatientServiceImpl implements PatientService {
         log.info("Recherche simplifiée pour le triage : {}", query);
         String q = query.trim().toLowerCase();
         // Recherche en mémoire sur tous les patients actifs (évite le filtre ROLE_PATIENT du repo)
+        Long hId = HospitalTenantContext.getHospitalId();
         return patientRepository.findAll().stream()
                 .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                .filter(p -> hId == null || p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
                 .filter(p -> {
                     String fn = p.getFirstName() != null ? p.getFirstName().toLowerCase() : "";
                     String ln = p.getLastName() != null ? p.getLastName().toLowerCase() : "";
@@ -188,7 +193,9 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public List<PatientDTO> getAllList() {
+        Long hId = HospitalTenantContext.getHospitalId();
         return patientRepository.findAllActivePatients().stream()
+                .filter(p -> hId == null || p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -196,18 +203,39 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PatientDTO> getAll(Pageable pageable) {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            List<Patient> filtered = patientRepository.findByIsActiveTrue(pageable).getContent().stream()
+                    .filter(p -> p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
+                    .collect(Collectors.toList());
+            return toPageResponse(new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size()));
+        }
         return toPageResponse(patientRepository.findByIsActiveTrue(pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PatientDTO> getAllArchived(Pageable pageable) {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            List<Patient> filtered = patientRepository.findByIsActiveFalse(pageable).getContent().stream()
+                    .filter(p -> p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
+                    .collect(Collectors.toList());
+            return toPageResponse(new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size()));
+        }
         return toPageResponse(patientRepository.findByIsActiveFalse(pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PatientDTO> search(String query, Pageable pageable) {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            List<Patient> filtered = patientRepository.searchActivePatients(query, pageable).getContent().stream()
+                    .filter(p -> p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
+                    .collect(Collectors.toList());
+            return toPageResponse(new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size()));
+        }
         return toPageResponse(patientRepository.searchActivePatients(query, pageable));
     }
 
@@ -366,6 +394,7 @@ public class PatientServiceImpl implements PatientService {
                 .temperature(dto.getTemperature())
                 .heartRate(dto.getHeartRate())
                 .symptoms(dto.getSymptoms())
+                .hospital(dto.getHospitalId() != null ? com.hospital.backend.entity.Hospital.builder().id(dto.getHospitalId()).build() : null)
                 .isActive(dto.getIsActive() != null ? dto.getIsActive() : true).build();
     }
 
@@ -391,6 +420,9 @@ public class PatientServiceImpl implements PatientService {
         if (dto.getTemperature() != null) patient.setTemperature(dto.getTemperature());
         if (dto.getHeartRate() != null) patient.setHeartRate(dto.getHeartRate());
         if (hasText(dto.getSymptoms())) patient.setSymptoms(dto.getSymptoms());
+        if (dto.getHospitalId() != null && patient.getHospital() == null) {
+            patient.setHospital(com.hospital.backend.entity.Hospital.builder().id(dto.getHospitalId()).build());
+        }
         if (hasText(dto.getBloodType())) patient.setBloodType(dto.getBloodType());
     }
 

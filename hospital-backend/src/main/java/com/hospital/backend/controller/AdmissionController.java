@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
 
 import java.util.List;
 
@@ -32,8 +33,14 @@ public class AdmissionController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTION', 'DOCTEUR', 'FINANCE', 'CAISSIER')")
     public ResponseEntity<List<AdmissionDTO>> getAllAdmissions() {
-        log.info("Récupération de toutes les admissions");
-        List<AdmissionDTO> admissions = admissionService.getAll();
+        Long hId = HospitalTenantContext.getHospitalId();
+        log.info("Récupération des admissions - hospitalId: {}", hId);
+        List<AdmissionDTO> admissions;
+        if (hId != null) {
+            admissions = admissionService.getByHospitalId(hId);
+        } else {
+            admissions = admissionService.getAll();
+        }
         return ResponseEntity.ok(admissions);
     }
 

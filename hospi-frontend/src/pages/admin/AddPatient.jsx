@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Save, 
@@ -18,6 +18,7 @@ import SuccessAccountModal from '../../components/auth/SuccessAccountModal';
 
 const AddPatient = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -230,7 +231,8 @@ const AddPatient = () => {
             icon: <CheckCircle2 className="h-5 w-5 text-[#37f49e]" />
           });
           // Rediriger vers la liste après 3 secondes
-          setTimeout(() => navigate('/reception/patients'), 3000);
+          const userRole1 = JSON.parse(localStorage.getItem('user') || '{}').role?.replace('ROLE_', '').toUpperCase().trim(); const redirectPath1 = userRole1 === 'ADMIN' || userRole1 === 'SUPERADMIN' ? '/admin/patients' : '/reception/patients';
+          setTimeout(() => navigate(redirectPath1), 3000);
         }
       } else {
         // Pas d'ID retourné - succès partiel
@@ -238,7 +240,8 @@ const AddPatient = () => {
           description: "Le dossier a été créé avec succès.",
           icon: <CheckCircle2 className="h-5 w-5 text-[#37f49e]" />
         });
-        setTimeout(() => navigate('/reception/patients'), 1500);
+        const userRole = JSON.parse(localStorage.getItem('user') || '{}').role?.replace('ROLE_', '').toUpperCase().trim(); const redirectPath = userRole === 'ADMIN' || userRole === 'SUPERADMIN' ? '/admin/patients' : '/reception/patients';
+        setTimeout(() => navigate(redirectPath), 1500);
       }
     } catch (error) {
       console.error("Erreur d'enregistrement:", error);
@@ -393,7 +396,8 @@ const AddPatient = () => {
         isOpen={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          navigate('/reception/patients');
+          const userRole2 = JSON.parse(localStorage.getItem('user') || '{}').role?.replace('ROLE_', '').toUpperCase().trim(); const redirectPath2 = userRole2 === 'ADMIN' || userRole2 === 'SUPERADMIN' ? '/admin/patients' : '/reception/patients';
+          navigate(redirectPath2);
         }}
         credentials={generatedCredentials}
         userType="patient"

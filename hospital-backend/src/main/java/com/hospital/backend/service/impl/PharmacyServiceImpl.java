@@ -11,6 +11,7 @@ import com.hospital.backend.service.ExpenseService;
 import com.hospital.backend.service.RevenueService;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.EmailService;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,7 @@ public class PharmacyServiceImpl implements PharmacyService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final PrescriptionRepository prescriptionRepository;
+    private final HospitalRepository hospitalRepository;
     private final ExpenseService expenseService;
     private final RevenueService revenueService;
     private final NotificationService notificationService;
@@ -149,9 +151,13 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public PageResponse<PharmacyOrderDTO> getOrdersByStatus(List<PharmacyOrderStatus> statuses, Pageable pageable) {
+        Long hId = HospitalTenantContext.getHospitalId();
         Page<PharmacyOrder> orders = pharmacyOrderRepository.findByStatusIn(statuses, pageable);
+        List<PharmacyOrder> filtered = orders.getContent().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
         return PageResponse.<PharmacyOrderDTO>builder()
-                .content(orders.getContent().stream().map(this::mapToDTO).collect(Collectors.toList()))
+                .content(filtered.stream().map(this::mapToDTO).collect(Collectors.toList()))
                 .totalElements(orders.getTotalElements())
                 .totalPages(orders.getTotalPages())
                 .size(orders.getSize())
@@ -161,9 +167,13 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public PageResponse<PharmacyOrderDTO> searchOrders(String query, Pageable pageable) {
+        Long hId = HospitalTenantContext.getHospitalId();
         Page<PharmacyOrder> orders = pharmacyOrderRepository.searchOrders(query, pageable);
+        List<PharmacyOrder> filtered = orders.getContent().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
         return PageResponse.<PharmacyOrderDTO>builder()
-                .content(orders.getContent().stream().map(this::mapToDTO).collect(Collectors.toList()))
+                .content(filtered.stream().map(this::mapToDTO).collect(Collectors.toList()))
                 .totalElements(orders.getTotalElements())
                 .totalPages(orders.getTotalPages())
                 .size(orders.getSize())
@@ -173,7 +183,9 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public List<PharmacyOrderDTO> getPendingOrders() {
+        Long hId = HospitalTenantContext.getHospitalId();
         return pharmacyOrderRepository.findPendingOrders().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -494,7 +506,9 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public List<PharmacyOrderDTO> getUnpaidOrders() {
+        Long hId = HospitalTenantContext.getHospitalId();
         return pharmacyOrderRepository.findUnpaidOrders().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -507,6 +521,10 @@ public class PharmacyServiceImpl implements PharmacyService {
     @Transactional
     public SupplierDTO createSupplier(SupplierDTO supplierDTO) {
         Supplier supplier = mapSupplierDTOToEntity(supplierDTO);
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            hospitalRepository.findById(hId).ifPresent(supplier::setHospital);
+        }
         Supplier savedSupplier = supplierRepository.save(supplier);
         return mapSupplierToDTO(savedSupplier);
     }
@@ -541,14 +559,21 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public List<SupplierDTO> getActiveSuppliers() {
-        return supplierRepository.findByIsActiveTrue().stream()
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Supplier> suppliers = (hId != null)
+                ? supplierRepository.findByHospitalIdAndIsActiveTrue(hId)
+                : supplierRepository.findByIsActiveTrue();
+        return suppliers.stream()
                 .map(this::mapSupplierToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public PageResponse<SupplierDTO> searchSuppliers(String query, Pageable pageable) {
-        Page<Supplier> suppliers = supplierRepository.searchSuppliers(query, pageable);
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<Supplier> suppliers = (hId != null)
+                ? supplierRepository.searchSuppliersByHospital(query, hId, pageable)
+                : supplierRepository.searchSuppliers(query, pageable);
         return PageResponse.<SupplierDTO>builder()
                 .content(suppliers.getContent().stream().map(this::mapSupplierToDTO).collect(Collectors.toList()))
                 .totalElements(suppliers.getTotalElements())
@@ -564,20 +589,31 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public PharmacyDashboardStatsDTO getDashboardStats() {
+        Long hId = HospitalTenantContext.getHospitalId();
         LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime monthStart = today.withDayOfMonth(1);
 
         // Dashboard method - includes ALL sales (archived and non-archived) for accurate stats
         // Include both PAYEE and LIVREE statuses for sales
         List<PharmacyOrder> todayOrders = pharmacyOrderRepository.findAllOrdersForDashboard(
-                List.of(PharmacyOrderStatus.PAYEE, PharmacyOrderStatus.LIVREE), today);
+                List.of(PharmacyOrderStatus.PAYEE, PharmacyOrderStatus.LIVREE), today).stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
         
         List<PharmacyOrder> monthOrders = pharmacyOrderRepository.findAllOrdersForDashboard(
-                List.of(PharmacyOrderStatus.PAYEE, PharmacyOrderStatus.LIVREE), monthStart);
+                List.of(PharmacyOrderStatus.PAYEE, PharmacyOrderStatus.LIVREE), monthStart).stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
 
-        List<Medication> lowStockMeds = medicationRepository.findLowStockMedications();
-        List<PharmacyOrder> unpaidOrders = pharmacyOrderRepository.findUnpaidOrders();
-        List<PharmacyOrder> pendingOrders = pharmacyOrderRepository.findPendingOrders();
+        List<Medication> lowStockMeds = (hId != null)
+                ? medicationRepository.findLowStockMedicationsByHospital(hId)
+                : medicationRepository.findLowStockMedications();
+        List<PharmacyOrder> unpaidOrders = pharmacyOrderRepository.findUnpaidOrders().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
+        List<PharmacyOrder> pendingOrders = pharmacyOrderRepository.findPendingOrders().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
 
         BigDecimal todaySales = todayOrders.stream()
                 .map(PharmacyOrder::getTotalAmount)
@@ -599,7 +635,9 @@ public class PharmacyServiceImpl implements PharmacyService {
                 .readyForDispensation(pendingOrders.stream()
                         .filter(o -> o.getStatus() == PharmacyOrderStatus.PAYEE)
                         .count())
-                .expiredMedications((long) medicationRepository.findExpiredMedications().size())
+                .expiredMedications((hId != null)
+                        ? (long) medicationRepository.findExpiredMedicationsByHospital(hId).size()
+                        : (long) medicationRepository.findExpiredMedications().size())
                 .stockAlerts(lowStockMeds.stream()
                         .map(this::mapToDashboardStockAlertDTO)
                         .collect(Collectors.toList()))
@@ -668,7 +706,10 @@ public class PharmacyServiceImpl implements PharmacyService {
 
     @Override
     public List<MedicationStockAlertDTO> getStockAlerts() {
-        List<Medication> lowStockMeds = medicationRepository.findLowStockMedications();
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> lowStockMeds = (hId != null)
+                ? medicationRepository.findLowStockMedicationsByHospital(hId)
+                : medicationRepository.findLowStockMedications();
         return lowStockMeds.stream()
                 .map(this::mapToStockAlertDTO)
                 .collect(Collectors.toList());
@@ -996,7 +1037,7 @@ public class PharmacyServiceImpl implements PharmacyService {
     @Override
     public PageResponse<PharmacyOrderDTO> getSalesHistory(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable, Boolean archived) {
         log.info("📊 [SALES HISTORY] Récupération de l'historique des ventes du {} au {} (archived: {})", startDate, endDate, archived);
-        
+        Long hId = HospitalTenantContext.getHospitalId();
         Page<PharmacyOrder> salesPage;
         
         // Si archived est null ou false, on utilise findActiveSalesHistory (ventes non-archivées)
@@ -1009,9 +1050,13 @@ public class PharmacyServiceImpl implements PharmacyService {
             log.info("📊 [SALES HISTORY] {} ventes archivées trouvées", salesPage.getTotalElements());
         }
         
+        List<PharmacyOrder> filtered = salesPage.getContent().stream()
+                .filter(o -> hId == null || (o.getPatient() != null && o.getPatient().getHospital() != null && o.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
+        
         return PageResponse.<PharmacyOrderDTO>builder()
-                .content(salesPage.getContent().stream().map(this::mapToDTO).collect(Collectors.toList()))
-                .totalElements(salesPage.getTotalElements())
+                .content(filtered.stream().map(this::mapToDTO).collect(Collectors.toList()))
+                .totalElements((long) filtered.size())
                 .totalPages(salesPage.getTotalPages())
                 .size(salesPage.getSize())
                 .page(salesPage.getNumber())
@@ -1389,8 +1434,9 @@ public class PharmacyServiceImpl implements PharmacyService {
     // ═════════════════════════════════════════════════════════════════
     
     private PharmacyReportDTO.StockMetricsDTO getStockMetrics() {
-        List<Medication> medications = medicationRepository.findAll();
-        List<Medication> lowStock = medicationRepository.findLowStockMedications();
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> medications = (hId != null) ? medicationRepository.findByHospitalId(hId) : medicationRepository.findAll();
+        List<Medication> lowStock = (hId != null) ? medicationRepository.findLowStockMedicationsByHospital(hId) : medicationRepository.findLowStockMedications();
         
         BigDecimal valuation = medications.stream()
             .map(m -> {
@@ -1409,7 +1455,8 @@ public class PharmacyServiceImpl implements PharmacyService {
     
     private List<PharmacyReportDTO.StockRotationDTO> getStockRotationData() {
         // Get all medications with stock
-        List<Medication> medications = medicationRepository.findAll();
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> medications = (hId != null) ? medicationRepository.findByHospitalId(hId) : medicationRepository.findAll();
         
         // Calculate rotation for each medication based on sales velocity
         // Rotation = days to deplete current stock at current sales rate

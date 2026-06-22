@@ -74,5 +74,37 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     // Total all time by currency
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.currency = :currency")
     BigDecimal getTotalByCurrency(@Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // ★ MULTI-TENANT: filtrer par hôpital de l'utilisateur créateur
+    @Query("SELECT e FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId ORDER BY e.date DESC")
+    List<Expense> findByCreatedByHospitalId(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT e FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId AND e.category = :category ORDER BY e.date DESC")
+    List<Expense> findByCreatedByHospitalIdAndCategory(@Param("hospitalId") Long hospitalId, @Param("category") ExpenseCategory category);
+
+    // ★ MULTI-TENANT: agrégations filtrées par hôpital
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = :today AND e.currency = :currency AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTodayTotalByCurrencyAndHospital(@Param("today") java.time.LocalDate today, @Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE YEAR(e.date) = YEAR(CURRENT_DATE) AND MONTH(e.date) = MONTH(CURRENT_DATE) AND e.currency = :currency AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal getCurrentMonthTotalByCurrencyAndHospital(@Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.currency = :currency AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTotalByCurrencyAndHospital(@Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT e.category, e.currency, COALESCE(SUM(e.amount), 0), COALESCE(COUNT(e), 0) FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId GROUP BY e.category, e.currency")
+    List<Object[]> getStatsByCategoryAndCurrencyAndHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumTotalAmountByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = CURRENT_DATE AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTodayTotalByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE YEAR(e.date) = YEAR(CURRENT_DATE) AND MONTH(e.date) = MONTH(CURRENT_DATE) AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal getCurrentMonthTotalByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.date BETWEEN :start AND :end AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumAmountByDateBetweenAndHospital(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end, @Param("hospitalId") Long hospitalId);
 }
 

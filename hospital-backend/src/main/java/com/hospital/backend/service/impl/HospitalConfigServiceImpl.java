@@ -1,8 +1,10 @@
 package com.hospital.backend.service.impl;
 
 import com.hospital.backend.entity.Currency;
+import com.hospital.backend.entity.Hospital;
 import com.hospital.backend.entity.HospitalConfig;
 import com.hospital.backend.repository.HospitalConfigRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.HospitalConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,17 +24,28 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
     @Override
     @Transactional(readOnly = true)
     public Optional<HospitalConfig> getCurrentConfig() {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return configRepository.findByHospitalId(hId);
+        }
         return configRepository.findFirstByOrderByIdAsc();
     }
 
     @Override
     @Transactional
     public HospitalConfig saveOrUpdate(HospitalConfig config, Long userId) {
-        Optional<HospitalConfig> existing = configRepository.findFirstByOrderByIdAsc();
+        Long hId = HospitalTenantContext.getHospitalId();
+        Optional<HospitalConfig> existing = (hId != null)
+                ? configRepository.findByHospitalId(hId)
+                : configRepository.findFirstByOrderByIdAsc();
         
         if (existing.isPresent()) {
             HospitalConfig current = existing.get();
             config.setId(current.getId());
+        }
+        // Assigner l'hôpital au moment de la sauvegarde
+        if (hId != null) {
+            config.setHospital(Hospital.builder().id(hId).build());
         }
         
         config.setUpdatedBy(userId);
@@ -58,6 +71,10 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
     @Transactional(readOnly = true)
     public boolean exists() {
         try {
+            Long hId = HospitalTenantContext.getHospitalId();
+            if (hId != null) {
+                return configRepository.existsByHospitalId(hId);
+            }
             return configRepository.count() > 0;
         } catch (Exception e) {
             log.warn("⚠️ Table hospital_config inaccessible (premier démarrage): {}", e.getMessage());
@@ -77,7 +94,9 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
             return null;
         }
 
+        Long hId = HospitalTenantContext.getHospitalId();
         HospitalConfig defaultConfig = HospitalConfig.builder()
+                .hospital(hId != null ? Hospital.builder().id(hId).build() : null)
                 .hospitalName("INUA AFYA")
                 .hospitalCode("HOSP-001")
                 .hospitalLogoUrl(null)

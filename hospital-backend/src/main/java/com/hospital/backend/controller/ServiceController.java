@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,8 +23,14 @@ public class ServiceController {
 
     @GetMapping
     public ResponseEntity<List<ServiceDTO>> getAvailableServices() {
-        log.info("Récupération de la liste des services disponibles");
-        List<MedicalService> services = serviceRepository.findByIsActiveTrue();
+        Long hId = HospitalTenantContext.getHospitalId();
+        log.info("Récupération des services - hospitalId: {}", hId);
+        List<MedicalService> services;
+        if (hId != null) {
+            services = serviceRepository.findByHospitalIdAndIsActiveTrue(hId);
+        } else {
+            services = serviceRepository.findByIsActiveTrue();
+        }
         List<ServiceDTO> dtos = services.stream()
                 .map(s -> ServiceDTO.builder()
                         .id(s.getId())

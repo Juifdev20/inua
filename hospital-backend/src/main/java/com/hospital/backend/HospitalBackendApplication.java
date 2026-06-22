@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootApplication
 @EnableScheduling
@@ -62,6 +63,18 @@ public class HospitalBackendApplication {
                 log.info("⚠️  [BOOT] Assignez ce rôle à vos comptes développeurs via la base de données.");
             } else {
                 log.info("✅ [BOOT] Rôle ROLE_SUPERADMIN déjà présent.");
+            }
+        };
+    }
+
+    @Bean
+    public CommandLineRunner dropExamenCodeUniqueConstraint(JdbcTemplate jdbcTemplate) {
+        return args -> {
+            try {
+                jdbcTemplate.execute("ALTER TABLE examens DROP CONSTRAINT IF EXISTS ukdoc5xfspcwmwk5xk91rff0fgb");
+                log.info("✅ [BOOT] Contrainte unique globale sur examens.code supprimée.");
+            } catch (Exception e) {
+                log.info("ℹ️ [BOOT] Contrainte unique sur examens.code déjà absente ou autre erreur: {}", e.getMessage());
             }
         };
     }

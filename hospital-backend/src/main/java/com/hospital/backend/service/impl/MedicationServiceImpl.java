@@ -6,7 +6,9 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.BadRequestException;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.MedicationRepository;
+import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.repository.StockMovementRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.MedicationService;
 import com.hospital.backend.service.PharmacieFinanceIntegrationService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class MedicationServiceImpl implements MedicationService {
     private final StockMovementRepository stockMovementRepository;
     private final PharmacieFinanceIntegrationService pharmacieFinanceIntegrationService;
     private final com.hospital.backend.repository.UserRepository userRepository;
+    private final HospitalRepository hospitalRepository;
     
     @Override
     @Transactional
@@ -40,6 +43,10 @@ public class MedicationServiceImpl implements MedicationService {
         }
         
         Medication medication = mapToEntity(dto);
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            hospitalRepository.findById(hId).ifPresent(medication::setHospital);
+        }
         medication = medicationRepository.save(medication);
         log.info("Médicament créé avec le code: {}", medication.getMedicationCode());
         
@@ -76,28 +83,38 @@ public class MedicationServiceImpl implements MedicationService {
     
     @Override
     public PageResponse<MedicationDTO> getAll(Pageable pageable) {
-        Page<Medication> page = medicationRepository.findByIsActiveTrue(pageable);
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<Medication> page = (hId != null)
+                ? medicationRepository.findByHospitalIdAndIsActiveTrue(hId, pageable)
+                : medicationRepository.findByIsActiveTrue(pageable);
         return toPageResponse(page);
     }
     
     @Override
     public PageResponse<MedicationDTO> search(String query, Pageable pageable) {
-        Page<Medication> page = medicationRepository.searchMedications(query, pageable);
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<Medication> page = (hId != null)
+                ? medicationRepository.searchMedicationsByHospital(query, hId, pageable)
+                : medicationRepository.searchMedications(query, pageable);
         return toPageResponse(page);
     }
     
     @Override
     public List<MedicationDTO> getLowStockMedications() {
-        return medicationRepository.findLowStockMedications().stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> meds = (hId != null)
+                ? medicationRepository.findLowStockMedicationsByHospital(hId)
+                : medicationRepository.findLowStockMedications();
+        return meds.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
     
     @Override
     public List<MedicationDTO> getExpiredMedications() {
-        return medicationRepository.findExpiredMedications().stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> meds = (hId != null)
+                ? medicationRepository.findExpiredMedicationsByHospital(hId)
+                : medicationRepository.findExpiredMedications();
+        return meds.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
     
     @Override
@@ -262,6 +279,10 @@ public class MedicationServiceImpl implements MedicationService {
         }
         
         Medication medication = mapToEntity(medicationDTO);
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            hospitalRepository.findById(hId).ifPresent(medication::setHospital);
+        }
         medication = medicationRepository.save(medication);
         log.info("Médicament sauvegardé avec l'ID: {}", medication.getId());
         
@@ -396,9 +417,11 @@ public class MedicationServiceImpl implements MedicationService {
     
     @Override
     public List<MedicationDTO> getAllMedications() {
-        return medicationRepository.findByIsActiveTrue().stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Medication> meds = (hId != null)
+                ? medicationRepository.findByHospitalIdAndIsActiveTrue(hId)
+                : medicationRepository.findByIsActiveTrue();
+        return meds.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
     
     @Override

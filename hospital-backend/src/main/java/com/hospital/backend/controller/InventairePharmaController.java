@@ -5,6 +5,7 @@ import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.security.CustomUserDetails;
 import com.hospital.backend.service.InventairePharmaService;
+import com.hospital.backend.security.HospitalTenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

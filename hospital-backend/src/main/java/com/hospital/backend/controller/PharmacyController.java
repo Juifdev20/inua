@@ -11,6 +11,7 @@ import com.hospital.backend.service.PrescriptionService;
 import com.hospital.backend.service.InvoiceService;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.security.CustomUserDetails;
+import com.hospital.backend.security.HospitalTenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -1044,7 +1045,9 @@ public class PharmacyController {
 
             LocalDate today = LocalDate.now();
 
+            Long hId = HospitalTenantContext.getHospitalId();
             List<Map<String, Object>> alerts = medicationRepository.findByIsActiveTrue().stream()
+                .filter(m -> hId == null || (m.getHospital() != null && m.getHospital().getId().equals(hId)))
                 .filter(m -> m.getExpiryDate() != null)
                 .filter(m -> {
                     int seuil = m.getJoursAvantAlerte() != null ? m.getJoursAvantAlerte() : 30;

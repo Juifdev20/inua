@@ -6,6 +6,8 @@ import com.hospital.backend.service.ActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
+import com.hospital.backend.entity.Hospital;
 
 import java.util.List;
 
@@ -23,14 +25,20 @@ public class MedicalServiceController {
 
     @GetMapping("/all")
     public List<MedicalService> getAllServices() {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return serviceRepository.findByHospitalIdAndIsActiveTrue(hId);
+        }
         return serviceRepository.findAll();
     }
 
     @PostMapping("/create")
     public MedicalService createService(@RequestBody MedicalService medicalService) {
-        // SÃ©curitÃ© pour le statut par dÃ©faut
         if (medicalService.getIsActive() == null) medicalService.setIsActive(true);
-
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            medicalService.setHospital(Hospital.builder().id(hId).build());
+        }
         MedicalService saved = serviceRepository.save(medicalService);
         activityService.log("Nouveau Service", "Ajout de : " + saved.getNom(), "success");
         return saved;

@@ -186,6 +186,13 @@ const LoginPage = () => {
 
         // ✅ Normalisation du rôle pour debug
         const userRole = String(userData.role).toUpperCase().replace("ROLE_", "").trim();
+        // 🔄 Force changement mot de passe avant redirection
+        if (userData.mustChangePassword) {
+          navigate("/change-password", { replace: true });
+          return;
+        }
+
+        // ✅ Normalisation du rôle pour debug
         console.log("DEBUG - Rôle normalisé pour redirection:", userRole);
 
         // ✅ Redirection correcte (inclut LABORATOIRE)

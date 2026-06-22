@@ -41,4 +41,26 @@ public interface MedicationRepository extends JpaRepository<Medication, Long> {
     List<Medication> findByIsActiveTrueAndCategorieAbc(CategorieAbc categorieAbc);
 
     List<Medication> findByIsActiveTrueAndCategorieAbcIn(List<CategorieAbc> categories);
+
+    // ★ MULTI-TENANT: filtrer par hôpital
+    Page<Medication> findByHospitalIdAndIsActiveTrue(Long hospitalId, Pageable pageable);
+    List<Medication> findByHospitalIdAndIsActiveTrue(Long hospitalId);
+    List<Medication> findByHospitalId(Long hospitalId);
+
+    @Query("SELECT m FROM Medication m WHERE m.hospital.id = :hospitalId AND (" +
+           "LOWER(m.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(m.genericName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(m.medicationCode) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Medication> searchMedicationsByHospital(@Param("search") String search, @Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT m FROM Medication m WHERE m.stockQuantity <= m.minimumStock AND m.isActive = true AND m.hospital.id = :hospitalId")
+    List<Medication> findLowStockMedicationsByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT m FROM Medication m WHERE m.expiryDate <= CURRENT_TIMESTAMP AND m.isActive = true AND m.hospital.id = :hospitalId")
+    List<Medication> findExpiredMedicationsByHospital(@Param("hospitalId") Long hospitalId);
+
+    List<Medication> findByHospitalIdAndIsActiveTrueAndCategorieAbc(Long hospitalId, CategorieAbc categorieAbc);
+
+    @Query("SELECT m FROM Medication m WHERE m.hospital.id = :hospitalId AND m.isActive = true AND m.categorieAbc IN :categories")
+    List<Medication> findByHospitalIdAndIsActiveTrueAndCategorieAbcIn(@Param("hospitalId") Long hospitalId, @Param("categories") List<CategorieAbc> categories);
 }

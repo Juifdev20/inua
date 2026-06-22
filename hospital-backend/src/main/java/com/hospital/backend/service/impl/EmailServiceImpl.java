@@ -1,5 +1,7 @@
 package com.hospital.backend.service.impl;
 
+import com.hospital.backend.entity.EmailLog;
+import com.hospital.backend.repository.EmailLogRepository;
 import com.hospital.backend.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -23,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final EmailLogRepository emailLogRepository;
 
     @Value("${app.email.from:${spring.mail.username}}")
     private String fromEmail;
@@ -435,7 +438,23 @@ public class EmailServiceImpl implements EmailService {
     /**
      * ★ Méthode interne pour envoyer l'email avec gestion d'erreur robuste
      */
-    private void sendHtmlEmailInternal(String to, String subject, String htmlContent)
+    private void logEmail(String to, String subject, String type, String status, String error) {
+        try {
+            com.hospital.backend.entity.EmailLog emailLog = com.hospital.backend.entity.EmailLog.builder()
+                    .recipient(to)
+                    .subject(subject)
+                    .type(type)
+                    .status(status)
+                    .errorMessage(error)
+                    .sentAt("SENT".equals(status) ? java.time.LocalDateTime.now() : null)
+                    .build();
+            emailLogRepository.save(emailLog);
+        } catch (Exception ex) {
+            log.warn("[EMAIL LOG] Could not save email log: {}", ex.getMessage());
+        }
+    }
+
+        private void sendHtmlEmailInternal(String to, String subject, String htmlContent)
             throws Exception {
         
         log.info("📧 [EMAIL INTERNAL] Préparation email pour: {}", to);
@@ -484,6 +503,7 @@ public class EmailServiceImpl implements EmailService {
         } catch (jakarta.mail.AuthenticationFailedException e) {
             log.error("❌ [EMAIL INTERNAL] ÉCHEC AUTHENTIFICATION SMTP: {}", e.getMessage());
             log.error("❌ [EMAIL INTERNAL] Vérifiez: 1) Mot de passe d'application Google, 2) 2FA activée, 3) Host/Port SMTP");
+            logEmail(to, subject, "GENERIC", "FAILED", "Auth SMTP echouee: " + e.getMessage());
             throw new RuntimeException("Authentification SMTP échouée. Vérifiez les credentials dans MailConfig.java", e);
             
         } catch (jakarta.mail.MessagingException e) {

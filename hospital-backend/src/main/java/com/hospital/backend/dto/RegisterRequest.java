@@ -43,4 +43,6 @@ public class RegisterRequest {
     private String role;
 
     private String department;
+
+    private Long hospitalId;
 }

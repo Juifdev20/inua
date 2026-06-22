@@ -4,6 +4,7 @@ import com.hospital.backend.dto.InventairePharmaDTO;
 import com.hospital.backend.dto.LigneInventairePharmaDTO;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,8 +34,14 @@ public class InventairePharmaService {
     // ─────────────────────────────────────────────────────
 
     public List<InventairePharmaDTO> listerInventaires() {
-        return inventaireRepository.findAllByOrderByDateDescCreatedAtDesc()
-                .stream()
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<InventairesPharmacie> inventaires;
+        if (hId != null) {
+            inventaires = inventaireRepository.findByAgentHospitalId(hId);
+        } else {
+            inventaires = inventaireRepository.findAllByOrderByDateDescCreatedAtDesc();
+        }
+        return inventaires.stream()
                 .map(inv -> mapToDTO(inv, false))
                 .collect(Collectors.toList());
     }

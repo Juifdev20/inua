@@ -8,6 +8,7 @@ import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.ExpenseRepository;
 import com.hospital.backend.service.CashBalanceService;
 import com.hospital.backend.service.ExpenseService;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +96,20 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    public List<ExpenseDTO> getAllExpensesByHospitalId(Long hospitalId) {
+        return expenseRepository.findByCreatedByHospitalId(hospitalId).stream()
+                .map(ExpenseDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ExpenseDTO> getExpensesByCategoryAndHospitalId(ExpenseCategory category, Long hospitalId) {
+        return expenseRepository.findByCreatedByHospitalIdAndCategory(hospitalId, category).stream()
+                .map(ExpenseDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<ExpenseDTO> getRecentExpensesByUser(Long userId, int limit) {
         Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
         return expenseRepository.findByCreatedByIdOrderByCreatedAtDesc(userId, pageable)
@@ -104,7 +119,8 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public BigDecimal getTotalExpensesBetween(LocalDateTime start, LocalDateTime end) {
-        return expenseRepository.sumAmountByDateBetweenAndCategory(start, end, null);
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? expenseRepository.sumAmountByDateBetweenAndHospital(start, end, hId) : expenseRepository.sumAmountByDateBetweenAndCategory(start, end, null);
     }
 
     @Override
@@ -114,12 +130,14 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public BigDecimal getTodayTotal() {
-        return expenseRepository.getTodayTotal();
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? expenseRepository.getTodayTotalByHospital(hId) : expenseRepository.getTodayTotal();
     }
 
     @Override
     public BigDecimal getMonthlyTotal() {
-        return expenseRepository.getCurrentMonthTotal();
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? expenseRepository.getCurrentMonthTotalByHospital(hId) : expenseRepository.getCurrentMonthTotal();
     }
 
     @Override

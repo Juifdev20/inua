@@ -21,12 +21,14 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 import com.hospital.backend.security.CustomUserDetails;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.LabAlertService;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.PatientDocumentService;
 import com.hospital.backend.service.RevenueService;
+import com.hospital.backend.service.PrescriptionService;
 import jakarta.persistence.EntityGraph;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +79,9 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final RevenueService revenueService;
     private final HospitalConfigRepository hospitalConfigRepository;
     private final PatientDocumentService patientDocumentService;
+    @Autowired
+    @Lazy
+    private PrescriptionService prescriptionService;
     private final ExamenRepository examenRepository;
     private final com.hospital.backend.repository.CompanyRepository companyRepository;
     private final CompanyConsumptionService consumptionService;
@@ -1338,9 +1345,10 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     public List<com.hospital.backend.dto.PendingPaymentDTO> getPendingPayments() {
-        List<Consultation> pendingConsultations = consultationRepository.findByStatus(
-                ConsultationStatus.EXAMENS_PRESCRITS
-        );
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> pendingConsultations = (hId != null)
+                ? consultationRepository.findByStatusAndHospitalId(ConsultationStatus.EXAMENS_PRESCRITS, hId)
+                : consultationRepository.findByStatus(ConsultationStatus.EXAMENS_PRESCRITS);
 
         return pendingConsultations.stream()
                 .map(this::mapToPendingPaymentDTO)
@@ -1399,9 +1407,10 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     public List<com.hospital.backend.dto.ReceptionPaymentDTO> getReceptionPendingPayments() {
-        List<Consultation> pendingConsultations = consultationRepository.findByStatus(
-                ConsultationStatus.EXAMENS_PRESCRITS
-        );
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> pendingConsultations = (hId != null)
+                ? consultationRepository.findByStatusAndHospitalId(ConsultationStatus.EXAMENS_PRESCRITS, hId)
+                : consultationRepository.findByStatus(ConsultationStatus.EXAMENS_PRESCRITS);
 
         return pendingConsultations.stream()
                 .map(this::mapToReceptionPaymentDTO)
@@ -1413,12 +1422,14 @@ public class ConsultationServiceImpl implements ConsultationService {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
 
-        List<Consultation> processedConsultations = consultationRepository
-                .findByStatusInAndUpdatedAtBetween(
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> processedConsultations = (hId != null)
+                ? consultationRepository.findByStatusInAndUpdatedAtBetweenAndHospitalId(
                         List.of(ConsultationStatus.AU_LABO, ConsultationStatus.TERMINE, ConsultationStatus.COMPLETED),
-                        startOfDay,
-                        endOfDay
-                );
+                        startOfDay, endOfDay, hId)
+                : consultationRepository.findByStatusInAndUpdatedAtBetween(
+                        List.of(ConsultationStatus.AU_LABO, ConsultationStatus.TERMINE, ConsultationStatus.COMPLETED),
+                        startOfDay, endOfDay);
 
         return processedConsultations.stream()
                 .map(this::mapToTodayProcessedDTO)
@@ -1430,16 +1441,18 @@ public class ConsultationServiceImpl implements ConsultationService {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
 
-        List<Consultation> pendingConsultations = consultationRepository.findByStatus(
-                ConsultationStatus.EXAMENS_PRESCRITS
-        );
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> pendingConsultations = (hId != null)
+                ? consultationRepository.findByStatusAndHospitalId(ConsultationStatus.EXAMENS_PRESCRITS, hId)
+                : consultationRepository.findByStatus(ConsultationStatus.EXAMENS_PRESCRITS);
 
-        List<Consultation> processedConsultations = consultationRepository
-                .findByStatusInAndUpdatedAtBetween(
+        List<Consultation> processedConsultations = (hId != null)
+                ? consultationRepository.findByStatusInAndUpdatedAtBetweenAndHospitalId(
                         List.of(ConsultationStatus.AU_LABO, ConsultationStatus.TERMINE, ConsultationStatus.COMPLETED),
-                        startOfDay,
-                        endOfDay
-                );
+                        startOfDay, endOfDay, hId)
+                : consultationRepository.findByStatusInAndUpdatedAtBetween(
+                        List.of(ConsultationStatus.AU_LABO, ConsultationStatus.TERMINE, ConsultationStatus.COMPLETED),
+                        startOfDay, endOfDay);
 
         Double totalPendingAmount = pendingConsultations.stream()
                 .mapToDouble(c -> {
@@ -1465,7 +1478,7 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     @Transactional
-    public ConsultationDTO updateExamPaymentAndSendToLab(Long consultationId, Double examAmountPaid) {
+    public ConsultationDTO updateExamPaymentAndSendToLab(Long consultationId, Double examAmountPaid, String paymentMethodStr) {
         log.info("💰 [CAISSE] Paiement + envoi labo consultation ID: {} - Montant: {}",
                 consultationId, examAmountPaid);
 
@@ -1546,8 +1559,14 @@ public class ConsultationServiceImpl implements ConsultationService {
         // 💰 Créer un revenu avec la source LABORATOIRE
         try {
             Long userId = getCurrentUserId();
-            createLabRevenue(savedConsultation, paidAmount, userId);
-            log.info("💰 [CAISSE] Revenu LABORATOIRE créé pour consultation ID: {}", consultationId);
+            // Détecter la devise depuis les examens prescrits
+            Currency examCurrency = exams.stream()
+                .map(PrescribedExam::getCurrency)
+                .filter(c -> c != null)
+                .findFirst()
+                .orElse(Currency.USD);
+            createLabRevenue(savedConsultation, paidAmount, paymentMethodStr, examCurrency, userId);
+            log.info("💰 [CAISSE] Revenu LABORATOIRE créé pour consultation ID: {} en {}", consultationId, examCurrency);
         } catch (Exception e) {
             log.error("❌ [CAISSE] Erreur lors de la création du revenu LABORATOIRE: {}", e.getMessage(), e);
             // Ne pas bloquer le processus si la création de revenu échoue
@@ -1617,7 +1636,7 @@ public class ConsultationServiceImpl implements ConsultationService {
         // 💰 Créer un revenu avec la source LABORATOIRE (montant = 0 pour le patient)
         try {
             Long userId = getCurrentUserId();
-            createLabRevenue(savedConsultation, BigDecimal.ZERO, userId);
+            createLabRevenue(savedConsultation, BigDecimal.ZERO, null, Currency.USD, userId);
             log.info("💰 [LABO] Revenu LABORATOIRE créé pour consultation ID: {} (montant patient = 0)", consultationId);
         } catch (Exception e) {
             log.error("❌ [LABO] Erreur lors de la création du revenu LABORATOIRE: {}", e.getMessage(), e);
@@ -1703,8 +1722,14 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     public List<ConsultationDTO> findByStatut(String statut) {
-        return consultationRepository.findByStatut(statut)
-                .stream()
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> consultations;
+        if (hId != null) {
+            consultations = consultationRepository.findByPatientHospitalIdAndStatus(hId, ConsultationStatus.valueOf(statut));
+        } else {
+            consultations = consultationRepository.findByStatut(statut);
+        }
+        return consultations.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -1804,8 +1829,14 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     @Override
     public List<ConsultationDTO> getAllConsultations() {
-        return consultationRepository.findAll()
-                .stream()
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Consultation> consultations;
+        if (hId != null) {
+            consultations = consultationRepository.findByPatientHospitalId(hId);
+        } else {
+            consultations = consultationRepository.findAll();
+        }
+        return consultations.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -2231,11 +2262,46 @@ public class ConsultationServiceImpl implements ConsultationService {
         try {
             Consultation saved = consultationRepository.save(consultation);
             log.info("✅ [FINALISER] Consultation ID: {} - Statut changé en TERMINE avec succès", id);
-            
-            // 🎯 Génération automatique de la fiche médicale si tout est payé
-            generateDossierIfFullyPaid(saved);
-            
-            return mapToDTO(saved);
+
+            // 💊 Créer la prescription si des items sont fournis (fusion avec /api/prescriptions/create)
+            if (request != null && request.getItems() != null && !request.getItems().isEmpty()) {
+                List<PrescriptionDTO.PrescriptionItemDTO> prescriptionItems = request.getItems().stream()
+                    .map(item -> PrescriptionDTO.PrescriptionItemDTO.builder()
+                        .medicationId(item.getMedicationId())
+                        .medicationName(item.getMedicationName())
+                        .dosage(item.getDosage())
+                        .frequency(item.getFrequency())
+                        .timeSlots(item.getTimeSlots())
+                        .duration(item.getDuration())
+                        .quantityPerDose(item.getQuantityPerDose())
+                        .instructions(item.getInstructions())
+                        .active(item.getActive())
+                        .build())
+                    .collect(Collectors.toList());
+
+                PrescriptionDTO prescriptionDTO = PrescriptionDTO.builder()
+                    .consultationId(id)
+                    .patientId(request.getPatientId())
+                    .doctorId(saved.getDoctor() != null ? saved.getDoctor().getId() : null)
+                    .notes(request.getNotes() != null ? request.getNotes() : request.getDiagnosticFinal())
+                    .status(PrescriptionStatus.PRESCRIPTION_ENVOYEE)
+                    .items(prescriptionItems)
+                    .build();
+
+                try {
+                    prescriptionService.createPrescription(prescriptionDTO);
+                    log.info("✅ [FINALISER] Prescription créée pour consultation {}", id);
+                } catch (Exception ex) {
+                    log.error("❌ [FINALISER] Erreur création prescription pour consultation {}: {}", id, ex.getMessage());
+                }
+            }
+            // ✅ Retourner un DTO léger (sans mapToDTO coûteux) pour éviter les N+1 queries
+            return ConsultationDTO.builder()
+                .id(saved.getId())
+                .consultationCode(saved.getConsultationCode())
+                .status(saved.getStatus())
+                .statut(saved.getStatut())
+                .build();
         } catch (Exception e) {
             log.error("❌ [FINALISER] Erreur lors de la sauvegarde de la consultation {}: {}", id, e.getMessage());
             throw new RuntimeException("Erreur lors de la finalisation de la consultation: " + e.getMessage(), e);
@@ -2634,11 +2700,24 @@ public class ConsultationServiceImpl implements ConsultationService {
     /**
      * Crée un revenu avec la source LABORATOIRE lors du paiement des examens
      */
-    private void createLabRevenue(Consultation consultation, BigDecimal amount, Long userId) {
+    private void createLabRevenue(Consultation consultation, BigDecimal amount, String paymentMethodStr, Currency currency, Long userId) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("⚠️ Montant invalide pour création revenu labo: {}", amount);
             return;
         }
+
+        // Résoudre la méthode de paiement
+        PaymentMethod paymentMethod = PaymentMethod.ESPECES;
+        try {
+            if (paymentMethodStr != null && !paymentMethodStr.isBlank()) {
+                paymentMethod = PaymentMethod.valueOf(paymentMethodStr.toUpperCase());
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ Méthode de paiement non reconnue: {}, utilisation ESPECES", paymentMethodStr);
+        }
+
+        // Utiliser la devise détectée depuis les examens (USD ou CDF)
+        Currency resolvedCurrency = currency != null ? currency : Currency.USD;
 
         // Préparer le patient name
         String patientName = "Patient";
@@ -2650,15 +2729,15 @@ public class ConsultationServiceImpl implements ConsultationService {
         RevenueDTO revenueDTO = RevenueDTO.builder()
             .amount(amount)
             .source(Revenue.RevenueSource.LABORATOIRE)
-            .paymentMethod(PaymentMethod.ESPECES)
-            .currency(Currency.CDF)
+            .paymentMethod(paymentMethod)
+            .currency(resolvedCurrency)
             .description("Paiement examens laboratoire - Patient: " + patientName +
                         " - Consultation ID: " + consultation.getId())
             .date(LocalDateTime.now())
             .build();
 
         revenueService.createRevenue(revenueDTO, userId != null ? userId : 1L);
-        log.info("💰 Revenu LABORATOIRE créé: {} CDF pour {} - Consultation ID: {}", amount, patientName, consultation.getId());
+        log.info("💰 Revenu LABORATOIRE créé: {} {} pour {} - Consultation ID: {}", amount, resolvedCurrency, patientName, consultation.getId());
     }
 
     /**

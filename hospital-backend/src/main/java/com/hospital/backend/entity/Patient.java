@@ -30,6 +30,11 @@ public class Patient {
     @Column(name = "patient_code", unique = true, nullable = false)
     private String patientCode;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id", referencedColumnName = "id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
     @Column(name = "first_name", nullable = false)
     private String firstName;
 

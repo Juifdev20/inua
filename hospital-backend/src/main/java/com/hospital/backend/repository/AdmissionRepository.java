@@ -2,6 +2,8 @@ package com.hospital.backend.repository;
 
 import com.hospital.backend.entity.Admission;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -29,4 +31,8 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findByAdmissionDateBetween(LocalDateTime start, LocalDateTime end);
 
     List<Admission> findByAdmissionDateAfter(LocalDateTime date);
+
+    // ★ MULTI-TENANT: filtrer par hôpital du patient
+    @Query("SELECT a FROM Admission a WHERE a.patient.hospital.id = :hospitalId")
+    List<Admission> findByPatientHospitalId(@Param("hospitalId") Long hospitalId);
 }

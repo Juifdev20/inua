@@ -23,4 +23,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     boolean existsByContractNumber(String contractNumber);
 
     boolean existsByNameIgnoreCase(String name);
+
+    // ★ MULTI-TENANT: filtrer par hôpital
+    List<Company> findByHospitalIdOrderByNameAsc(Long hospitalId);
+    List<Company> findByHospitalIdAndSubscriptionStatus(Long hospitalId, SubscriptionStatus status);
+    List<Company> findByHospitalIdAndSubscriptionStatusOrderByCreatedAtDesc(Long hospitalId, SubscriptionStatus status);
 }

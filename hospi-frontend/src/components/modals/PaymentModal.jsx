@@ -87,7 +87,7 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
         });
       }
       toast.success('Paiement validé avec succès !');
-      onSuccess();
+      onSuccess(backendMethod);
     } catch (error) {
       console.error('Payment error:', error);
       const errorMsg = error.response?.data?.error || 'Vérifiez la connexion ou les données';

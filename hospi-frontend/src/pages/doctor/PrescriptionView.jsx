@@ -176,41 +176,42 @@ const PrescriptionView = ({
         status: 'PRESCRIPTION_ENVOYEE'
       };
 
-      // 1. Créer la prescription
-      const response = await fetch(`${BACKEND_URL}/api/prescriptions/create`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify(prescriptionData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        toast.error(`Erreur: ${errorText.substring(0, 100)}`);
-        return;
+      // 1. Finaliser la consultation (endpoint POST avec /v1/)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      let finalizeResponse;
+      try {
+        finalizeResponse = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/finaliser`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ 
+            patientId: selectedConsultation.patientId,
+            diagnosticFinal: diagnostic,
+            notes: diagnostic || selectedConsultation.globalInterpretation,
+            items: items
+          }),
+          signal: controller.signal
+        });
+      } catch (fetchError) {
+        if (fetchError.name === 'AbortError') {
+          toast.error('Le serveur met trop de temps à répondre (timeout 30s). Réessayez.');
+          return;
+        }
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      // 2. Finaliser la consultation (endpoint POST avec /v1/)
-      const finalizeResponse = await fetch(`${BACKEND_URL}/api/v1/consultations/${consultationId}/finaliser`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ 
-          patientId: selectedConsultation.patientId,
-          diagnosticFinal: diagnostic,
-          notes: diagnostic || selectedConsultation.globalInterpretation,
-          items: items
-        })
-      });
 
       if (!finalizeResponse.ok) {
         const errorText = await finalizeResponse.text();
         console.error('Erreur finalisation:', errorText);
-        // On continue même si la finalisation échoue
+        let errMsg = 'Erreur lors de la finalisation';
+        try { errMsg = JSON.parse(errorText)?.message || errMsg; } catch {}
+        toast.error(`❌ ${errMsg}`);
+        return;
       }
 
       toast.success('✅ Prescription validée et consultation clôturée');

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Bell, Shield, Eye, EyeOff, Save, Loader2 } from 'lucide-react';
+import { Lock, Bell, Shield, Eye, EyeOff, Save, Loader2, Building2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -88,6 +89,9 @@ const Settings = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Hospital Settings */}
+        <HospitalSettings />
+
         {/* Security Settings */}
         <div className="lg:col-span-2 space-y-6">
           {/* Password Change */}
@@ -251,4 +255,38 @@ const Settings = () => {
   );
 };
 
+
+function HospitalSettings() {
+  const { user } = useAuth();
+  const hasHospital = !!user?.hospitalId;
+
+  return (
+    <div className="lg:col-span-3">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-blue-600" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="font-heading text-xl font-semibold text-foreground">Mon hopital</h2>
+            <p className="text-sm text-muted-foreground">Votre etablissement de sante attitre</p>
+          </div>
+        </div>
+        {hasHospital ? (
+          <div className="flex items-center gap-3 p-4 bg-muted/20 border border-border rounded-xl">
+            <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{user.hospitalName || "Hopital principal"}</p>
+              <p className="text-xs text-muted-foreground">ID: {user.hospitalId} - Ce choix est definitif et ne peut pas etre modifie.</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-amber-500">Aucun hopital associe. Veuillez contacter l administration.</p>
+        )}
+      </div>
+    </div>
+  );
+}
 export default Settings;

@@ -6,6 +6,7 @@ import com.hospital.backend.entity.Examen;
 import com.hospital.backend.entity.MedicalService;
 import com.hospital.backend.repository.ExamenRepository;
 import com.hospital.backend.repository.MedicalServiceRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.ExchangeRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +52,11 @@ public class PatientServiceCatalogController {
         
         List<ServiceCatalogDTO> catalog = new ArrayList<>();
         
+        Long hId = HospitalTenantContext.getHospitalId();
         // Récupérer les services médicaux actifs
-        List<MedicalService> services = medicalServiceRepository.findByIsActiveTrue();
+        List<MedicalService> services = (hId != null)
+                ? medicalServiceRepository.findByHospitalIdAndIsActiveTrue(hId)
+                : medicalServiceRepository.findByIsActiveTrue();
         for (MedicalService service : services) {
             ServiceCatalogDTO dto = convertServiceToDTO(service, currency);
             if (matchesFilter(dto, search, category)) {
@@ -61,7 +65,9 @@ public class PatientServiceCatalogController {
         }
         
         // Récupérer les examens actifs
-        List<Examen> examens = examenRepository.findByActifTrue();
+        List<Examen> examens = (hId != null)
+                ? examenRepository.findByHospitalIdAndActifTrue(hId)
+                : examenRepository.findByActifTrue();
         for (Examen examen : examens) {
             ServiceCatalogDTO dto = convertExamenToDTO(examen, currency);
             if (matchesFilter(dto, search, category)) {
@@ -236,8 +242,11 @@ public class PatientServiceCatalogController {
         
         List<String> categories = new ArrayList<>();
         
+        Long hId = HospitalTenantContext.getHospitalId();
         // Catégories des services
-        List<MedicalService> services = medicalServiceRepository.findByIsActiveTrue();
+        List<MedicalService> services = (hId != null)
+                ? medicalServiceRepository.findByHospitalIdAndIsActiveTrue(hId)
+                : medicalServiceRepository.findByIsActiveTrue();
         for (MedicalService service : services) {
             String category = mapDepartmentToCategory(service.getDepartement());
             if (!categories.contains(category)) {
@@ -246,7 +255,9 @@ public class PatientServiceCatalogController {
         }
         
         // Catégories des examens
-        List<Examen> examens = examenRepository.findByActifTrue();
+        List<Examen> examens = (hId != null)
+                ? examenRepository.findByHospitalIdAndActifTrue(hId)
+                : examenRepository.findByActifTrue();
         for (Examen examen : examens) {
             if (examen.getCategorie() != null && !categories.contains(examen.getCategorie())) {
                 categories.add(examen.getCategorie());

@@ -57,6 +57,10 @@ public class UserDTO {
     // ✅ PATIENT ID POUR LE SYSTÈME IA
     private Long patientId;
 
+    // ✅ MULTI-TENANT — HÔPITAL ASSOCIÉ
+    private Long hospitalId;
+    private String hospitalName;
+
     // ✅ CREDENTIALS GÉNÉRÉS (pour affichage après création)
     private String generatedPassword; // Temporaire, non persisté
 

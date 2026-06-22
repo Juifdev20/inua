@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,27 +42,31 @@ public class DashboardController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getStats() {
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-
+        Long hospitalId = HospitalTenantContext.getHospitalId();
         Map<String, Object> stats = new HashMap<>();
-
-        stats.put("totalUsers", userRepository.count());
-        stats.put("newUsersMonth", userRepository.countAllNewUsersSince(startOfMonth));
-        // Les rôles sont stockés avec le préfixe ROLE_ (ex: ROLE_DOCTEUR, ROLE_PATIENT)
-        stats.put("totalDoctors", userRepository.countByRoleNom("ROLE_DOCTEUR"));
-        stats.put("newDoctorsMonth", userRepository.countNewUsersByRoleSince("ROLE_DOCTEUR", startOfMonth));
-        stats.put("totalPatients", userRepository.countByRoleNom("ROLE_PATIENT"));
-        stats.put("newPatientsMonth", userRepository.countNewUsersByRoleSince("ROLE_PATIENT", startOfMonth));
-
-        // Départements
-        stats.put("totalDepartments", departmentRepository.count());
-
-        // RDV en attente (consultations EN_ATTENTE)
-        Long pendingCount = consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
-        stats.put("pendingAppointments", pendingCount != null ? pendingCount : 0L);
-
-        // Récupération des 5 dernières activités réelles
-        stats.put("activities", activityRepository.findTop5ByOrderByDateDesc());
-
+        if (hospitalId != null) {
+            stats.put("totalUsers", userRepository.countByHospitalId(hospitalId) + patientRepository.countActivePatientsByHospitalId(hospitalId));
+            stats.put("newUsersMonth", userRepository.countAllNewUsersByHospitalSince(hospitalId, startOfMonth));
+            stats.put("totalDoctors", userRepository.countByHospitalIdAndRoleNom(hospitalId, "ROLE_DOCTEUR"));
+            stats.put("newDoctorsMonth", userRepository.countNewUsersByRoleAndHospitalSince(hospitalId, "ROLE_DOCTEUR", startOfMonth));
+            stats.put("totalPatients", patientRepository.countActivePatientsByHospitalId(hospitalId));
+            stats.put("newPatientsMonth", patientRepository.countNewPatientsByHospitalSince(hospitalId, startOfMonth));
+            stats.put("totalDepartments", departmentRepository.count());
+            Long pendingCount = consultationRepository.countByStatusAndHospitalId(ConsultationStatus.EN_ATTENTE, hospitalId);
+            stats.put("pendingAppointments", pendingCount != null ? pendingCount : 0L);
+            stats.put("activities", activityRepository.findTop5ByHospitalIdOrderByDateDesc(hospitalId));
+        } else {
+            stats.put("totalUsers", userRepository.count());
+            stats.put("newUsersMonth", userRepository.countAllNewUsersSince(startOfMonth));
+            stats.put("totalDoctors", userRepository.countByRoleNom("ROLE_DOCTEUR"));
+            stats.put("newDoctorsMonth", userRepository.countNewUsersByRoleSince("ROLE_DOCTEUR", startOfMonth));
+            stats.put("totalPatients", userRepository.countByRoleNom("ROLE_PATIENT"));
+            stats.put("newPatientsMonth", userRepository.countNewUsersByRoleSince("ROLE_PATIENT", startOfMonth));
+            stats.put("totalDepartments", departmentRepository.count());
+            Long pendingCount = consultationRepository.countByStatus(ConsultationStatus.EN_ATTENTE);
+            stats.put("pendingAppointments", pendingCount != null ? pendingCount : 0L);
+            stats.put("activities", activityRepository.findTop5ByOrderByDateDesc());
+        }
         return ResponseEntity.ok(stats);
     }
 
@@ -85,14 +90,15 @@ public class DashboardController {
         List<Map<String, Object>> result = new ArrayList<>();
         LocalDate now = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM", Locale.FRENCH);
-
+        Long hospitalId = HospitalTenantContext.getHospitalId();
         for (int i = 5; i >= 0; i--) {
             LocalDate month = now.minusMonths(i);
             LocalDateTime start = month.withDayOfMonth(1).atStartOfDay();
             LocalDateTime end = month.plusMonths(1).withDayOfMonth(1).atStartOfDay().minusSeconds(1);
 
-            long count = consultationRepository.findByDateRange(start, end).size();
-
+            long count = (hospitalId != null
+                    ? consultationRepository.findByDateRangeAndHospitalId(start, end, hospitalId).size()
+                    : consultationRepository.findByDateRange(start, end).size());
             Map<String, Object> data = new HashMap<>();
             data.put("mois", month.format(formatter));
             data.put("consultations", count);
@@ -102,14 +108,19 @@ public class DashboardController {
     }
 
     private List<Map<String, Object>> getPatientsByDepartment() {
+        Long hospitalId = HospitalTenantContext.getHospitalId();
         List<Map<String, Object>> result = new ArrayList<>();
-        List<com.hospital.backend.entity.Department> departments = departmentRepository.findAll();
+        List<com.hospital.backend.entity.Department> departments = (hospitalId != null)
+                ? departmentRepository.findByHospitalId(hospitalId)
+                : departmentRepository.findAll();
 
         for (com.hospital.backend.entity.Department dept : departments) {
             Map<String, Object> data = new HashMap<>();
             data.put("name", dept.getNom());
-            // Compte approximatif basé sur les consultations par service (departement est un String dans MedicalService)
-            long count = consultationRepository.findAll().stream()
+            List<com.hospital.backend.entity.Consultation> allConsultations = (hospitalId != null)
+                    ? consultationRepository.findByPatientHospitalId(hospitalId)
+                    : consultationRepository.findAll();
+            long count = allConsultations.stream()
                     .filter(c -> c.getService() != null && dept.getNom().equalsIgnoreCase(c.getService().getDepartement()))
                     .map(c -> c.getPatient().getId())
                     .distinct()
@@ -121,6 +132,7 @@ public class DashboardController {
     }
 
     private List<Map<String, Object>> getRevenueByMonth() {
+        Long hospitalId = HospitalTenantContext.getHospitalId();
         List<Map<String, Object>> result = new ArrayList<>();
         LocalDate now = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM", Locale.FRENCH);
@@ -132,7 +144,9 @@ public class DashboardController {
             // Simulation: 50$ par consultation en moyenne
             LocalDateTime start = month.withDayOfMonth(1).atStartOfDay();
             LocalDateTime end = month.plusMonths(1).withDayOfMonth(1).atStartOfDay().minusSeconds(1);
-            long consultations = consultationRepository.findByDateRange(start, end).size();
+            long consultations = (hospitalId != null
+                    ? consultationRepository.findByDateRangeAndHospitalId(start, end, hospitalId).size()
+                    : consultationRepository.findByDateRange(start, end).size());
             data.put("revenu", consultations * 50);
             result.add(data);
         }

@@ -29,6 +29,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
@@ -184,6 +185,34 @@ public class AuthController {
         } catch (Exception e) {
             log.error("❌ [AUTH] Erreur vérification statut mot de passe: {}", e.getMessage());
             return ResponseEntity.status(500).body(ApiResponse.error("Erreur serveur"));
+        }
+        }
+
+    // ═════════════════════════════════════════════════════════════════
+    // FORCE CHANGE PASSWORD (first login)
+    // ════════════════════════════════════════════════════════════════════
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestHeader("Authorization") String authHeader,
+                                              @RequestBody ChangePasswordRequest request) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String username = jwtTokenProvider.getUsernameFromToken(token);
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                return ResponseEntity.status(401).body(ApiResponse.error("Mot de passe actuel incorrect"));
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            user.setMustChangePassword(false);
+            user.setUpdatedAt(java.time.LocalDateTime.now());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(ApiResponse.success("Mot de passe mis a jour", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur: " + e.getMessage()));
         }
     }
 }

@@ -9,6 +9,7 @@ import com.hospital.backend.security.JwtTokenProvider;
 import com.hospital.backend.service.AuthService;
 import com.hospital.backend.service.AuditLogService;
 import com.hospital.backend.service.EmailService;
+import com.hospital.backend.util.AccountGenerationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,6 +39,8 @@ public class AuthServiceImpl implements AuthService {
     private final SimpMessagingTemplate messagingTemplate;
     private final AuditLogService auditLogService;
     private final EmailService emailService;
+    private final HospitalRepository hospitalRepository;
+    private final AccountGenerationUtils accountGenerationUtils;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -60,6 +63,7 @@ public class AuthServiceImpl implements AuthService {
                     .refreshToken(jwtTokenProvider.generateRefreshToken(user))
                     .tokenType("Bearer")
                     .expiresIn(jwtTokenProvider.getAccessTokenExpiration())
+                    .mustChangePassword(user.getMustChangePassword() != null ? user.getMustChangePassword() : false)
                     .user(mapToDTO(user))
                     .build();
         } catch (Exception e) {
@@ -73,8 +77,15 @@ public class AuthServiceImpl implements AuthService {
     public UserDTO register(RegisterRequest request) {
         log.info("📝 Inscription patient : {}", request.getUsername());
 
-        if (userRepository.existsByUsername(request.getUsername())) throw new BadRequestException("Username déjà pris");
-        if (userRepository.existsByEmail(request.getEmail())) throw new BadRequestException("Email déjà utilisé");
+        // Validation des doublons avec messages clairs pour le frontend
+        if (userRepository.existsByUsername(request.getUsername())) {
+            log.warn("⚠️ Tentative d'inscription avec username déjà pris: {}", request.getUsername());
+            throw new BadRequestException("Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("⚠️ Tentative d'inscription avec email déjà utilisé: {}", request.getEmail());
+            throw new BadRequestException("Cet email est déjà associé à un compte. Veuillez utiliser un autre email.");
+        }
 
         Role userRole = roleRepository.findByNom("ROLE_PATIENT")
                 .or(() -> roleRepository.findByNom("PATIENT"))
@@ -105,6 +116,14 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .build();
 
+        // Lier l'hôpital si fourni dans la requête
+        if (request.getHospitalId() != null) {
+            hospitalRepository.findById(request.getHospitalId()).ifPresent(hospital -> {
+                savedUser.setHospital(hospital);
+                userRepository.save(savedUser);
+                patient.setHospital(hospital);
+            });
+        }
         patientRepository.save(patient);
         log.info("✅ Profil Patient créé et lié à l'User ID: {}", savedUser.getId());
 
@@ -275,6 +294,9 @@ public class AuthServiceImpl implements AuthService {
                 .notificationEnabled(user.getNotificationEnabled())
                 .soundEnabled(user.getSoundEnabled())
                 .preferredLanguage(user.getPreferredLanguage())
+                .mustChangePassword(user.getMustChangePassword())
+                .hospitalId(user.getHospital() != null ? user.getHospital().getId() : null)
+                .hospitalName(user.getHospital() != null ? user.getHospital().getNom() : null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

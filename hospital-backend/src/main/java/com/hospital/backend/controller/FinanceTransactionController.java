@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.hospital.backend.security.HospitalTenantContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -56,8 +57,10 @@ public class FinanceTransactionController {
             description = "Transactions créées par la pharmacie, en attente de scan et validation")
     public ResponseEntity<?> getDepensesEnAttente() {
         try {
-            List<FinanceTransaction> transactions = transactionRepository
-                .findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN);
+            Long hId = HospitalTenantContext.getHospitalId();
+            List<FinanceTransaction> transactions = (hId != null)
+                ? transactionRepository.findByStatusAndHospitalId(TransactionStatus.EN_ATTENTE_SCAN, hId)
+                : transactionRepository.findByStatusOrderByCreatedAtDesc(TransactionStatus.EN_ATTENTE_SCAN);
             log.info("✅ {} dépense(s) en attente de validation chargée(s)", transactions.size());
             return ResponseEntity.ok(transactions);
         } catch (Exception e) {
@@ -72,9 +75,11 @@ public class FinanceTransactionController {
     @Operation(summary = "Liste des dettes fournisseurs (crédits)",
             description = "Transactions A_PAYER triées par date d'échéance")
     public ResponseEntity<List<FinanceTransaction>> getDettesFournisseurs() {
-        return ResponseEntity.ok(
-            transactionRepository.findDettesFournisseurs(TransactionStatus.A_PAYER, TransactionType.DEPENSE)
-        );
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<FinanceTransaction> result = (hId != null)
+            ? transactionRepository.findDettesFournisseursByHospital(TransactionStatus.A_PAYER, TransactionType.DEPENSE, hId)
+            : transactionRepository.findDettesFournisseurs(TransactionStatus.A_PAYER, TransactionType.DEPENSE);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping
@@ -83,6 +88,10 @@ public class FinanceTransactionController {
     public ResponseEntity<Page<FinanceTransaction>> getAllTransactions(Pageable pageable) {
         if (pageable.getPageSize() > 100) {
             pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return ResponseEntity.ok(transactionRepository.findByHospitalId(hId, pageable));
         }
         return ResponseEntity.ok(transactionRepository.findAll(pageable));
     }
@@ -298,8 +307,10 @@ public class FinanceTransactionController {
         java.time.LocalDateTime startOfDay = today.atStartOfDay();
         java.time.LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
-        java.util.List<FinanceTransaction> todayTransactions = transactionRepository
-            .findByTypeAndCreatedAtBetween(TransactionType.DEPENSE, startOfDay, endOfDay);
+        Long hId = HospitalTenantContext.getHospitalId();
+        java.util.List<FinanceTransaction> todayTransactions = (hId != null)
+            ? transactionRepository.findByTypeAndCreatedAtBetweenAndHospital(TransactionType.DEPENSE, startOfDay, endOfDay, hId)
+            : transactionRepository.findByTypeAndCreatedAtBetween(TransactionType.DEPENSE, startOfDay, endOfDay);
 
         java.math.BigDecimal total = todayTransactions.stream()
             .map(FinanceTransaction::getMontant)

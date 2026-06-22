@@ -5,7 +5,7 @@ import {
   Search, Loader2, RefreshCw, ArrowUpDown,
   Receipt, ShoppingBag, Tablets, ClipboardList,
   Clock, ChevronRight, AlertTriangle, PackageCheck,
-  Building2
+  Building2, Printer
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import PaymentModal from '../../components/modals/PaymentModal.jsx';
 import { toast } from 'sonner';
+import { openPrintWindow, loadHospitalConfig } from '../../utils/printUtils.js';
+import { BACKEND_URL } from '../../config/environment.js';
 
 const CaissePharmacie = () => {
   const { t } = useTranslation();
@@ -87,22 +89,106 @@ const CaissePharmacie = () => {
 
   const handleDirectConfirm = async (invoice) => {
     try {
-      const response = await financeApi.processPrescriptionPayment(invoice.id, 'ESPECES');
+      await financeApi.processPrescriptionPayment(invoice.id, 'ESPECES');
       toast.success('Prescription validée - Couverture entreprise');
-      handlePaymentSuccess();
+      handlePaymentSuccess('ESPECES');
     } catch (error) {
       console.error('Direct confirm error:', error);
       toast.error('Erreur lors de la validation');
     }
   };
 
-  const handlePaymentSuccess = () => {
+  const printPharmacyReceipt = async (prescription, paymentMethod) => {
+    try {
+      const config = await loadHospitalConfig();
+      const methodLabels = {
+        'ESPECES': 'Espèces', 'CARTE_BANCAIRE': 'Carte bancaire', 'MOBILE_MONEY': 'Mobile Money'
+      };
+      const methodLabel = methodLabels[paymentMethod] || paymentMethod || 'Non précisé';
+      const now = new Date();
+      const dateStr = format(now, 'dd/MM/yyyy', { locale: fr });
+      const timeStr = format(now, 'HH:mm', { locale: fr });
+      const meds = prescription.services || prescription.items || [];
+      const currency = prescription.currency || 'USD';
+
+      const medsRows = meds.length > 0 ? meds.map((med) => `
+        <tr>
+          <td style="padding:5px 4px;border-bottom:1px dotted #ddd;font-size:11px;">${med.name || med.serviceName || '-'}</td>
+          <td style="padding:5px 4px;border-bottom:1px dotted #ddd;text-align:center;font-size:11px;">${med.quantity || '1'}</td>
+          <td style="padding:5px 4px;border-bottom:1px dotted #ddd;text-align:right;font-size:11px;">${formatCurrency(med.price || med.unitPrice || 0, currency)}</td>
+          <td style="padding:5px 4px;border-bottom:1px dotted #ddd;text-align:right;font-size:11px;">${formatCurrency((med.price || med.unitPrice || 0) * (med.quantity || 1), currency)}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" style="padding:8px;text-align:center;color:#999;font-size:11px;">Aucun médicament détaillé</td></tr>`;
+
+      const bodyContent = `
+        <div style="max-width:520px;margin:0 auto;">
+          <div style="text-align:center;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;">Reçu de Paiement</div>
+            <div style="font-size:11px;color:#888;">Pharmacie Hospitalière</div>
+          </div>
+
+          <table style="width:100%;font-size:11px;margin-bottom:12px;border-collapse:collapse;">
+            <tr><td style="color:#666;padding:3px 0;">Patient</td><td style="font-weight:bold;text-align:right;">${prescription.patientName || '-'}</td></tr>
+            <tr><td style="color:#666;padding:3px 0;">Référence</td><td style="text-align:right;font-family:monospace;">#${prescription.id}</td></tr>
+            <tr><td style="color:#666;padding:3px 0;">Date de paiement</td><td style="text-align:right;">${dateStr} à ${timeStr}</td></tr>
+            <tr><td style="color:#666;padding:3px 0;">Mode de paiement</td><td style="text-align:right;font-weight:bold;">${methodLabel}</td></tr>
+            ${prescription.isAbonne ? `<tr><td style="color:#666;padding:3px 0;">Couverture</td><td style="text-align:right;color:#2563eb;">${prescription.companyName || 'Entreprise'} (${prescription.coverageRate || 100}%)</td></tr>` : ''}
+          </table>
+
+          <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:6px 4px;text-align:left;font-size:10px;font-weight:bold;border-bottom:2px solid #333;">Médicament</th>
+                <th style="padding:6px 4px;text-align:center;font-size:10px;font-weight:bold;border-bottom:2px solid #333;">Qté</th>
+                <th style="padding:6px 4px;text-align:right;font-size:10px;font-weight:bold;border-bottom:2px solid #333;">P.U.</th>
+                <th style="padding:6px 4px;text-align:right;font-size:10px;font-weight:bold;border-bottom:2px solid #333;">Total</th>
+              </tr>
+            </thead>
+            <tbody>${medsRows}</tbody>
+            <tfoot>
+              <tr style="background:#f9fafb;">
+                <td colspan="3" style="padding:8px 4px;font-weight:bold;font-size:13px;border-top:2px solid #333;">TOTAL PAYÉ</td>
+                <td style="padding:8px 4px;font-weight:bold;font-size:15px;text-align:right;border-top:2px solid #333;">${formatCurrency(prescription.totalAmount || prescription.amount || 0, currency)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div style="border:2px solid #059669;padding:12px;border-radius:6px;text-align:center;background:#f0fdf4;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:bold;color:#059669;text-transform:uppercase;">✅ Paiement validé</div>
+            <div style="font-size:11px;color:#555;margin-top:4px;">Présentez ce reçu à la pharmacie pour retirer vos médicaments</div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#999;margin-top:20px;border-top:1px dashed #ccc;padding-top:10px;">
+            <div>Caissier(e): ________________________</div>
+            <div>Signature / Cachet</div>
+          </div>
+        </div>
+      `;
+
+      await openPrintWindow({
+        title: `Reçu Pharmacie — ${prescription.patientName}`,
+        documentTitle: 'REÇU PHARMACIE',
+        bodyContent,
+        config,
+        apiBaseUrl: BACKEND_URL,
+        autoClose: false
+      });
+    } catch (err) {
+      console.error('Erreur impression reçu:', err);
+      toast.error('Impossible d\'imprimer le reçu');
+    }
+  };
+
+  const handlePaymentSuccess = (paymentMethod) => {
+    const paidPrescription = selectedInvoice;
     setShowPaymentModal(false);
     setSelectedInvoice(null);
-    setSelectedPrescription(null);
     loadPrescriptions();
-    loadStats(); // ★ Recharger aussi les stats
+    loadStats();
     toast.success(t('finance.payment.success') || 'Paiement validé');
+    if (paidPrescription) {
+      printPharmacyReceipt(paidPrescription, paymentMethod);
+    }
   };
 
   const formatCurrency = (amount, currency = 'CDF') =>
@@ -587,11 +673,19 @@ const CaissePharmacie = () => {
                           </p>
                         </div>
                         <div className="flex gap-3">
-                          <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold border-2 gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 h-12 rounded-xl font-bold border-2 gap-2"
+                            onClick={() => printPharmacyReceipt(selectedPrescription, null)}
+                          >
                             <Eye className="w-4 h-4" /> Reçu
                           </Button>
-                          <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold border-2 gap-2">
-                            <Receipt className="w-4 h-4" /> Imprimer
+                          <Button
+                            variant="outline"
+                            className="flex-1 h-12 rounded-xl font-bold border-2 gap-2"
+                            onClick={() => printPharmacyReceipt(selectedPrescription, null)}
+                          >
+                            <Printer className="w-4 h-4" /> Imprimer
                           </Button>
                         </div>
                       </div>

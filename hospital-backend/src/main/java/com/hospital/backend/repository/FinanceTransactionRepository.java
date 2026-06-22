@@ -47,6 +47,16 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
      */
     List<FinanceTransaction> findByStatusOrderByCreatedAtDesc(TransactionStatus status);
 
+    // ★ MULTI-TENANT: filtrer par hôpital du créateur
+    @Query("SELECT ft FROM FinanceTransaction ft WHERE ft.status = :status AND ft.createdBy.hospital.id = :hospitalId ORDER BY ft.createdAt DESC")
+    List<FinanceTransaction> findByStatusAndHospitalId(@Param("status") TransactionStatus status, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT ft FROM FinanceTransaction ft WHERE ft.status = :status AND ft.type = :type AND ft.createdBy.hospital.id = :hospitalId ORDER BY ft.dateEcheancePaiement ASC")
+    List<FinanceTransaction> findDettesFournisseursByHospital(@Param("status") TransactionStatus status, @Param("type") TransactionType type, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT ft FROM FinanceTransaction ft WHERE ft.createdBy.hospital.id = :hospitalId ORDER BY ft.createdAt DESC")
+    org.springframework.data.domain.Page<FinanceTransaction> findByHospitalId(@Param("hospitalId") Long hospitalId, org.springframework.data.domain.Pageable pageable);
+
     /**
      * Liste les transactions par type (tous statuts)
      */
@@ -96,4 +106,8 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
      * Liste les transactions par type et période de création
      */
     List<FinanceTransaction> findByTypeAndCreatedAtBetween(TransactionType type, LocalDateTime start, LocalDateTime end);
+
+    // ★ MULTI-TENANT
+    @Query("SELECT ft FROM FinanceTransaction ft WHERE ft.type = :type AND ft.createdAt BETWEEN :start AND :end AND ft.createdBy.hospital.id = :hospitalId")
+    List<FinanceTransaction> findByTypeAndCreatedAtBetweenAndHospital(@Param("type") TransactionType type, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("hospitalId") Long hospitalId);
 }

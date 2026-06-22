@@ -9,6 +9,7 @@ import com.hospital.backend.repository.InvoiceRepository;
 import com.hospital.backend.repository.RevenueRepository;
 import com.hospital.backend.service.RevenueService;
 import com.hospital.backend.service.UserService;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -162,7 +163,8 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalRevenuesBetween(LocalDateTime start, LocalDateTime end) {
-        return revenueRepository.sumAmountByDateBetween(start, end);
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? revenueRepository.sumAmountByDateBetweenAndHospital(start, end, hId) : revenueRepository.sumAmountByDateBetween(start, end);
     }
 
     @Override
@@ -174,13 +176,15 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTodayTotal() {
-        return revenueRepository.getTodayTotal();
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? revenueRepository.getTodayTotalByHospital(hId) : revenueRepository.getTodayTotal();
     }
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getMonthlyTotal() {
-        return revenueRepository.getCurrentMonthTotal();
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null) ? revenueRepository.getCurrentMonthTotalByHospital(hId) : revenueRepository.getCurrentMonthTotal();
     }
 
     @Override

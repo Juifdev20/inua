@@ -10,6 +10,7 @@ import com.hospital.backend.repository.*;
 import com.hospital.backend.service.CompanyConsumptionService;
 import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.InvoiceService;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.NotificationService;
 import com.hospital.backend.service.PatientDocumentService;
 import com.hospital.backend.service.RevenueService;
@@ -730,8 +731,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
         LocalDateTime todayEnd = LocalDateTime.now().toLocalDate().atTime(LocalTime.MAX);
         
-        List<Invoice> paidInvoices = invoiceRepository
-                .findByStatusAndDepartmentSource(InvoiceStatus.PAYEE, source);
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Invoice> paidInvoices = (hId != null)
+                ? invoiceRepository.findByStatusAndDepartmentSourceAndHospitalId(InvoiceStatus.PAYEE, source, hId)
+                : invoiceRepository.findByStatusAndDepartmentSource(InvoiceStatus.PAYEE, source);
         
         // Filtrer pour aujourd'hui uniquement
         List<Invoice> paidToday = paidInvoices.stream()

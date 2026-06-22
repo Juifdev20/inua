@@ -19,6 +19,10 @@ public interface ExpenseService {
 
     Page<ExpenseDTO> getExpensesByCategory(ExpenseCategory category, Pageable pageable);
 
+    List<ExpenseDTO> getAllExpensesByHospitalId(Long hospitalId);
+
+    List<ExpenseDTO> getExpensesByCategoryAndHospitalId(ExpenseCategory category, Long hospitalId);
+
     List<ExpenseDTO> getRecentExpensesByUser(Long userId, int limit);
 
     BigDecimal getTotalExpensesBetween(LocalDateTime start, LocalDateTime end);

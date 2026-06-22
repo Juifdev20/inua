@@ -1,6 +1,8 @@
 package com.hospital.backend.controller;
 
 import com.hospital.backend.dto.ApiResponse;
+import com.hospital.backend.entity.Hospital;
+import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.service.SystemConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,6 +31,7 @@ import java.util.Map;
 public class PublicController {
 
     private final SystemConfigService systemConfigService;
+    private final HospitalRepository hospitalRepository;
 
     /**
      * Retourne le statut maintenance + un message.
@@ -47,5 +51,30 @@ public class PublicController {
         data.put("timestamp", LocalDateTime.now().toString());
 
         return ResponseEntity.ok(ApiResponse.success("Statut système", data));
+    }
+
+    /**
+     * Liste les hôpitaux actifs pour l'inscription des patients.
+     * Aucune authentification requise.
+     */
+    @GetMapping("/hospitals")
+    @Operation(summary = "Liste publique des hôpitaux actifs")
+    public ResponseEntity<?> getPublicHospitals() {
+        try {
+            List<Hospital> hospitals = hospitalRepository.findAllByIsActiveTrue();
+            List<Map<String, Object>> result = hospitals.stream().map(h -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", h.getId());
+                m.put("nom", h.getNom());
+                m.put("code", h.getCode());
+                m.put("city", h.getCity());
+                m.put("country", h.getCountry());
+                return m;
+            }).toList();
+            return ResponseEntity.ok(ApiResponse.success("Hopitaux actifs", result));
+        } catch (Exception e) {
+            log.error("[Public] Erreur liste hopitaux: {}", e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur"));
+        }
     }
 }

@@ -101,7 +101,7 @@ public interface ConsultationService {
      * @param examAmountPaid Montant payé pour les examens
      * @return Consultation mise à jour
      */
-    ConsultationDTO updateExamPaymentAndSendToLab(Long consultationId, Double examAmountPaid);
+    ConsultationDTO updateExamPaymentAndSendToLab(Long consultationId, Double examAmountPaid, String paymentMethodStr);
 
     /**
      * ✅ AJOUTÉ: Ajuste les examens prescrits (quantité, désactivation, notes caisse)

@@ -68,6 +68,14 @@ public class AdmissionServiceImpl implements AdmissionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<AdmissionDTO> getByHospitalId(Long hospitalId) {
+        return admissionRepository.findByPatientHospitalId(hospitalId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public AdmissionDTO create(AdmissionDTO dto) {
         Patient patient = patientRepository.findById(dto.getPatientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient introuvable avec l'ID: " + dto.getPatientId()));

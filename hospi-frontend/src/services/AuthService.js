@@ -50,6 +50,8 @@ export const saveAuthData = (token, user, rememberMe = true, refreshToken = null
         lastName: user.lastName || '',
         photoUrl: user.photoUrl || '',
         patientId: user.patientId || null,
+        hospitalName: user.hospitalName || '',
+        hospitalId: user.hospitalId || null,
         // Ne pas stocker de données sensibles
       };
 

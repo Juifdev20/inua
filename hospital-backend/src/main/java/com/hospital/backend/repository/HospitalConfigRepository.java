@@ -18,4 +18,8 @@ public interface HospitalConfigRepository extends JpaRepository<HospitalConfig, 
      * Vérifie si une configuration existe déjà
      */
     boolean existsById(Long id);
+
+    // ★ MULTI-TENANT: récupérer la config par hôpital
+    Optional<HospitalConfig> findByHospitalId(Long hospitalId);
+    boolean existsByHospitalId(Long hospitalId);
 }

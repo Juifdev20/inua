@@ -1,11 +1,14 @@
 package com.hospital.backend.controller;
 
 import com.hospital.backend.entity.Department;
+import com.hospital.backend.entity.Hospital;
 import com.hospital.backend.repository.DepartmentRepository;
+import com.hospital.backend.repository.HospitalRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
 
 import java.util.List;
 import java.util.Map;
@@ -19,11 +22,22 @@ public class DepartmentController {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private HospitalRepository hospitalRepository;
+
     // --- RÉCUPÉRER TOUT ---
     @GetMapping("/all")
     public ResponseEntity<List<Department>> getAll() {
         try {
-            return ResponseEntity.ok(departmentRepository.findAll());
+            Long hId = HospitalTenantContext.getHospitalId();
+            List<Department> departments;
+            if (hId != null) {
+                departments = departmentRepository.findByHospitalIdOrHospitalIsNull(hId);
+                log.info("[DEPARTMENT] {} départements pour l'hôpital {} (incl. legacy)", departments.size(), hId);
+            } else {
+                departments = departmentRepository.findAll();
+            }
+            return ResponseEntity.ok(departments);
         } catch (Exception e) {
             log.error("Erreur lors de la récupération des départements", e);
             return ResponseEntity.internalServerError().build();
@@ -40,6 +54,11 @@ public class DepartmentController {
             if (dept.getNombrePersonnel() == null) dept.setNombrePersonnel(0);
             if (dept.getNombreLits() == null) dept.setNombreLits(0);
 
+            Long hId = HospitalTenantContext.getHospitalId();
+            if (hId != null) {
+                Hospital hospital = hospitalRepository.findById(hId).orElse(null);
+                dept.setHospital(hospital);
+            }
             Department savedDept = departmentRepository.save(dept);
             return ResponseEntity.ok(savedDept);
         } catch (Exception e) {

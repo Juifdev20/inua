@@ -1,0 +1,25 @@
+package com.hospital.backend.repository;
+
+import com.hospital.backend.entity.Hospital;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface HospitalRepository extends JpaRepository<Hospital, Long> {
+
+    Optional<Hospital> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    List<Hospital> findAllByIsActiveTrue();
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId")
+    long countUsersByHospitalId(Long hospitalId);
+
+    @Query("SELECT COUNT(p) FROM Patient p WHERE p.hospital.id = :hospitalId")
+    long countPatientsByHospitalId(Long hospitalId);
+}

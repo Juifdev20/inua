@@ -27,6 +27,7 @@ import LandingPage from "./pages/Landingpage";
 import LoginPage from "./pages/auth/LoginPage";
 import OtpLoginPage from "./pages/auth/OtpLoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForceChangePasswordPage from "./pages/auth/ForceChangePasswordPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import CompleteSetupPage from "./pages/auth/CompleteSetupPage";
@@ -46,6 +47,10 @@ import Departments from "./pages/admin/Departments";
 import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
+import HospitalsPage from "./pages/superadmin/HospitalsPage";
+import PerformancePage from "./pages/superadmin/PerformancePage";
+import EmailManagementPage from "./pages/superadmin/EmailManagementPage";
+import BackupPage from "./pages/superadmin/BackupPage";
 import Profile from "./pages/admin/Profile";
 import HospitalSettings from "./pages/admin/HospitalSettings";
 import CompaniesPage from "./pages/admin/CompaniesPage";
@@ -204,7 +209,7 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/login-otp" element={<OtpLoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register" element={<RegisterPage />} />`n                <Route path="/change-password" element={<ForceChangePasswordPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/complete-setup" element={<CompleteSetupPage />} />
@@ -474,6 +479,10 @@ function App() {
                   <Route path="system" element={<SecurityDashboard />} />
                   <Route path="devs" element={<SecurityDashboard />} />
                   <Route path="logs" element={<SecurityDashboard />} />
+                  <Route path="hospitals" element={<HospitalsPage />} />
+                  <Route path="performance" element={<PerformancePage />} />
+                  <Route path="emails" element={<EmailManagementPage />} />
+                  <Route path="backup" element={<BackupPage />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -34,4 +34,7 @@ public class AuditLog {
     private String ip;
 
     private LocalDateTime date;
+    // ★ MULTI-TENANT: hôpital associé à l'action
+    @Column(name = "hospital_id")
+    private Long hospitalId;
 }

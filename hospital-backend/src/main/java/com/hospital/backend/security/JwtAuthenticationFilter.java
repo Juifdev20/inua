@@ -171,6 +171,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            Long hospitalId = jwtTokenProvider.getHospitalIdFromToken(token);
+            if (hospitalId != null) {
+                HospitalTenantContext.setHospitalId(hospitalId);
+            }
+            filterChain.doFilter(request, response);
+        } finally {
+            HospitalTenantContext.clear();
+        }
     }
 }

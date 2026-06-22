@@ -20,6 +20,7 @@ import com.hospital.backend.repository.ConsultationRepository;
 import com.hospital.backend.repository.MedicationRepository;
 import com.hospital.backend.repository.PrescriptionRepository;
 import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -282,6 +283,7 @@ public class UltraSimpleFinanceService {
         log.info("📋 [ULTRA-SIMPLE] Récupération des admissions - Date: {}", date);
 
         try {
+            Long hId = HospitalTenantContext.getHospitalId();
             // ── Optimisation : utiliser une requête filtrée au lieu de findAll() ─────────
             List<Admission> admissions;
             if (date != null && !date.isEmpty()) {
@@ -295,6 +297,14 @@ public class UltraSimpleFinanceService {
                 LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
                 admissions = admissionRepository.findByAdmissionDateAfter(thirtyDaysAgo);
                 log.info("📋 [ULTRA-SIMPLE] 30 derniers jours : {} admissions trouvées", admissions.size());
+            }
+            // ★ MULTI-TENANT: filtrer par hôpital
+            if (hId != null) {
+                admissions = admissions.stream()
+                    .filter(a -> a.getPatient() != null && a.getPatient().getHospital() != null
+                                 && a.getPatient().getHospital().getId().equals(hId))
+                    .collect(java.util.stream.Collectors.toList());
+                log.info("🏥 [ULTRA-SIMPLE] Après filtre hôpital {}: {} admissions", hId, admissions.size());
             }
 
             // Filtrer pour exclure les admissions déjà complètement payées ET les annulées
@@ -639,11 +649,18 @@ public class UltraSimpleFinanceService {
         log.info("📋 [NOUVEAU FLUX] Récupération prescriptions validées par la pharmacie (en attente de paiement)");
         
         try {
+            Long hId = HospitalTenantContext.getHospitalId();
             List<Prescription> pendingPrescriptions = prescriptionRepository.findByStatus(
                 PrescriptionStatus.VALIDEE,
                 org.springframework.data.domain.Pageable.unpaged()
             ).getContent();
-            
+            // ★ MULTI-TENANT: filtrer par hôpital du patient
+            if (hId != null) {
+                pendingPrescriptions = pendingPrescriptions.stream()
+                    .filter(p -> p.getPatient() != null && p.getPatient().getHospital() != null
+                                 && p.getPatient().getHospital().getId().equals(hId))
+                    .collect(java.util.stream.Collectors.toList());
+            }
             log.info("✅ [NOUVEAU FLUX] {} prescriptions en attente de paiement trouvées", pendingPrescriptions.size());
             
             return Map.of(

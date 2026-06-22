@@ -22,6 +22,11 @@ public class Department {
     @Column(name = "nom", nullable = false)
     private String nom;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id", referencedColumnName = "id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

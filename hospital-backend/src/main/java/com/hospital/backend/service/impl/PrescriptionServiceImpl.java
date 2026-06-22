@@ -7,6 +7,7 @@ import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
 import com.hospital.backend.service.PrescriptionService;
 import com.hospital.backend.service.InvoiceService;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -331,8 +332,14 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     public List<PrescriptionDTO> getPendingPrescriptions() {
         log.info("Récupération des prescriptions en attente");
         
+        Long hId = HospitalTenantContext.getHospitalId();
         List<Prescription> pendingPrescriptions = prescriptionRepository.findPendingPrescriptions();
-        
+        if (hId != null) {
+            pendingPrescriptions = pendingPrescriptions.stream()
+                .filter(p -> p.getPatient() != null && p.getPatient().getHospital() != null
+                             && p.getPatient().getHospital().getId().equals(hId))
+                .collect(Collectors.toList());
+        }
         return pendingPrescriptions.stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());

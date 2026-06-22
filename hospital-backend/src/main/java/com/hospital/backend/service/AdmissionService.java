@@ -11,6 +11,8 @@ public interface AdmissionService {
     
     List<AdmissionDTO> getByPatientId(Long patientId);
     
+    List<AdmissionDTO> getByHospitalId(Long hospitalId);
+    
     AdmissionDTO create(AdmissionDTO admissionDTO);
     
     AdmissionDTO update(Long id, AdmissionDTO admissionDTO);

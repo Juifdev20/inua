@@ -96,4 +96,38 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
     // Evolution over last 6 months by currency
     @Query("SELECT YEAR(r.date), MONTH(r.date), COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.date >= :startDate AND r.currency = :currency GROUP BY YEAR(r.date), MONTH(r.date) ORDER BY YEAR(r.date), MONTH(r.date)")
     List<Object[]> getMonthlyEvolutionByCurrency(@Param("startDate") LocalDateTime startDate, @Param("currency") com.hospital.backend.entity.Currency currency);
+
+    // ★ MULTI-TENANT: agrégations filtrées par hôpital
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = :today AND r.currency = :currency AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTodayTotalByCurrencyAndHospital(@Param("today") java.time.LocalDate today, @Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE YEAR(r.date) = YEAR(CURRENT_DATE) AND MONTH(r.date) = MONTH(CURRENT_DATE) AND r.currency = :currency AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal getCurrentMonthTotalByCurrencyAndHospital(@Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.currency = :currency AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTotalByCurrencyAndHospital(@Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT r.source, r.currency, COALESCE(SUM(r.amount), 0), COALESCE(COUNT(r), 0) FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId GROUP BY r.source, r.currency")
+    List<Object[]> getStatsBySourceAndCurrencyAndHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT YEAR(r.date), MONTH(r.date), COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.date >= :startDate AND r.currency = :currency AND r.createdBy.hospital.id = :hospitalId GROUP BY YEAR(r.date), MONTH(r.date) ORDER BY YEAR(r.date), MONTH(r.date)")
+    List<Object[]> getMonthlyEvolutionByCurrencyAndHospital(@Param("startDate") LocalDateTime startDate, @Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT r FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId ORDER BY r.date DESC")
+    List<Revenue> findRecentRevenuesByHospital(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.source = :source AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumAmountBySourceAndHospital(@Param("source") RevenueSource source, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumTotalAmountByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE CAST(r.date AS date) = CURRENT_DATE AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal getTodayTotalByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE YEAR(r.date) = YEAR(CURRENT_DATE) AND MONTH(r.date) = MONTH(CURRENT_DATE) AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal getCurrentMonthTotalByHospital(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.date BETWEEN :start AND :end AND r.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumAmountByDateBetweenAndHospital(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("hospitalId") Long hospitalId);
 }

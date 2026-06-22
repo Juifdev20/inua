@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -45,6 +45,16 @@ import LogoInuaAfya from '../LogoInuaAfya';
 
 const Sidebar = () => {
   const { t } = useTranslation();
+  const [hospitalName, setHospitalName] = useState('');
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setHospitalName(user?.hospitalName || user?.hospital?.nom || '');
+      }
+    } catch { /* ignore */ }
+  }, []);
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, toggleMobileSidebar } = useAdmin();
   
   // 🔔 Récupération sécurisée du contexte de notifications
@@ -100,7 +110,7 @@ const Sidebar = () => {
                   INUA AFYA
                 </h1>
                 <p className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">
-                  {t('admin.title')}
+                  {hospitalName || t('admin.title')}
                 </p>
               </div>
             </div>

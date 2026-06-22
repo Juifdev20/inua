@@ -65,6 +65,7 @@ public class PatientDTO {
     private Long appointmentCount;
 
     private Boolean hasMedicalRecord;
+    private Long hospitalId;
 
     // ✅ CORRECTION CRUCIALE : On empêche Spring d'essayer de désérialiser ces listes
     // lors d'un envoi Multipart/Form-Data depuis le frontend.

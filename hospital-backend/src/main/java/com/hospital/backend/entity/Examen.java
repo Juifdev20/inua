@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,7 +25,7 @@ public class Examen {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code", unique = true, nullable = false, length = 20)
+    @Column(name = "code", nullable = false, length = 20)
     private String code; // Ex: GLY, CRP, NFS, HIV
 
     @Column(name = "nom", nullable = false, length = 100)
@@ -58,6 +59,19 @@ public class Examen {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     private MedicalService service; // Service parent (optionnel)
+
+    // ★ MULTI-TENANT: Hôpital propriétaire de l'examen
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
+    @PrePersist
+    public void prePersist() {
+        if (actif == null) {
+            actif = true;
+        }
+    }
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

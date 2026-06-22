@@ -2,6 +2,7 @@ package com.hospital.backend.service;
 
 import com.hospital.backend.entity.AuditLog;
 import com.hospital.backend.repository.AuditLogRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,10 @@ public class AuditLogService {
     // ═══════════════════════════════════════════════════
 
     public List<AuditLog> getAllLogs() {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return repository.findByHospitalIdOrderByDateDesc(hId);
+        }
         return repository.findAllByOrderByDateDesc();
     }
 
@@ -51,6 +56,7 @@ public class AuditLogService {
                 .type(type)
                 .ip(ip)
                 .date(LocalDateTime.now())
+                .hospitalId(HospitalTenantContext.getHospitalId())
                 .build();
         repository.save(log);
     }

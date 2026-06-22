@@ -230,7 +230,7 @@ class ConsultationServiceTest {
         Authentication authentication = mock(Authentication.class);
         GrantedAuthority authority = mock(GrantedAuthority.class);
         
-        when(authentication.getAuthorities()).thenReturn(Collections.singletonList(authority));
+        doReturn(Collections.singletonList(authority)).when(authentication).getAuthorities();
         when(authority.getAuthority()).thenReturn(role);
         
         SecurityContext securityContext = mock(SecurityContext.class);

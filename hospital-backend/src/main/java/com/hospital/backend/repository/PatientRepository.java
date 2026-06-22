@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.List;
 
@@ -102,6 +103,12 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
      */
     @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT'")
     Long countActivePatients();
+    // MULTI-TENANT: comptage par hopital depuis la table Patient
+    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND (p.hospital.id = :hospitalId OR p.hospital IS NULL)")
+    Long countActivePatientsByHospitalId(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND (p.hospital.id = :hospitalId OR p.hospital IS NULL) AND p.createdAt >= :startDate")
+    Long countNewPatientsByHospitalSince(@Param("hospitalId") Long hospitalId, @Param("startDate") LocalDateTime startDate);
 
     // ==========================================
     // ✅ MÉTHODES LIÉES AU DOCTEUR (Dashboard)

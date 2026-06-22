@@ -4,6 +4,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.entity.Admission;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.ConsultationService;
 import com.hospital.backend.service.LabAlertService;
 import lombok.extern.slf4j.Slf4j;
@@ -692,7 +693,10 @@ public class DoctorController {
                 return ResponseEntity.ok(Collections.emptyList());
             }
 
-            List<User> doctors = userRepository.findByRole(doctorRole.get());
+            Long hospitalId = HospitalTenantContext.getHospitalId();
+            List<User> doctors = (hospitalId != null)
+                    ? userRepository.findByHospitalIdAndRole(hospitalId, doctorRole.get())
+                    : userRepository.findByRole(doctorRole.get());
 
             return ResponseEntity.ok(doctors.stream()
                     .filter(doc -> doc != null && Boolean.TRUE.equals(doc.getIsActive()))

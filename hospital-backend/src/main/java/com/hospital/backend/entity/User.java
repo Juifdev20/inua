@@ -66,6 +66,11 @@ public class User {
     @JsonIgnoreProperties({"users", "utilisateurs"})
     private Department department;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id", referencedColumnName = "id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false, referencedColumnName = "id")
     @JsonIgnoreProperties({"users", "utilisateursCount"})

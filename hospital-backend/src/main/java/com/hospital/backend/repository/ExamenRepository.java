@@ -58,6 +58,11 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
     boolean existsByCode(String code);
 
     /**
+     * Vérifie si un code existe déjà dans un hôpital
+     */
+    boolean existsByCodeAndHospitalId(String code, Long hospitalId);
+
+    /**
      * Compte les examens par catégorie
      */
     @Query("SELECT e.categorie, COUNT(e) FROM Examen e WHERE e.actif = true GROUP BY e.categorie")
@@ -67,4 +72,19 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
      * ★ Recherche par service ID (pour récupérer les valeurs de référence)
      */
     Optional<Examen> findByServiceId(Long serviceId);
+
+    // ★ MULTI-TENANT: filtrer par hôpital
+    List<Examen> findByHospitalIdAndActifTrue(Long hospitalId);
+
+    List<Examen> findByHospitalIdAndCategorieAndActifTrue(Long hospitalId, String categorie);
+
+    @Query("SELECT e FROM Examen e WHERE e.hospital.id = :hospitalId AND e.actif = true AND " +
+           "(LOWER(e.nom) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.code) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.categorie) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY e.nom ASC")
+    List<Examen> searchByNomOrCodeAndHospital(@Param("query") String query, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT e FROM Examen e WHERE e.hospital.id = :hospitalId AND e.actif = true ORDER BY e.nom ASC")
+    List<Examen> findAllActiveOrderedByHospital(@Param("hospitalId") Long hospitalId);
 }

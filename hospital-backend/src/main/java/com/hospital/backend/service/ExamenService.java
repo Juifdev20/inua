@@ -1,7 +1,10 @@
 package com.hospital.backend.service;
 
 import com.hospital.backend.entity.Examen;
+import com.hospital.backend.entity.Hospital;
 import com.hospital.backend.repository.ExamenRepository;
+import com.hospital.backend.repository.HospitalRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,14 +23,23 @@ import java.util.Optional;
 public class ExamenService {
 
     private final ExamenRepository examenRepository;
+    private final HospitalRepository hospitalRepository;
 
     /**
      * Crée un nouvel examen
      */
     @Transactional
     public Examen createExamen(Examen examen) {
-        if (examenRepository.existsByCode(examen.getCode())) {
+        Long hId = HospitalTenantContext.getHospitalId();
+        // Vérifier doublon dans le même hôpital (ou globalement si pas de contexte hôpital)
+        boolean codeExists = hId != null
+            ? examenRepository.existsByCodeAndHospitalId(examen.getCode(), hId)
+            : examenRepository.existsByCode(examen.getCode());
+        if (codeExists) {
             throw new IllegalArgumentException("Un examen avec ce code existe déjà: " + examen.getCode());
+        }
+        if (hId != null) {
+            hospitalRepository.findById(hId).ifPresent(examen::setHospital);
         }
         log.info("🧪 [EXAMEN SERVICE] Création de l'examen: {} ({})", examen.getNom(), examen.getCode());
         return examenRepository.save(examen);
@@ -59,6 +71,10 @@ public class ExamenService {
      * Récupère tous les examens actifs
      */
     public List<Examen> getAllActiveExamens() {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return examenRepository.findByHospitalIdAndActifTrue(hId);
+        }
         return examenRepository.findByActifTrue();
     }
 
@@ -66,10 +82,17 @@ public class ExamenService {
      * ★ Recherche d'examens par nom ou code
      */
     public List<Examen> searchExamens(String query) {
+        Long hId = HospitalTenantContext.getHospitalId();
         if (query == null || query.trim().isEmpty()) {
+            if (hId != null) {
+                return examenRepository.findAllActiveOrderedByHospital(hId);
+            }
             return examenRepository.findAllActiveOrdered();
         }
         log.info("🔍 [EXAMEN SERVICE] Recherche: '{}'", query);
+        if (hId != null) {
+            return examenRepository.searchByNomOrCodeAndHospital(query.trim(), hId);
+        }
         return examenRepository.searchByNomOrCode(query.trim());
     }
 
@@ -91,6 +114,10 @@ public class ExamenService {
      * Récupère les examens par catégorie
      */
     public List<Examen> getExamensByCategorie(String categorie) {
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            return examenRepository.findByHospitalIdAndCategorieAndActifTrue(hId, categorie);
+        }
         return examenRepository.findByCategorieAndActifTrue(categorie);
     }
 

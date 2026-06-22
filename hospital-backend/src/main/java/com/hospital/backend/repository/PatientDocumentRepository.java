@@ -59,5 +59,9 @@ public interface PatientDocumentRepository extends JpaRepository<PatientDocument
      * Compter les documents d'un patient
      */
     long countByPatientId(Long patientId);
+
+    // ★ MULTI-TENANT: filtrer par hôpital via consultation
+    @Query("SELECT d FROM PatientDocument d WHERE d.consultation.patient.hospital.id = :hospitalId ORDER BY d.createdAt DESC")
+    List<PatientDocument> findByHospitalId(@Param("hospitalId") Long hospitalId);
 }
 

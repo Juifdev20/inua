@@ -68,6 +68,13 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     List<Consultation> findByStatusInWithPatientDoctorAndExams(
             @Param("statuses") List<ConsultationStatus> statuses);
 
+    // ★ MULTI-TENANT: filtrer par hôpital du patient
+    @Query("SELECT c FROM Consultation c WHERE c.patient.hospital.id = :hospitalId ORDER BY c.createdAt DESC")
+    List<Consultation> findByPatientHospitalId(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT c FROM Consultation c WHERE c.patient.hospital.id = :hospitalId AND c.status = :status ORDER BY c.createdAt DESC")
+    List<Consultation> findByPatientHospitalIdAndStatus(@Param("hospitalId") Long hospitalId, @Param("status") ConsultationStatus status);
+
     /**
      * ★ CRITIQUE: Récupère les consultations avec examens prescrits filtrées par date
      * Utilisé par /all-lab-payments avec paramètre date pour le sélecteur de date
@@ -165,6 +172,17 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
             "WHERE c.status = :status " +
             "ORDER BY c.createdAt DESC")
     List<Consultation> findLabQueueByStatus(@Param("status") ConsultationStatus status);
+
+    // ★ MULTI-TENANT: variantes hospital-filtrées pour réception
+    @Query("SELECT c FROM Consultation c WHERE c.status = :status AND c.patient.hospital.id = :hospitalId ORDER BY c.createdAt DESC")
+    List<Consultation> findByStatusAndHospitalId(@Param("status") ConsultationStatus status, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT c FROM Consultation c WHERE c.status IN :statuses AND c.updatedAt BETWEEN :startOfDay AND :endOfDay AND c.patient.hospital.id = :hospitalId")
+    List<Consultation> findByStatusInAndUpdatedAtBetweenAndHospitalId(
+            @Param("statuses") List<ConsultationStatus> statuses,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay,
+            @Param("hospitalId") Long hospitalId);
 
     @Query("SELECT c FROM Consultation c WHERE c.status IN :statuses AND c.updatedAt BETWEEN :startOfDay AND :endOfDay")
     List<Consultation> findByStatusInAndUpdatedAtBetween(
@@ -336,4 +354,23 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
      * Utilisé par UltraSimpleFinanceService pour calculer le montant total
      */
     List<Consultation> findByAdmissionId(Long admissionId);
+
+    // MULTI-TENANT
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status = :status AND (c.patient.hospital.id = :hospitalId OR c.patient.hospital IS NULL)")
+    Long countByStatusAndHospitalId(@Param("status") ConsultationStatus status, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT c FROM Consultation c WHERE c.consultationDate BETWEEN :start AND :end AND c.patient.hospital.id = :hospitalId")
+    List<Consultation> findByDateRangeAndHospitalId(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.createdAt BETWEEN :startOfDay AND :endOfDay AND c.status != 'ARCHIVED' AND c.patient.hospital.id = :hospitalId")
+    Long countAdmissionsTodayByHospital(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status IN :statuses AND c.status != 'ARCHIVED' AND c.patient.hospital.id = :hospitalId")
+    Long countFichesTransmisesByHospital(@Param("statuses") List<ConsultationStatus> statuses, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status IN :statuses AND c.updatedAt BETWEEN :startOfDay AND :endOfDay AND c.status != 'ARCHIVED' AND c.patient.hospital.id = :hospitalId")
+    Long countTermineesTodayByHospital(@Param("statuses") List<ConsultationStatus> statuses, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT c FROM Consultation c WHERE c.createdAt BETWEEN :startOfDay AND :endOfDay AND c.patient.hospital.id = :hospitalId ORDER BY c.createdAt DESC")
+    List<Consultation> findRecentAdmissionsTodayByHospital(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay, @Param("hospitalId") Long hospitalId, org.springframework.data.domain.Pageable pageable);
 }

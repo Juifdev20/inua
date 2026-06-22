@@ -49,6 +49,8 @@ public class SuperAdminController {
     private final EmailService emailService;
     private final SystemConfigService systemConfigService;
     private final DeviceSessionService deviceSessionService;
+    private final com.hospital.backend.service.HospitalService hospitalService;
+    private final com.hospital.backend.service.AdminCredentialsPdfService adminCredentialsPdfService;
 
     // ═══════════════════════════════════════════════════
     // 1. AUDIT & SÉCURITÉ
@@ -452,4 +454,146 @@ public class SuperAdminController {
             return ResponseEntity.status(500).body(ApiResponse.error("Erreur déblocage appareil"));
         }
     }
+
+    // ═══════════════════════════════════════════════════
+    // 9. GESTION DES HOPITAUX (MULTI-TENANT)
+    // ═══════════════════════════════════════════════════
+
+    @GetMapping("/hospitals")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> getAllHospitals() {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Hopitaux", hospitalService.getAllHospitals()));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur hopitaux: {}", e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur recuperation hopitaux"));
+        }
+    }
+
+    @GetMapping("/hospitals/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> getHospital(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Hopital", hospitalService.getHospitalById(id)));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Hopital {} introuvable: {}", id, e.getMessage());
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/hospitals")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> createHospital(@RequestBody com.hospital.backend.dto.HospitalDTO dto) {
+        try {
+            com.hospital.backend.dto.HospitalDTO created = hospitalService.createHospital(dto);
+            auditLogService.logAction("HOSPITAL_CREATED", "SUPERADMIN", "HOSPITAL-" + created.getCode(), created.getNom(), "success", "127.0.0.1");
+            return ResponseEntity.status(201).body(ApiResponse.success("Hopital cree", created));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur creation hopital: {}", e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/hospitals/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> updateHospital(@PathVariable Long id, @RequestBody com.hospital.backend.dto.HospitalDTO dto) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Hopital modifie", hospitalService.updateHospital(id, dto)));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur maj hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/hospitals/{id}/toggle")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> toggleHospital(@PathVariable Long id) {
+        try {
+            hospitalService.toggleHospitalStatus(id);
+            auditLogService.logAction("HOSPITAL_TOGGLED", "SUPERADMIN", "HOSPITAL-" + id, "Statut modifie", "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Statut modifie", null));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur toggle hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/hospitals/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<?> deleteHospital(@PathVariable Long id) {
+        try {
+            hospitalService.deleteHospital(id);
+            auditLogService.logAction("HOSPITAL_DELETED", "SUPERADMIN", "HOSPITAL-" + id, "Supprime", "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Hopital supprime", null));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur suppression hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 10. PROVISION ADMIN POUR UN HÔPITAL
+    // ═══════════════════════════════════════════════════
+
+    @PostMapping("/hospitals/{id}/provision-admin")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Créer un compte ADMIN pour un hôpital")
+    public ResponseEntity<?> provisionAdmin(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            com.hospital.backend.entity.Hospital hospital = hospitalService.getEntityById(id);
+            String email = body.get("email");
+            String firstName = body.getOrDefault("firstName", "Admin");
+            String lastName = body.getOrDefault("lastName", hospital.getNom());
+
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email obligatoire"));
+            }
+            if (userRepository.existsByEmail(email)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email déjà utilisé"));
+            }
+
+            String tempPassword = java.util.UUID.randomUUID().toString().substring(0, 10);
+
+            Role adminRole = roleRepository.findByNom("ROLE_ADMIN")
+                    .orElseThrow(() -> new RuntimeException("Role ROLE_ADMIN non trouvé"));
+
+            User admin = User.builder()
+                    .username(email)
+                    .email(email)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .password(passwordEncoder.encode(tempPassword))
+                    .role(adminRole)
+                    .hospital(hospital)
+                    .isActive(true)
+                    .mustChangePassword(true)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            User saved = userRepository.save(admin);
+
+            // Generation PDF credentials
+            byte[] pdfBytes = adminCredentialsPdfService.generate(saved, tempPassword, hospital);
+            String pdfBase64 = adminCredentialsPdfService.toBase64(pdfBytes);
+
+            emailService.sendCredentialsEmail(
+                    email, firstName, lastName, email, tempPassword, "ADMIN"
+            );
+
+            auditLogService.logAction("ADMIN_PROVISIONED", "SUPERADMIN",
+                    "HOSPITAL-" + id, "Admin " + email + " pour " + hospital.getNom(), "success", "127.0.0.1");
+
+            log.info("[SuperAdmin] Admin provisionne pour {}: {}", hospital.getNom(), email);
+            return ResponseEntity.status(201).body(ApiResponse.success(
+                    "Admin cree pour " + hospital.getNom(),
+                    Map.of("id", saved.getId(), "email", email, "hospital", hospital.getNom(),
+                            "pdfBase64", pdfBase64, "filename", "credentials_" + saved.getId() + ".pdf")));
+
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur provision admin: {}", e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur: " + e.getMessage()));
+        }
+    }
+
 }

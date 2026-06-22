@@ -20,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.hospital.backend.security.HospitalTenantContext;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -64,11 +65,19 @@ public class ExpenseController {
         Sort sort = sortBy != null ? Sort.by(sortBy).descending() : Sort.by("date").descending();
         Pageable pageable = PageRequest.of(page, safeSize, sort);
         
+        Long hId = HospitalTenantContext.getHospitalId();
         Page<ExpenseDTO> expenses;
-        if (category != null) {
-            expenses = expenseService.getExpensesByCategory(category, pageable);
+        if (hId != null) {
+            List<ExpenseDTO> list = (category != null)
+                ? expenseService.getExpensesByCategoryAndHospitalId(category, hId)
+                : expenseService.getAllExpensesByHospitalId(hId);
+            expenses = new org.springframework.data.domain.PageImpl<>(list, pageable, list.size());
         } else {
-            expenses = expenseService.getAllExpenses(pageable);
+            if (category != null) {
+                expenses = expenseService.getExpensesByCategory(category, pageable);
+            } else {
+                expenses = expenseService.getAllExpenses(pageable);
+            }
         }
         
         return ResponseEntity.ok(ApiResponse.success("Dépenses récupérées", expenses));

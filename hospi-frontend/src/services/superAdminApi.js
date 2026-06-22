@@ -135,7 +135,104 @@ const superAdminApi = {
   getSystemHealth: async () => {
     const response = await api.get('/system/health');
     return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // GESTION DES HOPITAUX (MULTI-TENANT)
+  // ═══════════════════════════════════════
+
+  getHospitals: async () => {
+    const response = await api.get('/hospitals');
+    return response.data?.data || response.data;
+  },
+
+  getHospital: async (id) => {
+    const response = await api.get(`/hospitals/${id}`);
+    return response.data?.data || response.data;
+  },
+
+  createHospital: async (data) => {
+    const response = await api.post('/hospitals', data);
+    return response.data?.data || response.data;
+  },
+
+  updateHospital: async (id, data) => {
+    const response = await api.put(`/hospitals/${id}`, data);
+    return response.data?.data || response.data;
+  },
+
+  toggleHospital: async (id) => {
+    const response = await api.patch(`/hospitals/${id}/toggle`);
+    return response.data?.data || response.data;
+  },
+
+  deleteHospital: async (id) => {
+    const response = await api.delete(`/hospitals/${id}`);
+    return response.data?.data || response.data;
+  },
+
+  provisionAdmin: async (hospitalId, data) => {
+    const response = await api.post(`/hospitals/${hospitalId}/provision-admin`, data);
+    return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // PERFORMANCE DASHBOARD
+  // ═══════════════════════════════════════
+
+  getPerformanceMetrics: async () => {
+    const response = await api.get('/metrics');
+    return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // GESTION DES EMAILS
+  // ═══════════════════════════════════════
+
+  getEmailLogs: async (page = 0, size = 50) => {
+    const response = await api.get('/emails', { params: { page, size } });
+    return response.data?.data || response.data;
+  },
+
+  getEmailStats: async () => {
+    const response = await api.get('/emails/stats');
+    return response.data?.data || response.data;
+  },
+
+  retryFailedEmails: async () => {
+    const response = await api.post('/emails/retry');
+    return response.data?.data || response.data;
+  },
+
+  testSmtp: async (to) => {
+    const response = await api.post('/emails/test', { to });
+    return response.data?.data || response.data;
+  },
+
+  clearOldEmailLogs: async () => {
+    const response = await api.delete('/emails/clear-old');
+    return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // BACKUP & RESTAURATION
+  // ═══════════════════════════════════════
+
+  triggerBackup: async () => {
+    const response = await api.post('/backup/trigger');
+    return response.data?.data || response.data;
+  },
+
+  getBackupHistory: async () => {
+    const response = await api.get('/backup/history');
+    return response.data?.data || response.data;
+  },
+
+  getBackupStats: async () => {
+    const response = await api.get('/backup/stats');
+    return response.data?.data || response.data;
   }
+
 };
 
 export default superAdminApi;

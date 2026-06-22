@@ -9,6 +9,7 @@ import com.hospital.backend.repository.ConsultationRepository;
 import com.hospital.backend.repository.LabTestRepository;
 import com.hospital.backend.repository.PrescribedExamRepository;
 import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.LabAlertService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -70,8 +71,11 @@ public class LabController {
                 ConsultationStatus.AU_LABO
             );
 
+            Long hId = HospitalTenantContext.getHospitalId();
             List<Consultation> consultations = consultationRepository
-                .findByStatusInWithPatientDoctorAndExams(targetStatuses);
+                .findByStatusInWithPatientDoctorAndExams(targetStatuses).stream()
+                .filter(c -> hId == null || (c.getPatient() != null && c.getPatient().getHospital() != null && c.getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
 
             // Mapper en DTO pour le labo
             List<LabQueueItemDTO> queueItems = consultations.stream()
@@ -476,8 +480,11 @@ public class LabController {
         log.info("🔬 [LAB CTRL] Récupération des statistiques");
 
         try {
+            Long hId = HospitalTenantContext.getHospitalId();
             // Tous les examens prescrits actifs
-            List<PrescribedExam> allExams = prescribedExamRepository.findAllActive();
+            List<PrescribedExam> allExams = prescribedExamRepository.findAllActive().stream()
+                .filter(e -> hId == null || (e.getConsultation() != null && e.getConsultation().getPatient() != null && e.getConsultation().getPatient().getHospital() != null && e.getConsultation().getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
             
             long totalExams = allExams.size();
             long pendingExams = allExams.stream()
@@ -525,7 +532,10 @@ public class LabController {
         log.info("🔬 [LAB CTRL] Récupération de l'historique");
 
         try {
-            List<PrescribedExam> allExams = prescribedExamRepository.findAllActive();
+            Long hId = HospitalTenantContext.getHospitalId();
+            List<PrescribedExam> allExams = prescribedExamRepository.findAllActive().stream()
+                .filter(e -> hId == null || (e.getConsultation() != null && e.getConsultation().getPatient() != null && e.getConsultation().getPatient().getHospital() != null && e.getConsultation().getPatient().getHospital().getId().equals(hId)))
+                .collect(Collectors.toList());
             
             // Filtrer uniquement les examens avec résultats (résultat saisi)
             List<Map<String, Object>> historyItems = allExams.stream()

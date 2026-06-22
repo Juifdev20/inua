@@ -84,8 +84,13 @@ public class ExamenController {
     public ResponseEntity<ApiResponse<Examen>> createExamen(@RequestBody Examen examen) {
         log.info("🧪 [EXAMEN CTRL] Création de l'examen: {} ({}) - Prix: {}", 
                 examen.getNom(), examen.getCode(), examen.getPrix());
-        Examen created = examenService.createExamen(examen);
-        return ResponseEntity.ok(ApiResponse.success("Examen créé avec succès", created));
+        try {
+            Examen created = examenService.createExamen(examen);
+            return ResponseEntity.ok(ApiResponse.success("Examen créé avec succès", created));
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [EXAMEN CTRL] Validation échouée: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     /**

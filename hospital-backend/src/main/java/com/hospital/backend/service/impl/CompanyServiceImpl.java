@@ -21,6 +21,8 @@ import com.hospital.backend.repository.CompanyRepository;
 import com.hospital.backend.repository.HospitalConfigRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.service.CompanyService;
+import com.hospital.backend.security.HospitalTenantContext;
+import com.hospital.backend.entity.Hospital;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,17 +56,21 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional(readOnly = true)
     public List<CompanyResponse> getAllCompanies() {
-        return companyRepository.findAllByOrderByNameAsc().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Company> companies = (hId != null)
+                ? companyRepository.findByHospitalIdOrderByNameAsc(hId)
+                : companyRepository.findAllByOrderByNameAsc();
+        return companies.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CompanyResponse> getCompaniesByStatus(SubscriptionStatus status) {
-        return companyRepository.findBySubscriptionStatus(status).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Company> companies = (hId != null)
+                ? companyRepository.findByHospitalIdAndSubscriptionStatus(hId, status)
+                : companyRepository.findBySubscriptionStatus(status);
+        return companies.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -82,6 +88,7 @@ public class CompanyServiceImpl implements CompanyService {
             throw new IllegalArgumentException("Un contrat avec ce numéro existe déjà: " + request.getContractNumber());
         }
 
+        Long hId = HospitalTenantContext.getHospitalId();
         Company company = Company.builder()
                 .name(request.getName())
                 .address(request.getAddress())
@@ -95,6 +102,7 @@ public class CompanyServiceImpl implements CompanyService {
                         ? request.getCoverageRate() : new BigDecimal("100.00"))
                 .surplusRate(request.getSurplusRate() != null
                         ? request.getSurplusRate() : new BigDecimal("35.00"))
+                .hospital(hId != null ? Hospital.builder().id(hId).build() : null)
                 .build();
 
         Company saved = companyRepository.save(company);

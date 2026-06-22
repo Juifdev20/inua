@@ -16,6 +16,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     List<AuditLog> findAllByOrderByDateDesc();
 
+    // ★ MULTI-TENANT: filtrer par hôpital
+    List<AuditLog> findByHospitalIdOrderByDateDesc(Long hospitalId);
+
     // ─── FILTRAGES POUR SUPERADMIN ───
 
     Page<AuditLog> findByUtilisateurContainingIgnoreCase(String utilisateur, Pageable pageable);

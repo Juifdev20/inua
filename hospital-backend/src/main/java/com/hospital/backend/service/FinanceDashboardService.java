@@ -8,6 +8,7 @@ import com.hospital.backend.entity.Revenue;
 import com.hospital.backend.repository.ExpenseRepository;
 import com.hospital.backend.repository.InvoiceRepository;
 import com.hospital.backend.repository.RevenueRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class FinanceDashboardService {
     public FinanceDashboardDTO getDashboard() {
         log.info("📊 [DASHBOARD] Génération des statistiques financières...");
 
+        Long hId = HospitalTenantContext.getHospitalId();
         FinanceDashboardDTO dto = new FinanceDashboardDTO();
 
         // ═══════════════════════════════════════════════════════════════
@@ -54,18 +56,18 @@ public class FinanceDashboardService {
         LocalDate today = LocalDate.now();
 
         dto.setDailyRevenue(FinanceDashboardDTO.CurrencyStats.of(
-            revenueRepository.getTodayTotalByCurrency(today, Currency.CDF),
-            revenueRepository.getTodayTotalByCurrency(today, Currency.USD)
+            hId != null ? revenueRepository.getTodayTotalByCurrencyAndHospital(today, Currency.CDF, hId) : revenueRepository.getTodayTotalByCurrency(today, Currency.CDF),
+            hId != null ? revenueRepository.getTodayTotalByCurrencyAndHospital(today, Currency.USD, hId) : revenueRepository.getTodayTotalByCurrency(today, Currency.USD)
         ));
 
         dto.setMonthlyRevenue(FinanceDashboardDTO.CurrencyStats.of(
-            revenueRepository.getCurrentMonthTotalByCurrency(Currency.CDF),
-            revenueRepository.getCurrentMonthTotalByCurrency(Currency.USD)
+            hId != null ? revenueRepository.getCurrentMonthTotalByCurrencyAndHospital(Currency.CDF, hId) : revenueRepository.getCurrentMonthTotalByCurrency(Currency.CDF),
+            hId != null ? revenueRepository.getCurrentMonthTotalByCurrencyAndHospital(Currency.USD, hId) : revenueRepository.getCurrentMonthTotalByCurrency(Currency.USD)
         ));
 
         dto.setTotalRevenue(FinanceDashboardDTO.CurrencyStats.of(
-            revenueRepository.getTotalByCurrency(Currency.CDF),
-            revenueRepository.getTotalByCurrency(Currency.USD)
+            hId != null ? revenueRepository.getTotalByCurrencyAndHospital(Currency.CDF, hId) : revenueRepository.getTotalByCurrency(Currency.CDF),
+            hId != null ? revenueRepository.getTotalByCurrencyAndHospital(Currency.USD, hId) : revenueRepository.getTotalByCurrency(Currency.USD)
         ));
 
         // ═══════════════════════════════════════════════════════════════
@@ -73,18 +75,18 @@ public class FinanceDashboardService {
         // ═══════════════════════════════════════════════════════════════
 
         dto.setDailyExpenses(FinanceDashboardDTO.CurrencyStats.of(
-            expenseRepository.getTodayTotalByCurrency(today, Currency.CDF),
-            expenseRepository.getTodayTotalByCurrency(today, Currency.USD)
+            hId != null ? expenseRepository.getTodayTotalByCurrencyAndHospital(today, Currency.CDF, hId) : expenseRepository.getTodayTotalByCurrency(today, Currency.CDF),
+            hId != null ? expenseRepository.getTodayTotalByCurrencyAndHospital(today, Currency.USD, hId) : expenseRepository.getTodayTotalByCurrency(today, Currency.USD)
         ));
 
         dto.setMonthlyExpenses(FinanceDashboardDTO.CurrencyStats.of(
-            expenseRepository.getCurrentMonthTotalByCurrency(Currency.CDF),
-            expenseRepository.getCurrentMonthTotalByCurrency(Currency.USD)
+            hId != null ? expenseRepository.getCurrentMonthTotalByCurrencyAndHospital(Currency.CDF, hId) : expenseRepository.getCurrentMonthTotalByCurrency(Currency.CDF),
+            hId != null ? expenseRepository.getCurrentMonthTotalByCurrencyAndHospital(Currency.USD, hId) : expenseRepository.getCurrentMonthTotalByCurrency(Currency.USD)
         ));
 
         dto.setTotalExpenses(FinanceDashboardDTO.CurrencyStats.of(
-            expenseRepository.getTotalByCurrency(Currency.CDF),
-            expenseRepository.getTotalByCurrency(Currency.USD)
+            hId != null ? expenseRepository.getTotalByCurrencyAndHospital(Currency.CDF, hId) : expenseRepository.getTotalByCurrency(Currency.CDF),
+            hId != null ? expenseRepository.getTotalByCurrencyAndHospital(Currency.USD, hId) : expenseRepository.getTotalByCurrency(Currency.USD)
         ));
 
         // ═══════════════════════════════════════════════════════════════
@@ -109,14 +111,18 @@ public class FinanceDashboardService {
         // 5. RÉPARTITION PAR SOURCE (Revenus)
         // ═══════════════════════════════════════════════════════════════
 
-        List<Object[]> revenueStats = revenueRepository.getStatsBySourceAndCurrency();
+        List<Object[]> revenueStats = (hId != null)
+                ? revenueRepository.getStatsBySourceAndCurrencyAndHospital(hId)
+                : revenueRepository.getStatsBySourceAndCurrency();
         dto.setRevenueBySource(buildSourceStats(revenueStats));
 
         // ═══════════════════════════════════════════════════════════════
         // 6. RÉPARTITION PAR CATÉGORIE (Dépenses)
         // ═══════════════════════════════════════════════════════════════
 
-        List<Object[]> expenseStats = expenseRepository.getStatsByCategoryAndCurrency();
+        List<Object[]> expenseStats = (hId != null)
+                ? expenseRepository.getStatsByCategoryAndCurrencyAndHospital(hId)
+                : expenseRepository.getStatsByCategoryAndCurrency();
         dto.setExpensesByCategory(buildCategoryStats(expenseStats));
 
         // ═══════════════════════════════════════════════════════════════
@@ -125,10 +131,12 @@ public class FinanceDashboardService {
 
         LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6).withDayOfMonth(1).withHour(0).withMinute(0);
         dto.setRevenueEvolutionCDF(buildMonthlyEvolution(
-            revenueRepository.getMonthlyEvolutionByCurrency(sixMonthsAgo, Currency.CDF)
+            hId != null ? revenueRepository.getMonthlyEvolutionByCurrencyAndHospital(sixMonthsAgo, Currency.CDF, hId)
+                        : revenueRepository.getMonthlyEvolutionByCurrency(sixMonthsAgo, Currency.CDF)
         ));
         dto.setRevenueEvolutionUSD(buildMonthlyEvolution(
-            revenueRepository.getMonthlyEvolutionByCurrency(sixMonthsAgo, Currency.USD)
+            hId != null ? revenueRepository.getMonthlyEvolutionByCurrencyAndHospital(sixMonthsAgo, Currency.USD, hId)
+                        : revenueRepository.getMonthlyEvolutionByCurrency(sixMonthsAgo, Currency.USD)
         ));
 
         // ═══════════════════════════════════════════════════════════════

@@ -81,6 +81,10 @@ public class UserController {
             @RequestBody UserDTO userDTO) {
         String username = authentication.getName();
         UserDTO currentUser = userService.getByUsername(username);
+        // Bloquer changement hopital si deja choisi
+        if (currentUser.getHospitalId() != null && userDTO.getHospitalId() != null) {
+            userDTO.setHospitalId(null);
+        }
         UserDTO updated = userService.update(currentUser.getId(), userDTO);
         return ResponseEntity.ok(ApiResponse.success("Profil mis à jour", updated));
     }

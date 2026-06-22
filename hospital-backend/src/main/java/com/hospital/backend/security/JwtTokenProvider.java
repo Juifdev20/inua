@@ -76,6 +76,7 @@ public class JwtTokenProvider {
                 .claim("firstName", user.getFirstName())
                 .claim("lastName", user.getLastName())
                 .claim("tokenVersion", user.getTokenVersion())
+                .claim("hospitalId", user.getHospital() != null ? user.getHospital().getId() : null)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -115,6 +116,12 @@ public class JwtTokenProvider {
 
     public String getRoleFromToken(String token) {
         return getClaims(token).get("role", String.class);
+    }
+
+    public Long getHospitalIdFromToken(String token) {
+        Object val = getClaims(token).get("hospitalId");
+        if (val instanceof Number) return ((Number) val).longValue();
+        return null;
     }
 
     public Long getTokenVersionFromToken(String token) {

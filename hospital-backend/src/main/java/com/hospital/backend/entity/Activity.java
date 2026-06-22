@@ -22,6 +22,9 @@ public class Activity {
 
     private LocalDateTime date;
 
+    @Column(name = "hospital_id", nullable = true)
+    private Long hospitalId;
+
     @PrePersist
     protected void onCreate() {
         this.date = LocalDateTime.now();

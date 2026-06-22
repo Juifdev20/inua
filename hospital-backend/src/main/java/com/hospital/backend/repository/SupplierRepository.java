@@ -32,4 +32,20 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     
     @Query("SELECT s FROM Supplier s WHERE s.isActive = true ORDER BY s.isPreferred DESC, s.name ASC")
     List<Supplier> findActiveSuppliersOrderedByPreference();
+
+    // ★ MULTI-TENANT: filtrer par hôpital
+    List<Supplier> findByHospitalIdAndIsActiveTrue(Long hospitalId);
+
+    List<Supplier> findByHospitalIdAndIsPreferredTrue(Long hospitalId);
+
+    Page<Supplier> findByHospitalIdAndIsActiveTrue(Long hospitalId, Pageable pageable);
+
+    @Query("SELECT s FROM Supplier s WHERE s.hospital.id = :hospitalId AND (" +
+           "LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.contactPerson) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.supplierCode) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Supplier> searchSuppliersByHospital(@Param("search") String search, @Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT s FROM Supplier s WHERE s.hospital.id = :hospitalId AND s.isActive = true ORDER BY s.isPreferred DESC, s.name ASC")
+    List<Supplier> findActiveSuppliersOrderedByPreferenceAndHospital(@Param("hospitalId") Long hospitalId);
 }

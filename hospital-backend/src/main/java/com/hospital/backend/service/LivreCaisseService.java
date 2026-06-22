@@ -3,6 +3,7 @@ package com.hospital.backend.service;
 import com.hospital.backend.dto.LivreCaisseDTO;
 import com.hospital.backend.entity.Currency;
 import com.hospital.backend.repository.LivreCaisseRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,9 +38,14 @@ public class LivreCaisseService {
     public LivreCaisseDTO.SyntheseResponse getSynthese(LocalDate dateDebut, LocalDate dateFin) {
         log.info("📊 Génération du Livre de Caisse - Synthèse du {} au {}", dateDebut, dateFin);
 
+        Long hId = HospitalTenantContext.getHospitalId();
         // 1. Calculer les soldes d'ouverture (codes: USD, CDF)
-        BigDecimal soldeOuvertureUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
-        BigDecimal soldeOuvertureCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
+        BigDecimal soldeOuvertureUSD = (hId != null)
+                ? livreCaisseRepository.calculateSoldeOuvertureByHospital(dateDebut, Currency.USD.name(), hId)
+                : livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
+        BigDecimal soldeOuvertureCDF = (hId != null)
+                ? livreCaisseRepository.calculateSoldeOuvertureByHospital(dateDebut, Currency.CDF.name(), hId)
+                : livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
 
         if (soldeOuvertureUSD == null) soldeOuvertureUSD = BigDecimal.ZERO;
         if (soldeOuvertureCDF == null) soldeOuvertureCDF = BigDecimal.ZERO;
@@ -47,7 +53,9 @@ public class LivreCaisseService {
         log.info("💰 Solde d'ouverture - USD: {}, CDF: {}", soldeOuvertureUSD, soldeOuvertureCDF);
 
         // 2. Récupérer les totaux journaliers
-        List<Object[]> rawData = livreCaisseRepository.findSyntheseJournaliere(dateDebut, dateFin);
+        List<Object[]> rawData = (hId != null)
+                ? livreCaisseRepository.findSyntheseJournaliereByHospital(dateDebut, dateFin, hId)
+                : livreCaisseRepository.findSyntheseJournaliere(dateDebut, dateFin);
         List<LivreCaisseDTO.SyntheseJournaliere> journal = new ArrayList<>();
 
         BigDecimal soldeCumulatifUSD = soldeOuvertureUSD;
@@ -127,20 +135,26 @@ public class LivreCaisseService {
         log.info("📋 Génération du Livre de Caisse - Détails du {} au {} (page: {}, size: {})",
                 dateDebut, dateFin, pageable.getPageNumber(), pageable.getPageSize());
 
+        Long hId = HospitalTenantContext.getHospitalId();
         // 1. Calculer les soldes d'ouverture
-        BigDecimal soldeCumulatifUSD = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
-        BigDecimal soldeCumulatifCDF = livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
+        BigDecimal soldeCumulatifUSD = (hId != null)
+                ? livreCaisseRepository.calculateSoldeOuvertureByHospital(dateDebut, Currency.USD.name(), hId)
+                : livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.USD.name());
+        BigDecimal soldeCumulatifCDF = (hId != null)
+                ? livreCaisseRepository.calculateSoldeOuvertureByHospital(dateDebut, Currency.CDF.name(), hId)
+                : livreCaisseRepository.calculateSoldeOuverture(dateDebut, Currency.CDF.name());
 
         if (soldeCumulatifUSD == null) soldeCumulatifUSD = BigDecimal.ZERO;
         if (soldeCumulatifCDF == null) soldeCumulatifCDF = BigDecimal.ZERO;
 
-        // 2. Récupérer toutes les transactions (pour calculer les soldes cumulatifs)
-        // Note: On récupère tout pour calculer correctement le solde, même si on pagine l'affichage
+        // 2. Récupérer toutes les transactions
         log.info("🔍 [DETAILS] Exécution requête findTransactionsByPeriode du {} au {}", dateDebut, dateFin);
 
         List<Object[]> allTransactions;
         try {
-            allTransactions = livreCaisseRepository.findTransactionsByPeriode(dateDebut, dateFin, Pageable.unpaged()).getContent();
+            allTransactions = (hId != null)
+                    ? livreCaisseRepository.findTransactionsByPeriodeAndHospital(dateDebut, dateFin, hId, Pageable.unpaged()).getContent()
+                    : livreCaisseRepository.findTransactionsByPeriode(dateDebut, dateFin, Pageable.unpaged()).getContent();
             log.info("🔍 [DETAILS] Nombre de transactions brutes récupérées: {}", allTransactions.size());
         } catch (Exception e) {
             log.error("❌ [DETAILS] ERREUR lors de l'exécution de la requête: {}", e.getMessage(), e);
@@ -235,8 +249,10 @@ public class LivreCaisseService {
             LocalDate dateDebut, LocalDate dateFin, Long caissierId) {
         log.info("👤 Filtre par caissier ID: {} du {} au {}", caissierId, dateDebut, dateFin);
 
-        List<Object[]> rawData = livreCaisseRepository.findTransactionsByPeriodeAndCaissier(
-                dateDebut, dateFin, caissierId);
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Object[]> rawData = (hId != null)
+                ? livreCaisseRepository.findTransactionsByPeriodeCaissierAndHospital(dateDebut, dateFin, caissierId, hId)
+                : livreCaisseRepository.findTransactionsByPeriodeAndCaissier(dateDebut, dateFin, caissierId);
 
         List<LivreCaisseDTO.DetailTransaction> transactions = new ArrayList<>();
 

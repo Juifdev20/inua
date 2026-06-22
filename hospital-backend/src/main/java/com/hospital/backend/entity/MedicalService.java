@@ -44,6 +44,12 @@ public class MedicalService {
     @Builder.Default
     private Boolean isActive = true;
 
+    // ★ MULTI-TENANT: Hôpital associé
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
     // âœ… NOUVEAU: Relation inverse avec Consultation
     @ManyToMany(mappedBy = "services", fetch = FetchType.LAZY)
     @JsonIgnore

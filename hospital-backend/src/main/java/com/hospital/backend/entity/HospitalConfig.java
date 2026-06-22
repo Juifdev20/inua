@@ -1,5 +1,6 @@
 package com.hospital.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
@@ -131,6 +132,12 @@ public class HospitalConfig {
     @Column(name = "fiche_price_currency")  // nullable = true pour compatibilité migration
     @Builder.Default
     private Currency fichePriceCurrency = Currency.USD; // Devise par défaut: USD
+
+    // ★ MULTI-TENANT: Hôpital associé
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
 
     // === MÉTADONNÉES ===
     @Column(name = "updated_by")

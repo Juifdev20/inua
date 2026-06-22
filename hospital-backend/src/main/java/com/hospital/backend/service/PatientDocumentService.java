@@ -1,6 +1,7 @@
  package com.hospital.backend.service;
 
 import com.hospital.backend.dto.PatientDocumentDTO;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -522,7 +523,10 @@ public class PatientDocumentService {
     public List<PatientDocumentDTO> getAllDocuments() {
         log.info("📄 [PATIENT_DOCUMENT] Récupération de tous les documents");
         
-        List<PatientDocument> documents = patientDocumentRepository.findAllOrderByCreatedAtDesc();
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<PatientDocument> documents = (hId != null)
+                ? patientDocumentRepository.findByHospitalId(hId)
+                : patientDocumentRepository.findAllOrderByCreatedAtDesc();
         log.info("📄 [PATIENT_DOCUMENT] {} documents bruts récupérés de la BDD", documents.size());
         
         // Log chaque document brut pour debug

@@ -93,7 +93,10 @@ export const AuthProvider = ({ children }) => {
         soundEnabled: userFromApi.soundEnabled !== undefined ? userFromApi.soundEnabled : true,
         preferredLanguage: userFromApi.preferredLanguage || "fr",
         // ✅ CHANGEMENT DE MOT DE PASSE OBLIGATOIRE
-        mustChangePassword: userFromApi.mustChangePassword !== undefined ? userFromApi.mustChangePassword : false
+        mustChangePassword: userFromApi.mustChangePassword !== undefined ? userFromApi.mustChangePassword : false,
+        // ✅ MULTI-TENANT — HÔPITAL ASSOCIÉ
+        hospitalName: userFromApi.hospitalName || '',
+        hospitalId: userFromApi.hospitalId || null
       };
 
       // 🔥 Utilisation du AuthService pour sauvegarder (avec refresh token)
@@ -200,7 +203,8 @@ export const AuthProvider = ({ children }) => {
       await authAPI.register(data);
       return { success: true };
     } catch (error) {
-      return { success: false, error: "Erreur lors de l'inscription." };
+      const backendMessage = error.response?.data?.message || error.response?.data?.error || error.message;
+      return { success: false, error: backendMessage || "Erreur lors de l'inscription." };
     }
   };
 

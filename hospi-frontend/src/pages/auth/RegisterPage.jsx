@@ -1,8 +1,8 @@
 // 🏥 Page d'inscription - Version Cinématique Sans Scroll
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Activity, Mail, Lock, User, Phone, UserPlus, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Activity, Mail, Lock, User, Phone, UserPlus, Loader2, ArrowLeft, Sparkles, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import LogoInuaAfya from '../../components/LogoInuaAfya';
@@ -17,8 +17,16 @@ const RegisterPage = () => {
     phone: '', password: '', confirmPassword: '', role: 'PATIENT',
   });
   
+  const [hospitals, setHospitals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false); // Pour l'écran de transition
+
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/api/public/hospitals`)
+      .then(r => r.json())
+      .then(d => { if (d?.data) setHospitals(d.data); })
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,7 +60,8 @@ const RegisterPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phoneNumber: formData.phone,
-        role: 'PATIENT'
+        role: 'PATIENT',
+        hospitalId: formData.hospitalId ? Number(formData.hospitalId) : null
       };
 
       const result = await register(payload);
@@ -88,7 +97,8 @@ const RegisterPage = () => {
         setLoading(false);
       }
     } catch (error) {
-      toast.error("Erreur système", { description: "Serveur injoignable." });
+      const msg = error.response?.data?.message || error.response?.data?.error || error.message || "Serveur injoignable.";
+      toast.error("Erreur système", { description: msg });
       setLoading(false);
     }
   };
@@ -196,6 +206,23 @@ const RegisterPage = () => {
                 className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder:text-gray-400" 
                 placeholder="Téléphone" 
               />
+            </div>
+
+            {/* Hopital */}
+            <div className="relative">
+              <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                name="hospitalId"
+                value={formData.hospitalId}
+                onChange={handleChange}
+                required
+                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white appearance-none"
+              >
+                <option value="">Choisir un hopital</option>
+                {hospitals.map(h => (
+                  <option key={h.id} value={h.id}>{h.nom}</option>
+                ))}
+              </select>
             </div>
 
             {/* Password */}

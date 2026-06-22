@@ -9,6 +9,8 @@ import com.hospital.backend.repository.DepartmentRepository;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.service.ActivityService;
+import com.hospital.backend.repository.HospitalRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +53,9 @@ public class AdminController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private HospitalRepository hospitalRepository;
+
     private final String UPLOAD_DIR = "uploads/profiles/";
 
     // ========================= LECTURE =========================
@@ -58,7 +63,10 @@ public class AdminController {
     @GetMapping("/users/all")
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         try {
-            List<User> users = userRepository.findAll();
+            Long hospitalId = HospitalTenantContext.getHospitalId();
+            List<User> users = (hospitalId != null)
+                    ? userRepository.findByHospitalId(hospitalId)
+                    : userRepository.findAll();
             log.info("Nombre d'utilisateurs trouvés: {}", users.size());
             
             // ✅ CORRECTION : Créer une liste simplifiée pour éviter la boucle infinie JSON
@@ -104,7 +112,10 @@ public class AdminController {
     public ResponseEntity<?> getAllDoctors() {
         try {
             return roleRepository.findByNom("DOCTEUR").map(role -> {
-                List<User> doctors = userRepository.findByRole(role);
+                Long hospitalId = HospitalTenantContext.getHospitalId();
+                List<User> doctors = (hospitalId != null)
+                        ? userRepository.findByHospitalIdAndRole(hospitalId, role)
+                        : userRepository.findByRole(role);
                 List<Map<String, Object>> response = doctors.stream().map(doc -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", doc.getId());
@@ -125,9 +136,16 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> getGlobalStats() {
         Map<String, Object> stats = new HashMap<>();
         try {
-            stats.put("utilisateursTotal", userRepository.count());
-            roleRepository.findByNom("DOCTEUR").ifPresent(r -> stats.put("docteurs", userRepository.countByRole(r)));
-            roleRepository.findByNom("PATIENT").ifPresent(r -> stats.put("patients", userRepository.countByRole(r)));
+            Long hospitalId = HospitalTenantContext.getHospitalId();
+            if (hospitalId != null) {
+                stats.put("utilisateursTotal", userRepository.countByHospitalId(hospitalId));
+                roleRepository.findByNom("DOCTEUR").ifPresent(r -> stats.put("docteurs", userRepository.countByHospitalIdAndRole(hospitalId, r)));
+                roleRepository.findByNom("PATIENT").ifPresent(r -> stats.put("patients", userRepository.countByHospitalIdAndRole(hospitalId, r)));
+            } else {
+                stats.put("utilisateursTotal", userRepository.count());
+                roleRepository.findByNom("DOCTEUR").ifPresent(r -> stats.put("docteurs", userRepository.countByRole(r)));
+                roleRepository.findByNom("PATIENT").ifPresent(r -> stats.put("patients", userRepository.countByRole(r)));
+            }
             stats.put("departements", departmentRepository.count());
         } catch (Exception e) {
             log.error("Erreur statistiques", e);
@@ -151,7 +169,11 @@ public class AdminController {
 
             String deptNom = (String) userData.get("departement");
             if (deptNom != null && !deptNom.isEmpty()) {
-                departmentRepository.findByNom(deptNom).ifPresent(user::setDepartment);
+                Long hId = HospitalTenantContext.getHospitalId();
+                Optional<Department> deptOpt = (hId != null)
+                    ? departmentRepository.findByNomAndHospitalId(deptNom, hId)
+                    : departmentRepository.findByNom(deptNom);
+                deptOpt.ifPresent(user::setDepartment);
             }
 
             String roleName = (String) userData.get("role");
@@ -167,6 +189,12 @@ public class AdminController {
                     user::setRole,
                     () -> roleRepository.findByNom("PATIENT").ifPresent(user::setRole)
             );
+
+            // Multi-tenant: assigner l'hopital depuis le contexte JWT
+            Long hospitalId = HospitalTenantContext.getHospitalId();
+            if (hospitalId != null) {
+                hospitalRepository.findById(hospitalId).ifPresent(user::setHospital);
+            }
 
             userRepository.save(user);
             activityService.log("Création", "Utilisateur: " + user.getFirstName() + " créé", "success");
@@ -194,18 +222,33 @@ public class AdminController {
 
                 String deptNom = (String) userDetails.get("departement");
                 if (deptNom != null) {
-                    departmentRepository.findByNom(deptNom).ifPresent(user::setDepartment);
+                    Long hId = HospitalTenantContext.getHospitalId();
+                    Optional<Department> deptOpt = (hId != null)
+                        ? departmentRepository.findByNomAndHospitalId(deptNom, hId)
+                        : departmentRepository.findByNom(deptNom);
+                    deptOpt.ifPresent(user::setDepartment);
                 }
 
                 String roleName = (String) userDetails.get("role");
+                log.info("[ADMIN UPDATE] userId={}, roleName received='{}'", id, roleName);
                 if (roleName != null) {
                     String upperRole = roleName.toUpperCase();
                     // 🛡️ BLOCAGE SÉCURITÉ : un admin hospitalier ne peut PAS promouvoir en SUPERADMIN
                     if ("SUPERADMIN".equals(upperRole) || "ROLE_SUPERADMIN".equals(upperRole)) {
                         log.warn("🚨 [SECURITE] Tentative de promotion vers ROLE_SUPERADMIN bloquée (userId={})", id);
                     } else {
-                        roleRepository.findByNom(upperRole).ifPresent(user::setRole);
+                        // Essayer tel quel (ex: "ROLE_ADMIN") ou avec préfixe (ex: "ADMIN" → "ROLE_ADMIN")
+                        Optional<Role> foundRole = roleRepository.findByNom(upperRole)
+                            .or(() -> roleRepository.findByNom("ROLE_" + upperRole));
+                        if (foundRole.isPresent()) {
+                            log.info("[ADMIN UPDATE] Role trouvé: {} -> {}", upperRole, foundRole.get().getNom());
+                            user.setRole(foundRole.get());
+                        } else {
+                            log.warn("[ADMIN UPDATE] Role NON trouvé: {} ou {}", upperRole, "ROLE_" + upperRole);
+                        }
                     }
+                } else {
+                    log.warn("[ADMIN UPDATE] roleName est NULL pour userId={}", id);
                 }
 
                 userRepository.save(user);

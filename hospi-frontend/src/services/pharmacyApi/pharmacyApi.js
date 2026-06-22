@@ -9,6 +9,7 @@ const pharmacyApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // ⏱️ Timeout global 30s pour éviter les blocages infinis
 });
 
 // Request interceptor to add auth token
@@ -150,7 +151,7 @@ export const convertPrescriptionToOrder = (prescriptionId, options = {}) =>
 export const getPrescriptionById = (prescriptionId) => 
   pharmacyApi.get(`/prescriptions/${prescriptionId}`);
 export const validatePrescription = (prescriptionId, validationData) => 
-  pharmacyApi.post(`/prescriptions/${prescriptionId}/validate`, validationData);
+  pharmacyApi.post(`/prescriptions/${prescriptionId}/validate`, validationData, { timeout: 15000 });
 export const removePrescriptionItem = (itemId, reasonData) => 
   pharmacyApi.delete(`/prescriptions/items/${itemId}`, { data: reasonData });
 export const updatePrescriptionItem = (itemId, itemData) => 

@@ -5,10 +5,13 @@ import com.hospital.backend.entity.Role;
 import com.hospital.backend.entity.User;
 import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.Department;
+import com.hospital.backend.entity.Hospital;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.repository.DepartmentRepository;
+import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.service.ActivityService;
 import com.hospital.backend.util.AccountGenerationUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +43,7 @@ public class AccountCreationController {
     private final RoleRepository roleRepository;
     private final PatientRepository patientRepository;
     private final DepartmentRepository departmentRepository;
+    private final HospitalRepository hospitalRepository;
     private final AccountGenerationUtils accountGenerationUtils;
     private final PasswordEncoder passwordEncoder;
     private final ActivityService activityService;
@@ -118,6 +122,13 @@ public class AccountCreationController {
             }
 
             roleRepository.findByNom(searchName).ifPresent(user::setRole);
+
+            // MULTI-TENANT: assigner l'hôpital depuis le contexte JWT
+            Long hId = HospitalTenantContext.getHospitalId();
+            if (hId != null) {
+                hospitalRepository.findById(hId).ifPresent(user::setHospital);
+                log.info("✅ [ACCOUNT] Hôpital {} assigné au compte staff", hId);
+            }
 
             // Sauvegarder
             User savedUser = userRepository.save(user);
@@ -257,6 +268,17 @@ public class AccountCreationController {
                         "success", false,
                         "error", "Configuration invalide: rôle patient non trouvé"
                 ));
+            }
+
+            // MULTI-TENANT: assigner l'hôpital depuis le patient ou le contexte JWT
+            if (patient.getHospital() != null) {
+                user.setHospital(patient.getHospital());
+                log.info("✅ [RECEPTION] Hôpital {} assigné depuis le patient", patient.getHospital().getId());
+            } else {
+                Long hId = HospitalTenantContext.getHospitalId();
+                if (hId != null) {
+                    hospitalRepository.findById(hId).ifPresent(user::setHospital);
+                }
             }
 
             log.info("📝 [RECEPTION] Création utilisateur: username={}, firstName={}, lastName={}",

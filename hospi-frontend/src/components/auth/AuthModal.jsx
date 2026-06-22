@@ -27,6 +27,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [hospitals, setHospitals] = useState([]);
   
   // Login form
   const [loginData, setLoginData] = useState({ username: '', password: '' });
@@ -35,6 +36,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   const [registerData, setRegisterData] = useState({
     username: '', firstName: '', lastName: '', email: '',
     phone: '', password: '', confirmPassword: '',
+    hospitalId: '',
   });
   
   const { login, register } = useAuth();
@@ -47,10 +49,18 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       setRegisterData({
         username: '', firstName: '', lastName: '', email: '',
         phone: '', password: '', confirmPassword: '',
+        hospitalId: '',
       });
     }
   }, [isOpen, initialMode]);
 
+  // Fetch hospitals for registration
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/api/public/hospitals`)
+      .then(r => r.json())
+      .then(d => { if (d?.data) setHospitals(d.data); })
+      .catch(() => {});
+  }, []);
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e) => {
@@ -197,7 +207,8 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         firstName: registerData.firstName,
         lastName: registerData.lastName,
         phoneNumber: registerData.phone,
-        role: 'PATIENT'
+        role: 'PATIENT',
+        hospitalId: registerData.hospitalId ? Number(registerData.hospitalId) : null
       };
       
       const result = await register(payload);
@@ -479,6 +490,22 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                     className="w-full pl-10 pr-3 py-2.5 sm:py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white placeholder-gray-400 text-sm sm:text-base"
                     placeholder="Téléphone"
                   />
+                </div>
+
+                {/* Hôpital */}
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <select
+                    value={registerData.hospitalId}
+                    onChange={(e) => setRegisterData({ ...registerData, hospitalId: e.target.value })}
+                    required
+                    className="w-full pl-10 pr-3 py-2.5 sm:py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white text-sm sm:text-base appearance-none"
+                  >
+                    <option value="">Choisir un hôpital</option>
+                    {hospitals.map(h => (
+                      <option key={h.id} value={h.id}>{h.nom}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Password */}

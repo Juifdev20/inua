@@ -8,6 +8,7 @@ import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.service.UserService;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,7 +45,14 @@ public class UserServiceImpl implements UserService {
     public List<UserDTO> getUsersByRole(String roleName) {
         Role role = roleRepository.findByNom(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Rôle non trouvé: " + roleName));
-        return userRepository.findByRoleAndIsActiveTrue(role).stream()
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<User> users;
+        if (hId != null) {
+            users = userRepository.findByHospitalIdAndRoleAndIsActiveTrue(hId, role);
+        } else {
+            users = userRepository.findByRoleAndIsActiveTrue(role);
+        }
+        return users.stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
     }
 

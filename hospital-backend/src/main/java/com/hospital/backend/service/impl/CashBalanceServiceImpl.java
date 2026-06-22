@@ -5,6 +5,7 @@ import com.hospital.backend.entity.Expense;
 import com.hospital.backend.repository.RevenueRepository;
 import com.hospital.backend.repository.ExpenseRepository;
 import com.hospital.backend.service.CashBalanceService;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,8 +41,11 @@ public class CashBalanceServiceImpl implements CashBalanceService {
 
     @Override
     public BigDecimal getBalanceBySource(Revenue.RevenueSource source) {
+        Long hId = HospitalTenantContext.getHospitalId();
         // Calculate total revenues for this source
-        BigDecimal totalRevenues = revenueRepository.sumAmountBySource(source);
+        BigDecimal totalRevenues = (hId != null)
+                ? revenueRepository.sumAmountBySourceAndHospital(source, hId)
+                : revenueRepository.sumAmountBySource(source);
         if (totalRevenues == null) {
             totalRevenues = BigDecimal.ZERO;
         }
@@ -62,8 +66,9 @@ public class CashBalanceServiceImpl implements CashBalanceService {
 
     @Override
     public BigDecimal getTotalBalance() {
-        BigDecimal totalRevenues = revenueRepository.sumTotalAmount();
-        BigDecimal totalExpenses = expenseRepository.sumTotalAmount();
+        Long hId = HospitalTenantContext.getHospitalId();
+        BigDecimal totalRevenues = (hId != null) ? revenueRepository.sumTotalAmountByHospital(hId) : revenueRepository.sumTotalAmount();
+        BigDecimal totalExpenses = (hId != null) ? expenseRepository.sumTotalAmountByHospital(hId) : expenseRepository.sumTotalAmount();
         
         if (totalRevenues == null) totalRevenues = BigDecimal.ZERO;
         if (totalExpenses == null) totalExpenses = BigDecimal.ZERO;
