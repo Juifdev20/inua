@@ -1,6 +1,7 @@
 package com.hospital.backend.config;
 
 import com.hospital.backend.security.CustomUserDetailsService;
+import com.hospital.backend.security.HospitalStatusFilter;
 import com.hospital.backend.security.JwtAuthenticationFilter;
 import com.hospital.backend.security.OAuth2AuthenticationFailureHandler;
 import com.hospital.backend.security.OAuth2LoginSuccessHandler;
@@ -40,6 +41,7 @@ import java.util.Collections;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final HospitalStatusFilter hospitalStatusFilter;
     private final CustomUserDetailsService userDetailsService;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
@@ -176,7 +178,8 @@ public class SecurityConfig {
                         .failureHandler(oAuth2AuthenticationFailureHandler)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(hospitalStatusFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

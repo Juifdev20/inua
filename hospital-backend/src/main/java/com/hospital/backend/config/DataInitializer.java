@@ -40,6 +40,7 @@ public class DataInitializer implements CommandLineRunner {
         log.info("🚀 Initialisation des données de base...");
         
         initializeRoles();
+        initializeSuperAdminUser();
         initializeHospitalConfig();
         initializeAdminUser();
         initializeDoctorUser();
@@ -69,8 +70,9 @@ public class DataInitializer implements CommandLineRunner {
 
     private void initializeRoles() {
         List<String> roleNames = Arrays.asList(
+            "ROLE_SUPERADMIN",
             "ROLE_ADMIN",
-            "ROLE_DOCTEUR", 
+            "ROLE_DOCTEUR",
             "ROLE_PATIENT",
             "ROLE_RECEPTION",
             "ROLE_FINANCE",
@@ -106,6 +108,42 @@ public class DataInitializer implements CommandLineRunner {
             case "ROLE_INFIRMIER" -> "Infirmier";
             default -> "Rôle utilisateur";
         };
+    }
+
+    private void initializeSuperAdminUser() {
+        String superAdminUsername = "superadmin";
+
+        Role superAdminRole = roleRepository.findByNom("ROLE_SUPERADMIN")
+            .orElseThrow(() -> new RuntimeException("Rôle ROLE_SUPERADMIN non trouvé"));
+
+        User existingUser = userRepository.findByUsername(superAdminUsername).orElse(null);
+        if (existingUser == null) {
+            User superAdmin = User.builder()
+                .username(superAdminUsername)
+                .email("superadmin@inuaafia.com")
+                .password(passwordEncoder.encode("admin123"))
+                .firstName("Super")
+                .lastName("Admin")
+                .phoneNumber("+243000000000")
+                .role(superAdminRole)
+                .isActive(true)
+                .notificationEnabled(true)
+                .soundEnabled(true)
+                .preferredLanguage("fr")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+            userRepository.save(superAdmin);
+            log.info("🛡️ Utilisateur super admin créé: {} / Mot de passe: admin123", superAdminUsername);
+        } else {
+            // Forcer la mise à jour du mot de passe (corrige anciens hash invalides)
+            existingUser.setPassword(passwordEncoder.encode("admin123"));
+            existingUser.setRole(superAdminRole);
+            existingUser.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(existingUser);
+            log.info("🛡️ Mot de passe super admin mis à jour: {} / Mot de passe: admin123", superAdminUsername);
+        }
     }
 
     private void initializeAdminUser() {

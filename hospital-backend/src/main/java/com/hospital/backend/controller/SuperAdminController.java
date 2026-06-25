@@ -518,6 +518,21 @@ public class SuperAdminController {
         }
     }
 
+    @PatchMapping("/hospitals/{id}/toggle-status")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Activer / Désactiver un hôpital")
+    public ResponseEntity<?> toggleHospitalStatus(@PathVariable Long id) {
+        try {
+            hospitalService.toggleHospitalStatus(id);
+            com.hospital.backend.dto.HospitalDTO updatedHospital = hospitalService.getHospitalById(id);
+            auditLogService.logAction("HOSPITAL_STATUS_TOGGLED", "SUPERADMIN", "HOSPITAL-" + id, "Statut modifie", "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Statut modifie", updatedHospital));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur toggle statut hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/hospitals/{id}")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<?> deleteHospital(@PathVariable Long id) {

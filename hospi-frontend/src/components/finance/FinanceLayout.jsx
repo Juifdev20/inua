@@ -4,12 +4,14 @@ import { FinanceProvider, useFinance } from '../../context/FinanceContext';
 import FinanceSidebar from './FinanceSidebar';
 import FinanceHeader from './FinanceHeader';
 import { cn } from '../../lib/utils';
+import HospitalShutdownListener from '../../components/HospitalShutdownListener';
 
 const FinanceLayoutContent = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useFinance();
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      <HospitalShutdownListener />
 
       {/* Sidebar Finance — flex-based, UNE SEULE FOIS */}
       <FinanceSidebar />

@@ -4,12 +4,14 @@ import { LaboratoryProvider, useLaboratory } from '../../context/LaboratoryConte
 import LabSidebar from '../../components/labo/LabSidebar';
 import LabHeader from '../../components/labo/LabHeader';
 import { cn } from '../../lib/utils';
+import HospitalShutdownListener from '../../components/HospitalShutdownListener';
 
 const LabLayoutContent = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useLaboratory();
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      <HospitalShutdownListener />
 
       {/* Sidebar Labo — flex-based, UNE SEULE FOIS */}
       <LabSidebar />

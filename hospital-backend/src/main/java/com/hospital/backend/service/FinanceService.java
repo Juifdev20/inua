@@ -4,6 +4,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.ConsultationRepository;
 import com.hospital.backend.repository.InvoiceRepository;
 import com.hospital.backend.repository.AdmissionRepository;
+import com.hospital.backend.repository.PrescribedExamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,6 +24,7 @@ public class FinanceService {
     private final ConsultationRepository consultationRepository;
     private final InvoiceRepository invoiceRepository;
     private final AdmissionRepository admissionRepository;
+    private final PrescribedExamRepository prescribedExamRepository;
 
     @Transactional
     public Map<String, Object> processPayment(Long consultationId, Map<String, Object> paymentData) {
@@ -84,9 +87,28 @@ public class FinanceService {
             
             log.info("💵 [FINANCE SERVICE] Montant à payer: {}, Méthode: {}", amountPaid, paymentMethod);
             
-            // 4. MISE À JOUR CONSULTATION
-            consultation.setStatus(ConsultationStatus.PAYEE);
-            consultation.setStatut("PAYEE");
+            // 4. VÉRIFIER S'IL Y A DES EXAMENS PRESCRITS
+            boolean hasPrescribedExams = false;
+            try {
+                List<PrescribedExam> exams = prescribedExamRepository.findByConsultationIdAndActiveTrue(consultationId);
+                hasPrescribedExams = exams != null && !exams.isEmpty();
+                log.info("📋 [FINANCE SERVICE] Examens prescrits: {}", hasPrescribedExams ? "OUI" : "NON");
+            } catch (Exception e) {
+                log.warn("⚠️ [FINANCE SERVICE] Erreur vérification examens: {}", e.getMessage());
+            }
+
+            // 5. MISE À JOUR CONSULTATION
+            // ✅ CORRIGÉ: PAYEE si pas d'examens prescrits (permet au docteur de prescrire)
+            // EXAMENS_PAYES seulement si des examens sont déjà prescrits
+            if (hasPrescribedExams) {
+                log.info("📝 [FINANCE SERVICE] Changement statut -> EXAMENS_PAYES (examens prescrits)...");
+                consultation.setStatus(ConsultationStatus.EXAMENS_PAYES);
+                consultation.setStatut("EXAMENS_PAYES");
+            } else {
+                log.info("📝 [FINANCE SERVICE] Changement statut -> PAYEE (pas d'examens, docteur peut prescrire)...");
+                consultation.setStatus(ConsultationStatus.PAYEE);
+                consultation.setStatut("PAYEE");
+            }
             
             // Mettre à jour les montants payés si les champs existent
             try {

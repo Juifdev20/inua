@@ -1184,6 +1184,17 @@ public class ConsultationServiceImpl implements ConsultationService {
         if (consultationDTO.getConsulAmountDue() != null) consultation.setConsulAmountDue(consultationDTO.getConsulAmountDue());
         if (consultationDTO.getConsulAmountPaid() != null) consultation.setConsulAmountPaid(consultationDTO.getConsulAmountPaid());
 
+        // ✅ SYNCHRONISATION: Quand examAmountPaid est mis à jour, synchroniser ficheAmountPaid
+        // pour que l'affichage frontend (basé sur ficheAmountPaid) soit correct
+        if (consultationDTO.getExamAmountPaid() != null) {
+            consultation.setExamAmountPaid(consultationDTO.getExamAmountPaid());
+            // Si ficheAmountDue existe, on considère que ce paiement couvre aussi la fiche
+            if (consultation.getFicheAmountDue() != null && consultation.getFicheAmountDue() > 0) {
+                consultation.setFicheAmountPaid(consultation.getFicheAmountDue());
+                log.info("💰 [UPDATE] ficheAmountPaid synchronisé avec ficheAmountDue: {}", consultation.getFicheAmountDue());
+            }
+        }
+
         consultation.setUpdatedAt(LocalDateTime.now());
 
         Consultation savedConsultation = consultationRepository.save(consultation);
@@ -1303,6 +1314,13 @@ public class ConsultationServiceImpl implements ConsultationService {
 
         consultation.setExamTotalAmount(totalAmount);
         consultation.setExamAmountPaid(paid);
+
+        // ✅ METTRE À JOUR ficheAmountPaid pour synchroniser avec l'affichage frontend
+        // Si ficheAmountDue existe, on considère que ce paiement couvre la fiche
+        if (consultation.getFicheAmountDue() != null && consultation.getFicheAmountDue() > 0) {
+            consultation.setFicheAmountPaid(consultation.getFicheAmountDue());
+            log.info("💰 [CAISSE] ficheAmountPaid mis à jour: {}", consultation.getFicheAmountDue());
+        }
 
         List<PrescribedExam> exams = prescribedExamRepository.findByConsultationIdAndActiveTrue(consultationId);
 
@@ -2570,9 +2588,22 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     private PatientJourneyDTO.BillingSummaryDTO getJourneyBillingSummary(Consultation consultation) {
         try {
-            java.math.BigDecimal consultationFee = consultation.getConsulAmountDue() != null ?
+            // ✅ CORRECTION: consultationFee = ficheAmountDue + consulAmountDue
+            // ficheAmountDue = frais de fiche (frais de dossier)
+            // consulAmountDue = frais de consultation/service
+            java.math.BigDecimal ficheFee = consultation.getFicheAmountDue() != null ?
+                    java.math.BigDecimal.valueOf(consultation.getFicheAmountDue().doubleValue()) : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal consulFee = consultation.getConsulAmountDue() != null ?
                     java.math.BigDecimal.valueOf(consultation.getConsulAmountDue().doubleValue()) : java.math.BigDecimal.ZERO;
-            
+            java.math.BigDecimal consultationFee = ficheFee.add(consulFee);
+
+            // ✅ Déterminer si c'est un nouveau patient (ficheFee > 0 indique nouveau patient)
+            boolean isNewPatient = ficheFee.compareTo(java.math.BigDecimal.ZERO) > 0;
+            // ✅ CORRECTION: Si ficheAmountDue = 0 (ancien patient), fraisFichePaid = true (rien à payer)
+            // Sinon, vérifier si ficheAmountPaid > 0
+            boolean fraisFichePaid = ficheFee.compareTo(java.math.BigDecimal.ZERO) == 0 ||
+                    (consultation.getFicheAmountPaid() != null && consultation.getFicheAmountPaid() > 0);
+
             // Recalculer le montant des examens à partir des examens prescrits actifs
             java.math.BigDecimal examFee = java.math.BigDecimal.ZERO;
             try {
@@ -2580,25 +2611,57 @@ public class ConsultationServiceImpl implements ConsultationService {
                     examFee = calculatePrescriptionTotal(consultation.getId());
                 }
             } catch (Exception e) {
-                log.warn("⚠️ Erreur lors du calcul du total des examens pour consultation {}: {}", 
+                log.warn("⚠️ Erreur lors du calcul du total des examens pour consultation {}: {}",
                         consultation.getId(), e.getMessage());
             }
-            
+
             if (examFee == null || examFee.compareTo(java.math.BigDecimal.ZERO) == 0) {
                 // Fallback sur l'ancienne valeur stockée si pas d'examens prescrits
                 examFee = consultation.getExamTotalAmount() != null ?
                         java.math.BigDecimal.valueOf(consultation.getExamTotalAmount().doubleValue()) : java.math.BigDecimal.ZERO;
             }
+
+            // ✅ Calculer le montant des prescriptions pharmacie
+            java.math.BigDecimal pharmacyFee = java.math.BigDecimal.ZERO;
+            java.math.BigDecimal pharmacyPaid = java.math.BigDecimal.ZERO;
+            boolean isPharmacyPaid = false;
             
-            java.math.BigDecimal paid = consultation.getConsulAmountPaid() != null ?
+            try {
+                // Utiliser le repository pour éviter le lazy loading problem
+                var prescriptions = prescriptionRepository.findAllByConsultationId(consultation.getId());
+                if (prescriptions != null && !prescriptions.isEmpty()) {
+                    for (com.hospital.backend.entity.Prescription prescription : prescriptions) {
+                        if (prescription.getTotalAmount() != null) {
+                            pharmacyFee = pharmacyFee.add(prescription.getTotalAmount());
+                        }
+                        if (prescription.getAmountPaid() != null) {
+                            pharmacyPaid = pharmacyPaid.add(prescription.getAmountPaid());
+                        }
+                        // Si une prescription est payée, on considère la pharmacie comme payée
+                        if (com.hospital.backend.entity.PrescriptionStatus.PAYEE.equals(prescription.getStatus())) {
+                            isPharmacyPaid = true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ Erreur lors du calcul du total pharmacie pour consultation {}: {}",
+                        consultation.getId(), e.getMessage());
+            }
+
+            // ✅ CORRECTION: totalPaid = ficheAmountPaid + consulAmountPaid + examPaid + pharmacyPaid
+            // ficheAmountPaid = montant payé pour la fiche (frais de dossier)
+            // consulAmountPaid = montant payé pour la consultation/service
+            java.math.BigDecimal fichePaid = consultation.getFicheAmountPaid() != null ?
+                    java.math.BigDecimal.valueOf(consultation.getFicheAmountPaid().doubleValue()) : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal consulPaid = consultation.getConsulAmountPaid() != null ?
                     java.math.BigDecimal.valueOf(consultation.getConsulAmountPaid().doubleValue()) : java.math.BigDecimal.ZERO;
-            
-            // Ajouter le montant payé pour les examens
             java.math.BigDecimal examPaid = consultation.getExamAmountPaid() != null ?
                     consultation.getExamAmountPaid() : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal totalPaid = paid.add(examPaid);
 
-            java.math.BigDecimal total = consultationFee.add(examFee);
+            // Total payé incluant fiche, consultation, examens ET pharmacie
+            java.math.BigDecimal totalPaid = fichePaid.add(consulPaid).add(examPaid).add(pharmacyPaid);
+
+            java.math.BigDecimal total = consultationFee.add(examFee).add(pharmacyFee);
             java.math.BigDecimal balance = total.subtract(totalPaid);
 
             // Déterminer le statut de paiement
@@ -2642,7 +2705,9 @@ public class ConsultationServiceImpl implements ConsultationService {
             log.info("[DEBUG] Statut final: {}", status);
 
             // Déterminer si consultation et labo sont payés (basé sur montant OU statut)
-            boolean isConsultationPaid = (consultation.getConsulAmountPaid() != null && consultation.getConsulAmountPaid() > 0)
+            // Utiliser ficheAmountPaid en priorité sur consulAmountPaid
+            boolean isConsultationPaid = (consultation.getFicheAmountPaid() != null && consultation.getFicheAmountPaid() > 0)
+                    || (consultation.getConsulAmountPaid() != null && consultation.getConsulAmountPaid() > 0)
                     || consultStatus == ConsultationStatus.PAYEE
                     || consultStatus == ConsultationStatus.PAID_PENDING_LAB
                     || consultStatus == ConsultationStatus.PAID_COMPLETED
@@ -2666,7 +2731,8 @@ public class ConsultationServiceImpl implements ConsultationService {
             if ("SOLDE".equals(status)) {
                 isConsultationPaid = true;
                 isLabPaid = true;
-                log.info("[DEBUG] Statut global SOLDE -> consultationPaid=true, labPaid=true");
+                isPharmacyPaid = true;
+                log.info("[DEBUG] Statut global SOLDE -> consultationPaid=true, labPaid=true, pharmacyPaid=true");
             }
 
             return PatientJourneyDTO.BillingSummaryDTO.builder()
@@ -2676,10 +2742,15 @@ public class ConsultationServiceImpl implements ConsultationService {
                     .consultationPaid(isConsultationPaid)
                     .labAmount(examFee)
                     .labPaid(isLabPaid)
+                    .pharmacyAmount(pharmacyFee)
+                    .pharmacyPaid(isPharmacyPaid)
                     .totalAmount(total)
                     .totalPaid(totalPaid)
                     .balanceDue(balance)
                     .paymentStatus(status)
+                    .fraisFiche(ficheFee)
+                    .fraisFichePaid(fraisFichePaid)
+                    .isNewPatient(isNewPatient)
                     .build();
         } catch (Exception e) {
             log.error("❌ Erreur dans getJourneyBillingSummary pour consultation {}: {}", 

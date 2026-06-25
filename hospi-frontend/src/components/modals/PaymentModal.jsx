@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 const API = `${BACKEND_URL}/api/finance`;
 
-const formatCurrency = (amount, currency = 'CDF') => {
+const formatCurrency = (amount, currency = 'USD') => {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: currency,
@@ -201,7 +201,7 @@ const PaymentModal = ({ invoice, onClose, onSuccess }) => {
               <span className="text-3xl font-black text-violet-600">
                 {formatCurrency(invoice.totalAmount || invoice.amount || 0, invoice.currency)}
               </span>
-              <span className="text-xs text-violet-500/70 font-medium">{invoice.currency || 'CDF'}</span>
+              <span className="text-xs text-violet-500/70 font-medium">{invoice.currency || 'USD'}</span>
             </div>
           </div>
 

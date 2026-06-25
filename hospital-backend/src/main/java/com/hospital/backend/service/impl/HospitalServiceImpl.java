@@ -6,6 +6,7 @@ import com.hospital.backend.exception.BadRequestException;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.service.HospitalService;
+import com.hospital.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class HospitalServiceImpl implements HospitalService {
 
     private final HospitalRepository hospitalRepository;
+    private final NotificationService notificationService;
 
     @Override
     public List<HospitalDTO> getAllHospitals() {
@@ -82,10 +84,25 @@ public class HospitalServiceImpl implements HospitalService {
     @Transactional
     public void toggleHospitalStatus(Long id) {
         Hospital h = getEntityById(id);
-        if (id == 1L) throw new BadRequestException("L'hopital principal ne peut pas etre desactive");
-        h.setIsActive(!Boolean.TRUE.equals(h.getIsActive()));
+        boolean newStatus = !Boolean.TRUE.equals(h.getIsActive());
+        h.setIsActive(newStatus);
         hospitalRepository.save(h);
         log.info("[Hospital] Statut hopital {} -> {}", h.getNom(), h.getIsActive());
+
+        // Si désactivation, envoyer alerte aux utilisateurs cliniques uniquement
+        if (!newStatus) {
+            List<Long> clinicalUserIds = hospitalRepository.findClinicalUserIdsByHospitalId(id);
+            log.info("🏥 [SHUTDOWN] Désactivation hôpital {} - {} utilisateurs cliniques à notifier", h.getNom(), clinicalUserIds.size());
+            if (!clinicalUserIds.isEmpty()) {
+                notificationService.notifyHospitalShutdownWarning(id, h.getNom(), clinicalUserIds);
+            }
+        }
+
+        // Envoyer notification de statut à tous les utilisateurs de l'hôpital
+        List<Long> userIds = hospitalRepository.findUserIdsByHospitalId(id);
+        if (!userIds.isEmpty()) {
+            notificationService.notifyHospitalStatusChanged(id, h.getNom(), newStatus, userIds);
+        }
     }
 
     @Override

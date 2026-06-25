@@ -19,6 +19,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [showHospitalDisabledModal, setShowHospitalDisabledModal] = useState(false);
 
   // ★ Vérifier si on vient d'une réinitialisation (force=true) et vider les champs
   // ★ Gérer les erreurs OAuth2
@@ -26,10 +27,17 @@ const LoginPage = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const forceLogin = urlParams.get('force') === 'true';
     const oauthError = urlParams.get('error');
+    const hospitalDisabled = urlParams.get('error') === 'hospital_disabled';
 
     if (forceLogin) {
       // Forcer la vidange des champs pour éviter l'auto-fill du navigateur
       setFormData({ username: '', password: '' });
+    }
+
+    if (hospitalDisabled) {
+      setShowHospitalDisabledModal(true);
+      // Retirer le paramètre error de l'URL sans recharger
+      window.history.replaceState({}, document.title, '/login');
     }
 
     if (oauthError === 'oauth_cancelled') {
@@ -205,10 +213,14 @@ const LoginPage = () => {
         const errorMessage = result?.error || "";
 
         if (errorMessage.toLowerCase().includes("disabled") || errorMessage.toLowerCase().includes("désactivé")) {
-          toast.error("Accès Refusé", {
-            description: "Votre compte est inactif. Veuillez contacter l'administration.",
-            duration: 6000,
-          });
+          if (errorMessage.toLowerCase().includes("établissement") || errorMessage.toLowerCase().includes("suspendu")) {
+            setShowHospitalDisabledModal(true);
+          } else {
+            toast.error("Accès Refusé", {
+              description: "Votre compte est inactif. Veuillez contacter l'administration.",
+              duration: 6000,
+            });
+          }
         } else {
           toast.error("Échec de connexion", {
             description: "Identifiants incorrects. Veuillez réessayer.",
@@ -409,6 +421,33 @@ const LoginPage = () => {
           Connexion sécurisée • Chiffrement AES-256
         </p>
       </div>
+
+      {/* Modal Hôpital Désactivé */}
+      {showHospitalDisabledModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Accès Suspendu
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Le profil de votre établissement est temporairement désactivé. Veuillez contacter votre administrateur local ou le service client Inua Afya pour plus d'informations.
+              </p>
+              <button
+                onClick={() => setShowHospitalDisabledModal(false)}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors"
+              >
+                J'ai compris
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

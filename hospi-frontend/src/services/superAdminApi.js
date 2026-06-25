@@ -162,7 +162,7 @@ const superAdminApi = {
   },
 
   toggleHospital: async (id) => {
-    const response = await api.patch(`/hospitals/${id}/toggle`);
+    const response = await api.patch(`/hospitals/${id}/toggle-status`);
     return response.data?.data || response.data;
   },
 

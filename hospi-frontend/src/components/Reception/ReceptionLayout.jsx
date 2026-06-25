@@ -4,6 +4,7 @@ import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import Sidebar from './Sidebar'; // Votre Sidebar Réception corrigée
 import ReceptionHeader from './ReceptionHeader'; // Votre Header Réception corrigé
 import { cn } from '../../lib/utils';
+import HospitalShutdownListener from '../../components/HospitalShutdownListener';
 
 const ReceptionLayoutContent = () => {
   // On récupère les états du menu mobile pour gérer l'overlay
@@ -14,6 +15,7 @@ const ReceptionLayoutContent = () => {
        pour assurer la cohérence visuelle avec le thème. 
     */
     <div className="flex h-screen bg-background overflow-hidden">
+      <HospitalShutdownListener />
       
       {/* Sidebar Réception : 
           Elle est fixée à gauche. Le reste du contenu doit s'adapter 

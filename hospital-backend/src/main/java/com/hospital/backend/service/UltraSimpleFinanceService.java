@@ -10,6 +10,7 @@ import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Medication;
 import com.hospital.backend.entity.PaymentMethod;
 import com.hospital.backend.entity.Patient;
+import com.hospital.backend.entity.PrescribedExam;
 import com.hospital.backend.entity.Prescription;
 import com.hospital.backend.entity.PrescriptionStatus;
 import com.hospital.backend.entity.Revenue;
@@ -18,6 +19,7 @@ import com.hospital.backend.entity.User;
 import com.hospital.backend.repository.AdmissionRepository;
 import com.hospital.backend.repository.ConsultationRepository;
 import com.hospital.backend.repository.MedicationRepository;
+import com.hospital.backend.repository.PrescribedExamRepository;
 import com.hospital.backend.repository.PrescriptionRepository;
 import com.hospital.backend.repository.UserRepository;
 import com.hospital.backend.security.HospitalTenantContext;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +54,7 @@ public class UltraSimpleFinanceService {
     private final PrescriptionRepository prescriptionRepository;
     private final CompanyConsumptionService companyConsumptionService;
     private final MedicationRepository medicationRepository;
+    private final PrescribedExamRepository prescribedExamRepository;
 
     @Transactional(readOnly = false)
     public Map<String, Object> payConsultation(Long consultationId, String paymentMethod, Double amountPaid, Long userId) {
@@ -81,16 +85,34 @@ public class UltraSimpleFinanceService {
             // 2. VÉRIFIER STATUT ACTUEL
             ConsultationStatus currentStatus = c.getStatus();
             log.info("📊 [ULTRA-SIMPLE] Statut actuel: {}", currentStatus);
-            
+
             if (currentStatus == ConsultationStatus.EXAMENS_PAYES || currentStatus == ConsultationStatus.PAYEE) {
                 log.warn("⚠️ [ULTRA-SIMPLE] Déjà payée!");
                 return Map.of("success", false, "message", "Déjà payée");
             }
-            
-            // 3. CHANGER STATUT (ACTION CRITIQUE) - ✅ CORRIGÉ: EXAMENS_PAYES pour le workflow labo
-            log.info("📝 [ULTRA-SIMPLE] Changement statut -> EXAMENS_PAYES...");
-            c.setStatus(ConsultationStatus.EXAMENS_PAYES);
-            c.setStatut("EXAMENS_PAYES");
+
+            // 3. VÉRIFIER S'IL Y A DES EXAMENS PRESCRITS
+            boolean hasPrescribedExams = false;
+            try {
+                List<PrescribedExam> exams = prescribedExamRepository.findByConsultationIdAndActiveTrue(consultationId);
+                hasPrescribedExams = exams != null && !exams.isEmpty();
+                log.info("📋 [ULTRA-SIMPLE] Examens prescrits: {}", hasPrescribedExams ? "OUI" : "NON");
+            } catch (Exception e) {
+                log.warn("⚠️ [ULTRA-SIMPLE] Erreur vérification examens: {}", e.getMessage());
+            }
+
+            // 4. CHANGER STATUT (ACTION CRITIQUE)
+            // ✅ CORRIGÉ: PAYEE si pas d'examens prescrits (permet au docteur de prescrire)
+            // EXAMENS_PAYES seulement si des examens sont déjà prescrits
+            if (hasPrescribedExams) {
+                log.info("📝 [ULTRA-SIMPLE] Changement statut -> EXAMENS_PAYES (examens prescrits)...");
+                c.setStatus(ConsultationStatus.EXAMENS_PAYES);
+                c.setStatut("EXAMENS_PAYES");
+            } else {
+                log.info("📝 [ULTRA-SIMPLE] Changement statut -> PAYEE (pas d'examens, docteur peut prescrire)...");
+                c.setStatus(ConsultationStatus.PAYEE);
+                c.setStatut("PAYEE");
+            }
 
             // ✅ METTRE À JOUR LES MONTANTS PAYÉS (important pour hasActiveFile)
             try {

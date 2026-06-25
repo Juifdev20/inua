@@ -43,26 +43,28 @@ export const NotificationProvider = ({ children }) => {
 
     stompClient.connect(headers, () => {
       console.log('NotificationContext - WebSocket connecte');
+
+      // Abonnement aux notifications générales
       stompClient.subscribe('/topic/notifications', (message) => {
         if (message.body) {
           try {
             const data = JSON.parse(message.body);
-            
+
             // On utilise une seule mise a jour d'etat pour eviter les desynchronisations
             setNotifications(prev => {
               // FILTRE ANTI-DOUBLON STRICT
-              const isDuplicate = prev.some(n => 
-                n.message === data.content && 
+              const isDuplicate = prev.some(n =>
+                n.message === data.content &&
                 (new Date() - new Date(n.timestamp)) < 3000
               );
 
               if (isDuplicate) {
-                return prev; 
+                return prev;
               }
 
               // Si ce n'est pas un doublon, on cree la notif
               const newNotif = {
-                id: `${Date.now()}-${Math.random()}`, 
+                id: `${Date.now()}-${Math.random()}`,
                 message: data.content,
                 timestamp: new Date().toISOString(),
                 unread: true
@@ -75,6 +77,46 @@ export const NotificationProvider = ({ children }) => {
             });
           } catch (error) {
             console.error('Erreur parsing notification:', error);
+          }
+        }
+      });
+
+      // Abonnement aux notifications de statut d'hôpital
+      stompClient.subscribe('/user/queue/notifications', (message) => {
+        if (message.body) {
+          try {
+            const data = JSON.parse(message.body);
+
+            // Gestion spéciale pour les notifications de statut d'hôpital
+            if (data.type === 'HOSPITAL_STATUS') {
+              setNotifications(prev => {
+                const isDuplicate = prev.some(n =>
+                  n.message === data.message &&
+                  (new Date() - new Date(n.timestamp)) < 3000
+                );
+
+                if (isDuplicate) {
+                  return prev;
+                }
+
+                const newNotif = {
+                  id: `${Date.now()}-${Math.random()}`,
+                  title: data.title,
+                  message: data.message,
+                  timestamp: new Date().toISOString(),
+                  unread: true,
+                  type: 'HOSPITAL_STATUS',
+                  hospitalId: data.hospitalId,
+                  isActive: data.isActive
+                };
+
+                setUnreadCount(count => count + 1);
+
+                return [newNotif, ...prev];
+              });
+            }
+          } catch (error) {
+            console.error('Erreur parsing notification hôpital:', error);
           }
         }
       });

@@ -91,8 +91,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // 🔐 VÉRIFICATION tokenVersion (force-logout SuperAdmin)
             Long tokenVersion = jwtTokenProvider.getTokenVersionFromToken(token);
-            User user = userRepository.findByUsername(username)
-                    .or(() -> userRepository.findByEmail(username))
+            User user = userRepository.findByUsernameWithHospitalAndRole(username)
+                    .or(() -> userRepository.findByEmailWithHospitalAndRole(username))
                     .orElse(null);
 
             if (user != null && !tokenVersion.equals(user.getTokenVersion())) {
@@ -165,6 +165,56 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             "error", "Mode maintenance en cours. Seuls les administrateurs peuvent accéder.",
                             "code", 503,
                             "maintenance", true
+                    )));
+                    return;
+                }
+            }
+
+            // 🏥 Vérifier si l'hôpital est désactivé et si l'utilisateur est clinique
+            log.info("🏥 [JWT CHECK] User: {}, Hospital: {}, Role: {}", 
+                user != null ? user.getUsername() : "null", 
+                user != null && user.getHospital() != null ? user.getHospital().getNom() : "null",
+                user != null && user.getRole() != null ? user.getRole().getNom() : "null");
+            
+            if (user != null && user.getHospital() != null) {
+                log.info("🏥 [JWT CHECK] Hospital Active: {}", user.getHospital().getIsActive());
+            }
+            
+            if (user != null && user.getHospital() != null && !Boolean.TRUE.equals(user.getHospital().getIsActive())) {
+                String roleName = user.getRole() != null ? user.getRole().getNom() : "";
+                log.info("🏥 [JWT CHECK] Checking clinical role: {}", roleName);
+                
+                boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
+                        roleName.equals("ROLE_DOCTEUR") ||
+                        roleName.equals("DOCTOR") ||
+                        roleName.equals("DOCTEUR") ||
+                        roleName.equals("ROLE_LABO") ||
+                        roleName.equals("ROLE_LABORATOIRE") ||
+                        roleName.equals("LABO") ||
+                        roleName.equals("LABORATOIRE") ||
+                        roleName.equals("ROLE_PHARMACY") ||
+                        roleName.equals("ROLE_PHARMACIE") ||
+                        roleName.equals("PHARMACY") ||
+                        roleName.equals("PHARMACIE") ||
+                        roleName.equals("ROLE_PHARMACIST") ||
+                        roleName.equals("PHARMACIST") ||
+                        roleName.equals("ROLE_RECEPTION") ||
+                        roleName.equals("RECEPTION") ||
+                        roleName.equals("ROLE_FINANCE") ||
+                        roleName.equals("FINANCE") ||
+                        roleName.equals("ROLE_CAISSIER") ||
+                        roleName.equals("CAISSIER");
+
+                log.info("🏥 [JWT CHECK] Is Clinical Role: {}", isClinicalRole);
+
+                if (isClinicalRole) {
+                    log.warn("🚫 [JWT BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", username);
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+                    response.setContentType("application/json");
+                    response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+                            "error", "Accès suspendu. Le profil de votre établissement est temporairement désactivé.",
+                            "code", 403,
+                            "hospitalDisabled", true
                     )));
                     return;
                 }

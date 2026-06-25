@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
-import { Bell, CheckCircle, Calendar, FileText, Info } from 'lucide-react';
+import { Bell, CheckCircle, Calendar, FileText, Info, Building2, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { getBaseUrl, getApiUrl } from '../utils/websocket';
 
@@ -60,10 +60,14 @@ const NotificationBell = ({ userId }) => {
     };
 
     // Icone selon le type de notification
-    const getIcon = (type) => {
+    const getIcon = (type, isActive) => {
         switch (type) {
             case 'RENDEZ_VOUS': return <Calendar className="text-blue-500" size={18} />;
             case 'DOCUMENT': return <FileText className="text-green-500" size={18} />;
+            case 'HOSPITAL_STATUS':
+                return isActive
+                    ? <Building2 className="text-green-500" size={18} />
+                    : <AlertCircle className="text-red-500" size={18} />;
             default: return <Info className="text-gray-500" size={18} />;
         }
     };
@@ -93,17 +97,19 @@ const NotificationBell = ({ userId }) => {
                             <div className="p-4 text-center text-gray-400 text-sm">Aucune notification</div>
                         ) : (
                             notifications.map(notif => (
-                                <div 
-                                    key={notif.id} 
+                                <div
+                                    key={notif.id}
                                     className={`p-3 border-b hover:bg-gray-50 flex items-start gap-3 transition ${!notif.read ? 'bg-blue-50' : ''}`}
                                     onClick={() => !notif.read && handleMarkAsRead(notif.id)}
                                 >
-                                    <div className="mt-1">{getIcon(notif.type)}</div>
+                                    <div className="mt-1">{getIcon(notif.type, notif.isActive)}</div>
                                     <div className="flex-1">
-                                        <p className={`text-sm ${!notif.read ? 'font-bold' : 'text-gray-700'}`}>{notif.title}</p>
+                                        <p className={`text-sm ${!notif.read ? 'font-bold' : 'text-gray-700'}`}>
+                                            {notif.title || (notif.type === 'HOSPITAL_STATUS' ? (notif.isActive ? '🟢 Hôpital réactivé' : '🔴 Hôpital désactivé') : 'Notification')}
+                                        </p>
                                         <p className="text-xs text-gray-500 mt-1">{notif.message}</p>
                                         <p className="text-[10px] text-gray-400 mt-1">
-                                            {new Date(notif.createdAt).toLocaleString()}
+                                            {new Date(notif.createdAt || notif.timestamp).toLocaleString()}
                                         </p>
                                     </div>
                                     {!notif.read && <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>}

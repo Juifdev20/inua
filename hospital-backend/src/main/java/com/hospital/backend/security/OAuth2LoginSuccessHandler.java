@@ -135,6 +135,38 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         User user = userOpt.get();
 
+        // 🏥 Vérifier si l'hôpital est désactivé et si l'utilisateur est clinique
+        if (user.getHospital() != null && !Boolean.TRUE.equals(user.getHospital().getIsActive())) {
+            String roleName = user.getRole() != null ? user.getRole().getNom() : "";
+            boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
+                    roleName.equals("ROLE_DOCTEUR") ||
+                    roleName.equals("DOCTOR") ||
+                    roleName.equals("DOCTEUR") ||
+                    roleName.equals("ROLE_LABO") ||
+                    roleName.equals("ROLE_LABORATOIRE") ||
+                    roleName.equals("LABO") ||
+                    roleName.equals("LABORATOIRE") ||
+                    roleName.equals("ROLE_PHARMACY") ||
+                    roleName.equals("ROLE_PHARMACIE") ||
+                    roleName.equals("PHARMACY") ||
+                    roleName.equals("PHARMACIE") ||
+                    roleName.equals("ROLE_PHARMACIST") ||
+                    roleName.equals("PHARMACIST") ||
+                    roleName.equals("ROLE_RECEPTION") ||
+                    roleName.equals("RECEPTION") ||
+                    roleName.equals("ROLE_FINANCE") ||
+                    roleName.equals("FINANCE") ||
+                    roleName.equals("ROLE_CAISSIER") ||
+                    roleName.equals("CAISSIER");
+
+            if (isClinicalRole) {
+                log.warn("🚫 [OAUTH2 BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", user.getUsername());
+                String targetUrl = String.format("%s/login?error=hospital_disabled", frontendUrl);
+                getRedirectStrategy().sendRedirect(request, response, targetUrl);
+                return;
+            }
+        }
+
         // Vérifier si l'utilisateur a déjà un mot de passe défini
         boolean hasPassword = user.getPassword() != null && !user.getPassword().isEmpty();
         boolean mustChangePassword = Boolean.TRUE.equals(user.getMustChangePassword());

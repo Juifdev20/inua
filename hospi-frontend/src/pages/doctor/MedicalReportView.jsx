@@ -448,6 +448,17 @@ const MedicalReportView = () => {
                     </thead>
                     <tbody>
                       <tr>
+                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Frais de fiche</td>
+                        <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.fraisFiche?.toLocaleString()} $</td>
+                        <td className="border border-border px-2 sm:px-3 py-2 text-center">
+                          {report.billingSummary.fraisFichePaid ? (
+                            <Badge className="bg-emerald-100 text-emerald-800">Paye</Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
                         <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Consultation</td>
                         <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.consultationAmount?.toLocaleString()} $</td>
                         <td className="border border-border px-2 sm:px-3 py-2 text-center">
@@ -469,6 +480,19 @@ const MedicalReportView = () => {
                           )}
                         </td>
                       </tr>
+                      {report.billingSummary.pharmacyAmount && report.billingSummary.pharmacyAmount > 0 && (
+                        <tr>
+                          <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">Pharmacie</td>
+                          <td className="border border-border px-2 sm:px-3 py-2 text-sm text-right font-medium text-foreground">{report.billingSummary.pharmacyAmount?.toLocaleString()} $</td>
+                          <td className="border border-border px-2 sm:px-3 py-2 text-center">
+                            {report.billingSummary.pharmacyPaid ? (
+                              <Badge className="bg-emerald-100 text-emerald-800">Paye</Badge>
+                            ) : (
+                              <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      )}
                       {report.billingSummary.otherAmounts?.map((item, index) => (
                         <tr key={index} className={index % 2 === 1 ? 'bg-muted/30' : ''}>
                           <td className="border border-border px-2 sm:px-3 py-2 text-sm text-foreground">

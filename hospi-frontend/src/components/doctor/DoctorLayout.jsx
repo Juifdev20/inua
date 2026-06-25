@@ -4,6 +4,7 @@ import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import DoctorSidebar from './DoctorSidebar';
 import DoctorHeader from './DoctorHeader';
 import { cn } from '../../lib/utils';
+import HospitalShutdownListener from '../../components/HospitalShutdownListener';
 
 const DoctorLayoutContent = () => {
   // On récupère les états du menu mobile pour gérer l'overlay
@@ -12,6 +13,7 @@ const DoctorLayoutContent = () => {
   return (
     /* bg-surface permet au fond de s'adapter automatiquement au thème (clair/sombre) */
     <div className="flex h-screen bg-surface overflow-hidden">
+      <HospitalShutdownListener />
       
       {/* Sidebar Spécifique Docteur */}
       <DoctorSidebar />

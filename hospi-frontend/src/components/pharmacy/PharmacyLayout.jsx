@@ -6,6 +6,7 @@ import PharmacyHeader from './PharmacyHeader';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { getExpiryAlerts } from '../../services/pharmacyApi/pharmacyApi.js';
+import HospitalShutdownListener from '../../components/HospitalShutdownListener';
 
 const PharmacyLayoutContent = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = usePharmacy();
@@ -46,6 +47,7 @@ const PharmacyLayoutContent = () => {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      <HospitalShutdownListener />
 
       {/* Sidebar Pharmacie — UNE SEULE FOIS */}
       <PharmacySidebar />

@@ -28,6 +28,8 @@ export default function HospitalsPage() {
   const [adminForm, setAdminForm] = useState({ email: '', firstName: '', lastName: '' });
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminMsg, setAdminMsg] = useState('');
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   const fetchHospitals = async () => {
     setLoading(true);
@@ -73,9 +75,23 @@ export default function HospitalsPage() {
   };
 
   const handleToggle = async (h) => {
-    if (h.id === 1) return;
-    try { await superAdminApi.toggleHospital(h.id); fetchHospitals(); }
-    catch (e) { alert(e?.response?.data?.message || 'Erreur'); }
+    setToggleTarget(h);
+  };
+
+  const confirmToggle = async () => {
+    if (!toggleTarget) return;
+    setToggleLoading(true);
+    try {
+      const updatedHospital = await superAdminApi.toggleHospital(toggleTarget.id);
+      setHospitals(prev => prev.map(hosp =>
+        hosp.id === toggleTarget.id ? updatedHospital : hosp
+      ));
+      setToggleTarget(null);
+    } catch (e) {
+      alert(e?.response?.data?.message || 'Erreur');
+    } finally {
+      setToggleLoading(false);
+    }
   };
 
   const openProvisionAdmin = (h) => { setAdminTarget(h); setAdminForm({ email: '', firstName: '', lastName: '' }); setAdminMsg(''); setShowAdminModal(true); };
@@ -210,7 +226,7 @@ export default function HospitalsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => handleToggle(h)} disabled={h.id === 1} title={h.id === 1 ? 'Hôpital principal' : ''}>
+                    <button onClick={() => handleToggle(h)}>
                       {h.isActive
                         ? <span className="flex items-center gap-1 text-emerald-400 text-xs font-medium"><ToggleRight className="w-4 h-4" /> Actif</span>
                         : <span className="flex items-center gap-1 text-rose-400 text-xs font-medium"><ToggleLeft className="w-4 h-4" /> Inactif</span>}
@@ -263,6 +279,56 @@ export default function HospitalsPage() {
               <button onClick={handleProvisionAdmin} disabled={adminLoading} className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
                 <UserPlus className="w-4 h-4" />
                 {adminLoading ? 'Creation...' : 'Creer le compte admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Confirmation Modal */}
+      {toggleTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground">
+                {toggleTarget.isActive ? 'Désactiver l\'hôpital' : 'Activer l\'hôpital'}
+              </h2>
+              <button onClick={() => setToggleTarget(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className={`flex items-center gap-3 p-4 rounded-lg ${toggleTarget.isActive ? 'bg-rose-500/10' : 'bg-emerald-500/10'}`}>
+                {toggleTarget.isActive ? (
+                  <ToggleLeft className="w-8 h-8 text-rose-400" />
+                ) : (
+                  <ToggleRight className="w-8 h-8 text-emerald-400" />
+                )}
+                <div>
+                  <p className="font-medium text-foreground">{toggleTarget.nom}</p>
+                  <p className="text-sm text-muted-foreground">{toggleTarget.code}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {toggleTarget.isActive
+                  ? 'Êtes-vous sûr de vouloir désactiver cet hôpital ? Le personnel clinique ne pourra plus accéder au système.'
+                  : 'Êtes-vous sûr de vouloir activer cet hôpital ? Le personnel clinique pourra à nouveau accéder au système.'}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6">
+              <button onClick={() => setToggleTarget(null)} className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={confirmToggle}
+                disabled={toggleLoading}
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  toggleTarget.isActive
+                    ? 'bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-60'
+                    : 'bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-60'
+                }`}
+              >
+                {toggleLoading ? 'Traitement...' : toggleTarget.isActive ? 'Désactiver' : 'Activer'}
               </button>
             </div>
           </div>

@@ -144,7 +144,7 @@ public class PatientBillingController {
             log.warn("⚠️ [BILLING] Profil patient inexistant pour l'utilisateur: {}", username);
             return ResponseEntity.ok(PageResponse.<BillingItemDTO>builder()
                     .content(new ArrayList<>())
-                    .message("Aucun profil patient associé à ce compte")
+                    .message("Aucun profil patient associé à ce compte. Veuillez contacter l'administration.")
                     .build());
         }
         log.info("✅ [BILLING] Patient trouvé: {} {} (ID: {})", patient.getFirstName(), patient.getLastName(), patient.getId());
@@ -369,8 +369,20 @@ public class PatientBillingController {
                 username
         ).orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
-        Patient patient = patientRepository.findByUser(user)
-                .orElseThrow(() -> new ResourceNotFoundException("Profil patient inexistant"));
+        Patient patient = patientRepository.findByUser(user).orElse(null);
+        if (patient == null) {
+            log.warn("⚠️ [BILLING STATS] Profil patient inexistant pour l'utilisateur: {}", username);
+            return ResponseEntity.ok(BillingStatsDTO.builder()
+                    .totalPaid(BigDecimal.ZERO)
+                    .totalPending(BigDecimal.ZERO)
+                    .totalInvoiced(BigDecimal.ZERO)
+                    .invoiceCount(0)
+                    .paidCount(0)
+                    .pendingCount(0)
+                    .currency("CDF")
+                    .lastUpdated(LocalDateTime.now())
+                    .build());
+        }
 
         // Calculer les stats
         BigDecimal totalPaid = BigDecimal.ZERO;
@@ -602,7 +614,6 @@ public class PatientBillingController {
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
                 .totalPrice(item.getTotalPrice())
-                .instructions(item.getDosageInstructions())
                 .build();
     }
 

@@ -93,4 +93,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.loginCode = :code AND u.codeExpiry > CURRENT_TIMESTAMP")
     Optional<User> findValidLoginCode(@Param("email") String email, @Param("code") String code);
+
+    // ★ MÉTHODE POUR CHARGER L'UTILISATEUR AVEC HÔPITAL ET RÔLE (évite LazyInitializationException)
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.hospital LEFT JOIN FETCH u.role WHERE u.username = :username")
+    Optional<User> findByUsernameWithHospitalAndRole(@Param("username") String username);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.hospital LEFT JOIN FETCH u.role WHERE u.email = :email")
+    Optional<User> findByEmailWithHospitalAndRole(@Param("email") String email);
 }

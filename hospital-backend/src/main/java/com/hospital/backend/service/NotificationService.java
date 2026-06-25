@@ -212,7 +212,7 @@ public class NotificationService {
     public void notifyPaymentConfirmed(com.hospital.backend.entity.PharmacyOrder order) {
         String customerName = order.getCustomerName() != null ? order.getCustomerName() : "Client comptoir";
         BigDecimal amount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
-        
+
         log.info("💰💊 Notification Pharmacie: Paiement confirmé pour commande {} - Client: {} - Montant: {} $",
                 order.getOrderCode(), customerName, amount);
 
@@ -227,7 +227,92 @@ public class NotificationService {
             "message", "Paiement confirmé - Prêt pour délivrance",
             "timestamp", java.time.LocalDateTime.now().toString()
         ));
-        
+
         log.info("📢 Notification WebSocket envoyée au topic: {}", destination);
+    }
+
+    /**
+     * 🏥 Notifie tous les utilisateurs d'un hôpital lors de la désactivation/activation
+     * @param hospitalId ID de l'hôpital
+     * @param hospitalName Nom de l'hôpital
+     * @param isActive Nouveau statut (true = activé, false = désactivé)
+     * @param userIds Liste des IDs des utilisateurs concernés
+     */
+    @Transactional
+    public void notifyHospitalStatusChanged(Long hospitalId, String hospitalName, boolean isActive, List<Long> userIds) {
+        String title = isActive ? "🟢 Hôpital réactivé" : "🔴 Hôpital désactivé";
+        String message = isActive
+            ? String.format("Votre hôpital %s a été réactivé. Vous pouvez maintenant accéder au système.", hospitalName)
+            : String.format("Votre hôpital %s a été temporairement désactivé par l'administration. Veuillez contacter le support pour plus d'informations.", hospitalName);
+
+        log.info("🏥 Notification hôpital {}: {} - {} utilisateurs concernés", hospitalName, isActive ? "activé" : "désactivé", userIds.size());
+
+        // Envoyer via WebSocket au topic spécifique à l'hôpital
+        String destination = "/topic/hospital/" + hospitalId + "/status";
+        messagingTemplate.convertAndSend(destination, Map.of(
+            "hospitalId", hospitalId,
+            "hospitalName", hospitalName,
+            "isActive", isActive,
+            "title", title,
+            "message", message,
+            "timestamp", java.time.LocalDateTime.now().toString()
+        ));
+
+        // Envoyer à chaque utilisateur individuellement
+        for (Long userId : userIds) {
+            String userDestination = "/topic/notifications/" + userId;
+            messagingTemplate.convertAndSend(userDestination, Map.of(
+                "hospitalId", hospitalId,
+                "hospitalName", hospitalName,
+                "isActive", isActive,
+                "title", title,
+                "message", message,
+                "type", "HOSPITAL_STATUS",
+                "timestamp", java.time.LocalDateTime.now().toString()
+            ));
+        }
+
+        log.info("📢 Notification hôpital envoyée à {} utilisateurs via WebSocket", userIds.size());
+    }
+
+    /**
+     * ⚠️ Notifie les utilisateurs cliniques d'un hôpital d'une désactivation imminente (5 min)
+     * @param hospitalId ID de l'hôpital
+     * @param hospitalName Nom de l'hôpital
+     * @param userIds Liste des IDs des utilisateurs cliniques concernés
+     */
+    @Transactional
+    public void notifyHospitalShutdownWarning(Long hospitalId, String hospitalName, List<Long> userIds) {
+        String title = "⚠️ Attention : Arrêt imminent du système";
+        String message = "Le système de votre hôpital sera temporairement suspendu pour des raisons administratives dans 5 minutes. Veuillez finaliser et enregistrer votre travail en cours. Pour toute assistance, contactez le support Inua Afya.";
+
+        log.info("⚠️ Notification shutdown warning hôpital {} - {} utilisateurs cliniques concernés", hospitalName, userIds.size());
+
+        // Envoyer via WebSocket au topic spécifique pour l'alerte d'arrêt
+        String destination = "/topic/hospital/" + hospitalId + "/shutdown-warning";
+        messagingTemplate.convertAndSend(destination, Map.of(
+            "hospitalId", hospitalId,
+            "hospitalName", hospitalName,
+            "title", title,
+            "message", message,
+            "shutdownInMinutes", 5,
+            "timestamp", java.time.LocalDateTime.now().toString()
+        ));
+
+        // Envoyer à chaque utilisateur clinique individuellement
+        for (Long userId : userIds) {
+            String userDestination = "/topic/notifications/" + userId;
+            messagingTemplate.convertAndSend(userDestination, Map.of(
+                "hospitalId", hospitalId,
+                "hospitalName", hospitalName,
+                "title", title,
+                "message", message,
+                "type", "HOSPITAL_SHUTDOWN_WARNING",
+                "shutdownInMinutes", 5,
+                "timestamp", java.time.LocalDateTime.now().toString()
+            ));
+        }
+
+        log.info("📢 Notification shutdown warning envoyée à {} utilisateurs cliniques via WebSocket", userIds.size());
     }
 }

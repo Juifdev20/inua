@@ -22,4 +22,10 @@ public interface HospitalRepository extends JpaRepository<Hospital, Long> {
 
     @Query("SELECT COUNT(p) FROM Patient p WHERE p.hospital.id = :hospitalId")
     long countPatientsByHospitalId(Long hospitalId);
+
+    @Query("SELECT u.id FROM User u WHERE u.hospital.id = :hospitalId")
+    List<Long> findUserIdsByHospitalId(Long hospitalId);
+
+    @Query("SELECT u.id FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom IN ('ROLE_DOCTOR', 'ROLE_LABO', 'ROLE_PHARMACY', 'ROLE_PHARMACIST', 'ROLE_RECEPTION', 'ROLE_FINANCE', 'ROLE_CAISSIER')")
+    List<Long> findClinicalUserIdsByHospitalId(Long hospitalId);
 }
