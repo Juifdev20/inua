@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
 public class Hospital {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "hospital_sequence")
+    @SequenceGenerator(name = "hospital_sequence", sequenceName = "hospitals_id_seq", allocationSize = 1)
     private Long id;
 
     @Column(name = "nom", nullable = false)

@@ -42,7 +42,9 @@ public class HospitalServiceImpl implements HospitalService {
         if (hospitalRepository.existsByCode(dto.getCode())) {
             throw new BadRequestException("Un hopital avec le code '" + dto.getCode() + "' existe deja");
         }
+        // Ignorer l'ID du DTO pour permettre la génération automatique par la base de données
         Hospital h = Hospital.builder()
+                .id(null) // Force null pour éviter les conflits d'ID
                 .nom(dto.getNom())
                 .code(dto.getCode().toUpperCase())
                 .address(dto.getAddress())

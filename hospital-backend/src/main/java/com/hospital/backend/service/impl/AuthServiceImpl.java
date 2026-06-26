@@ -66,32 +66,41 @@ public class AuthServiceImpl implements AuthService {
                     String roleName = user.getRole() != null ? user.getRole().getNom() : "";
                     log.info("🏥 [AUTH CHECK] User Role: {}", roleName);
                     
-                    boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
-                            roleName.equals("ROLE_DOCTEUR") ||
-                            roleName.equals("DOCTOR") ||
-                            roleName.equals("DOCTEUR") ||
-                            roleName.equals("ROLE_LABO") ||
-                            roleName.equals("ROLE_LABORATOIRE") ||
-                            roleName.equals("LABO") ||
-                            roleName.equals("LABORATOIRE") ||
-                            roleName.equals("ROLE_PHARMACY") ||
-                            roleName.equals("ROLE_PHARMACIE") ||
-                            roleName.equals("PHARMACY") ||
-                            roleName.equals("PHARMACIE") ||
-                            roleName.equals("ROLE_PHARMACIST") ||
-                            roleName.equals("PHARMACIST") ||
-                            roleName.equals("ROLE_RECEPTION") ||
-                            roleName.equals("RECEPTION") ||
-                            roleName.equals("ROLE_FINANCE") ||
-                            roleName.equals("FINANCE") ||
-                            roleName.equals("ROLE_CAISSIER") ||
-                            roleName.equals("CAISSIER");
+                    // Exclure les super admins du blocage
+                    boolean isSuperAdmin = roleName.equals("ROLE_SUPER_ADMIN") ||
+                            roleName.equals("SUPER_ADMIN");
+                    
+                    if (isSuperAdmin) {
+                        log.info("🏥 [AUTH CHECK] Super Admin détecté, blocage ignoré");
+                        // Ne pas bloquer les super admins
+                    } else {
+                        boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
+                                roleName.equals("ROLE_DOCTEUR") ||
+                                roleName.equals("DOCTOR") ||
+                                roleName.equals("DOCTEUR") ||
+                                roleName.equals("ROLE_LABO") ||
+                                roleName.equals("ROLE_LABORATOIRE") ||
+                                roleName.equals("LABO") ||
+                                roleName.equals("LABORATOIRE") ||
+                                roleName.equals("ROLE_PHARMACY") ||
+                                roleName.equals("ROLE_PHARMACIE") ||
+                                roleName.equals("PHARMACY") ||
+                                roleName.equals("PHARMACIE") ||
+                                roleName.equals("ROLE_PHARMACIST") ||
+                                roleName.equals("PHARMACIST") ||
+                                roleName.equals("ROLE_RECEPTION") ||
+                                roleName.equals("RECEPTION") ||
+                                roleName.equals("ROLE_FINANCE") ||
+                                roleName.equals("FINANCE") ||
+                                roleName.equals("ROLE_CAISSIER") ||
+                                roleName.equals("CAISSIER");
 
-                    log.info("🏥 [AUTH CHECK] Is Clinical Role: {}", isClinicalRole);
+                        log.info("🏥 [AUTH CHECK] Is Clinical Role: {}", isClinicalRole);
 
-                    if (isClinicalRole) {
-                        log.warn("🚫 [AUTH BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", user.getUsername());
-                        throw new BadRequestException("Accès suspendu. Le profil de votre établissement est temporairement désactivé. Veuillez contacter votre administrateur local ou le service client Inua Afya.");
+                        if (isClinicalRole) {
+                            log.warn("🚫 [AUTH BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", user.getUsername());
+                            throw new BadRequestException("Accès suspendu. Le profil de votre établissement est temporairement désactivé. Veuillez contacter votre administrateur local ou le service client Inua Afya.");
+                        }
                     }
                 }
             }

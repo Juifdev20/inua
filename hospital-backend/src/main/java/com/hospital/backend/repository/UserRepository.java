@@ -27,10 +27,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role = :role")
     long countByHospitalIdAndRole(@Param("hospitalId") Long hospitalId, @Param("role") Role role);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE (u.hospital.id = :hospitalId OR u.hospital IS NULL) AND u.role.nom = :roleNom")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom")
     long countByHospitalIdAndRoleNom(@Param("hospitalId") Long hospitalId, @Param("roleNom") String roleNom);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE (u.hospital.id = :hospitalId OR u.hospital IS NULL) AND u.role.nom = :roleNom AND u.createdAt >= :startDate")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom AND u.createdAt >= :startDate")
     long countNewUsersByRoleAndHospitalSince(@Param("hospitalId") Long hospitalId, @Param("roleNom") String roleNom, @Param("startDate") LocalDateTime startDate);
 
     Optional<User> findByUsername(String username);

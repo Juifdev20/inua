@@ -184,39 +184,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String roleName = user.getRole() != null ? user.getRole().getNom() : "";
                 log.info("🏥 [JWT CHECK] Checking clinical role: {}", roleName);
                 
-                boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
-                        roleName.equals("ROLE_DOCTEUR") ||
-                        roleName.equals("DOCTOR") ||
-                        roleName.equals("DOCTEUR") ||
-                        roleName.equals("ROLE_LABO") ||
-                        roleName.equals("ROLE_LABORATOIRE") ||
-                        roleName.equals("LABO") ||
-                        roleName.equals("LABORATOIRE") ||
-                        roleName.equals("ROLE_PHARMACY") ||
-                        roleName.equals("ROLE_PHARMACIE") ||
-                        roleName.equals("PHARMACY") ||
-                        roleName.equals("PHARMACIE") ||
-                        roleName.equals("ROLE_PHARMACIST") ||
-                        roleName.equals("PHARMACIST") ||
-                        roleName.equals("ROLE_RECEPTION") ||
-                        roleName.equals("RECEPTION") ||
-                        roleName.equals("ROLE_FINANCE") ||
-                        roleName.equals("FINANCE") ||
-                        roleName.equals("ROLE_CAISSIER") ||
-                        roleName.equals("CAISSIER");
+                // Exclure les super admins du blocage
+                boolean isSuperAdminForHospital = roleName.equals("ROLE_SUPER_ADMIN") ||
+                        roleName.equals("SUPER_ADMIN");
+                
+                if (isSuperAdminForHospital) {
+                    log.info("🏥 [JWT CHECK] Super Admin détecté, blocage ignoré");
+                    // Ne pas bloquer les super admins
+                } else {
+                    boolean isClinicalRole = roleName.equals("ROLE_DOCTOR") ||
+                            roleName.equals("ROLE_DOCTEUR") ||
+                            roleName.equals("DOCTOR") ||
+                            roleName.equals("DOCTEUR") ||
+                            roleName.equals("ROLE_LABO") ||
+                            roleName.equals("ROLE_LABORATOIRE") ||
+                            roleName.equals("LABO") ||
+                            roleName.equals("LABORATOIRE") ||
+                            roleName.equals("ROLE_PHARMACY") ||
+                            roleName.equals("ROLE_PHARMACIE") ||
+                            roleName.equals("PHARMACY") ||
+                            roleName.equals("PHARMACIE") ||
+                            roleName.equals("ROLE_PHARMACIST") ||
+                            roleName.equals("PHARMACIST") ||
+                            roleName.equals("ROLE_RECEPTION") ||
+                            roleName.equals("RECEPTION") ||
+                            roleName.equals("ROLE_FINANCE") ||
+                            roleName.equals("FINANCE") ||
+                            roleName.equals("ROLE_CAISSIER") ||
+                            roleName.equals("CAISSIER");
 
-                log.info("🏥 [JWT CHECK] Is Clinical Role: {}", isClinicalRole);
+                    log.info("🏥 [JWT CHECK] Is Clinical Role: {}", isClinicalRole);
 
-                if (isClinicalRole) {
-                    log.warn("🚫 [JWT BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", username);
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
-                    response.setContentType("application/json");
-                    response.getWriter().write(objectMapper.writeValueAsString(Map.of(
-                            "error", "Accès suspendu. Le profil de votre établissement est temporairement désactivé.",
-                            "code", 403,
-                            "hospitalDisabled", true
-                    )));
-                    return;
+                    if (isClinicalRole) {
+                        log.warn("🚫 [JWT BLOCKED] Hôpital désactivé pour utilisateur clinique: {}", username);
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+                        response.setContentType("application/json");
+                        response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+                                "error", "Accès suspendu. Le profil de votre établissement est temporairement désactivé.",
+                                "code", 403,
+                                "hospitalDisabled", true
+                        )));
+                        return;
+                    }
                 }
             }
         }

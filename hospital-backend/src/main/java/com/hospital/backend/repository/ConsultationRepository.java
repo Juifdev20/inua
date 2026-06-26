@@ -356,7 +356,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     List<Consultation> findByAdmissionId(Long admissionId);
 
     // MULTI-TENANT
-    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status = :status AND (c.patient.hospital.id = :hospitalId OR c.patient.hospital IS NULL)")
+    @Query("SELECT COUNT(c) FROM Consultation c WHERE c.status = :status AND c.patient.hospital.id = :hospitalId")
     Long countByStatusAndHospitalId(@Param("status") ConsultationStatus status, @Param("hospitalId") Long hospitalId);
 
     @Query("SELECT c FROM Consultation c WHERE c.consultationDate BETWEEN :start AND :end AND c.patient.hospital.id = :hospitalId")

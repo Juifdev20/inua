@@ -104,10 +104,10 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT'")
     Long countActivePatients();
     // MULTI-TENANT: comptage par hopital depuis la table Patient
-    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND (p.hospital.id = :hospitalId OR p.hospital IS NULL)")
+    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND p.hospital.id = :hospitalId")
     Long countActivePatientsByHospitalId(@Param("hospitalId") Long hospitalId);
 
-    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND (p.hospital.id = :hospitalId OR p.hospital IS NULL) AND p.createdAt >= :startDate")
+    @Query("SELECT COUNT(p) FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND p.hospital.id = :hospitalId AND p.createdAt >= :startDate")
     Long countNewPatientsByHospitalSince(@Param("hospitalId") Long hospitalId, @Param("startDate") LocalDateTime startDate);
 
     // ==========================================
