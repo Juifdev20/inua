@@ -26,8 +26,10 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
     public Optional<HospitalConfig> getCurrentConfig() {
         Long hId = HospitalTenantContext.getHospitalId();
         if (hId != null) {
+            // En multi-tenant, NE JAMAIS retourner une config sans hospital_id
             return configRepository.findByHospitalId(hId);
         }
+        // Fallback pour super admin ou tests (sans contexte d'hôpital)
         return configRepository.findFirstByOrderByIdAsc();
     }
 

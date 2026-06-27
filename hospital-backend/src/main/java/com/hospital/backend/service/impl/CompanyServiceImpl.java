@@ -586,9 +586,20 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional(readOnly = true)
     public List<CompanyStatsDTO> getAllCompaniesStats(String yearMonth) {
-        // ── Optimisation : ne charger que les entreprises actives pour éviter OOM ─────────
-        return companyRepository.findBySubscriptionStatusOrderByCreatedAtDesc(
-                SubscriptionStatus.ACTIVE).stream()
+        // MULTI-TENANT: filtrer par hôpital
+        Long hospitalId = HospitalTenantContext.getHospitalId();
+        
+        List<Company> companies;
+        if (hospitalId != null) {
+            companies = companyRepository.findByHospitalIdAndSubscriptionStatusOrderByCreatedAtDesc(
+                    hospitalId, SubscriptionStatus.ACTIVE);
+        } else {
+            // Fallback pour super admin
+            companies = companyRepository.findBySubscriptionStatusOrderByCreatedAtDesc(
+                    SubscriptionStatus.ACTIVE);
+        }
+        
+        return companies.stream()
                 .map(c -> buildStats(c, yearMonth))
                 .collect(Collectors.toList());
     }

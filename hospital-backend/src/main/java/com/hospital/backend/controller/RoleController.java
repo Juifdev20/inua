@@ -3,6 +3,7 @@ package com.hospital.backend.controller;
 import com.hospital.backend.entity.Role;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.ActivityService; // Import du service
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,8 +34,17 @@ public class RoleController {
         List<Role> roles = roleRepository.findAll().stream()
                 .filter(r -> !"ROLE_SUPERADMIN".equals(r.getNom()) && !"SUPERADMIN".equals(r.getNom()))
                 .toList();
+        
+        // MULTI-TENANT: filtrer par hôpital
+        Long hospitalId = HospitalTenantContext.getHospitalId();
+        
         for (Role role : roles) {
-            long count = userRepository.countByRole(role);
+            long count;
+            if (hospitalId != null) {
+                count = userRepository.countByHospitalIdAndRole(hospitalId, role);
+            } else {
+                count = userRepository.countByRole(role);
+            }
             role.setUtilisateursCount((int) count);
         }
         return roles;
@@ -76,7 +86,16 @@ public class RoleController {
                     role.setPermissions(roleDetails.getPermissions());
 
                     Role updatedRole = roleRepository.save(role);
-                    updatedRole.setUtilisateursCount((int) userRepository.countByRole(updatedRole));
+                    
+                    // MULTI-TENANT: filtrer par hôpital
+                    Long hospitalId = HospitalTenantContext.getHospitalId();
+                    long count;
+                    if (hospitalId != null) {
+                        count = userRepository.countByHospitalIdAndRole(hospitalId, updatedRole);
+                    } else {
+                        count = userRepository.countByRole(updatedRole);
+                    }
+                    updatedRole.setUtilisateursCount((int) count);
 
                     // Enregistrement de l'activité
                     activityService.log("Modification", "Mise à jour du rôle " + updatedRole.getNom(), "info");

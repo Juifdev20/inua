@@ -133,7 +133,7 @@ public class HospitalConfig {
     @Builder.Default
     private Currency fichePriceCurrency = Currency.USD; // Devise par défaut: USD
 
-    // ★ MULTI-TENANT: Hôpital associé
+    // ★ MULTI-TENANT: Hôpital associé (nullable pour legacy, mais devrait toujours être renseigné en multi-tenant)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hospital_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
