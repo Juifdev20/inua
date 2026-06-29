@@ -78,7 +78,7 @@ const Profile = () => {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image trop lourde (max 2MB)");
+      toast.error("Image trop lourde ou ne correspond pas (max 2MB)");
       return;
     }
 
@@ -102,7 +102,7 @@ const Profile = () => {
       // ✅ Mise à jour du contexte (déclenche le refresh Navbar)
       updateUser({ photoUrl: String(newPhotoName) });
       
-      toast.success("Photo de profil mise à jour !");
+      toast.success("Photo de profil mise à jour!");
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Échec de l'upload");

@@ -66,7 +66,7 @@ public class AdminController {
             Long hospitalId = HospitalTenantContext.getHospitalId();
             List<User> users = (hospitalId != null)
                     ? userRepository.findByHospitalId(hospitalId)
-                    : userRepository.findAll();
+                    : userRepository.findAll().stream().filter(u -> u.getRole() == null || (!"ROLE_SUPERADMIN".equals(u.getRole().getNom()) && !"SUPERADMIN".equals(u.getRole().getNom()))).toList();
             log.info("Nombre d'utilisateurs trouvés: {}", users.size());
             
             // ✅ CORRECTION : Créer une liste simplifiée pour éviter la boucle infinie JSON
@@ -401,3 +401,5 @@ public class AdminController {
         }
     }
 }
+
+

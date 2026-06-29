@@ -172,7 +172,14 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(admin);
             log.info("👤 Utilisateur admin créé: {} / Mot de passe: admin123", adminUsername);
         } else {
-            log.info("👤 Utilisateur admin existe déjà");
+            // Mettre à jour le mot de passe de l'admin existant pour s'assurer qu'est encodé correctement
+            User existingAdmin = userRepository.findByUsername(adminUsername).orElse(null);
+            if (existingAdmin != null) {
+                existingAdmin.setPassword(passwordEncoder.encode("admin123"));
+                existingAdmin.setUpdatedAt(LocalDateTime.now());
+                userRepository.save(existingAdmin);
+                log.info("👤 Mot de passe admin mis à jour: {} / Mot de passe: admin123", adminUsername);
+            }
         }
     }
 

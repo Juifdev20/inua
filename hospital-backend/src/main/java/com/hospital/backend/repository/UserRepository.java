@@ -17,20 +17,23 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
 
-    // ★ MULTI-TENANT: filtré par hôpital
-    List<User> findByHospitalId(Long hospitalId);
-    List<User> findByHospitalIdAndRole(Long hospitalId, Role role);
-    List<User> findByHospitalIdAndRoleAndIsActiveTrue(Long hospitalId, Role role);
-    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId")
+    // ★ MULTI-TENANT: filtré par hôpital (exclut automatiquement les super admins)
+    @Query("SELECT u FROM User u WHERE u.hospital.id = :hospitalId AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
+    List<User> findByHospitalId(@Param("hospitalId") Long hospitalId);
+    @Query("SELECT u FROM User u WHERE u.hospital.id = :hospitalId AND u.role = :role AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
+    List<User> findByHospitalIdAndRole(@Param("hospitalId") Long hospitalId, @Param("role") Role role);
+    @Query("SELECT u FROM User u WHERE u.hospital.id = :hospitalId AND u.role = :role AND u.isActive = true AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
+    List<User> findByHospitalIdAndRoleAndIsActiveTrue(@Param("hospitalId") Long hospitalId, @Param("role") Role role);
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
     long countByHospitalId(@Param("hospitalId") Long hospitalId);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role = :role")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role = :role AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
     long countByHospitalIdAndRole(@Param("hospitalId") Long hospitalId, @Param("role") Role role);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
     long countByHospitalIdAndRoleNom(@Param("hospitalId") Long hospitalId, @Param("roleNom") String roleNom);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom AND u.createdAt >= :startDate")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.role.nom = :roleNom AND u.createdAt >= :startDate AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
     long countNewUsersByRoleAndHospitalSince(@Param("hospitalId") Long hospitalId, @Param("roleNom") String roleNom, @Param("startDate") LocalDateTime startDate);
 
     Optional<User> findByUsername(String username);
@@ -75,7 +78,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.role.nom = :roleNom AND u.createdAt >= :startDate")
     long countNewUsersByRoleSince(@Param("roleNom") String roleNom, @Param("startDate") LocalDateTime startDate);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.createdAt >= :startDate")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId AND u.createdAt >= :startDate AND (u.role.nom <> 'ROLE_SUPERADMIN' AND u.role.nom <> 'SUPERADMIN')")
     long countAllNewUsersByHospitalSince(@Param("hospitalId") Long hospitalId, @Param("startDate") LocalDateTime startDate);
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startDate")
