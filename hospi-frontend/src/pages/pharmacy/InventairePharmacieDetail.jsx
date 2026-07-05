@@ -34,13 +34,19 @@ const STATUTS_INFO = {
 function fmt(n) {
   if (n == null) return '—';
   const num = parseFloat(n);
-  return isNaN(num) ? '—' : num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (isNaN(num)) return '—';
+  // Formatage ASCII-safe pour jsPDF
+  return num.toFixed(2).replace('.', ',');
 }
 
 function fmtMoney(n) {
   if (n == null) return '—';
   const num = parseFloat(n);
-  return isNaN(num) ? '—' : num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (isNaN(num)) return '—';
+  // Formatage ASCII-safe pour jsPDF (évite les caractères UTF-8 comme les espaces insécables)
+  const formatted = num.toFixed(2);
+  // Remplace le point par une virgule (format français)
+  return formatted.replace('.', ',');
 }
 
 function fmtDate(d) {
@@ -331,12 +337,12 @@ export default function InventairePharmacieDetail() {
           color: [pr, pg, pb],
         },
         {
-          label: 'Avec écart',
+          label: 'Avec ecart',
           value: String(kpis.avecEcart),
           color: kpis.avecEcart > 0 ? [220, 38, 38] : [22, 163, 74],
         },
         {
-          label: 'Valeur des écarts',
+          label: 'Valeur des ecarts',
           value: fmtMoney(kpis.valTotale),
           color: kpis.valTotale < 0 ? [220, 38, 38] : [pr, pg, pb],
         },
@@ -390,7 +396,7 @@ export default function InventairePharmacieDetail() {
 
       autoTable(doc, {
         startY: tableStartY,
-        head: [['Code DCI', 'Désignation', 'Forme', 'Dosage', 'Unité', 'Th.', 'Phys.', 'Écart', 'Val. Écart', 'Observation']],
+        head: [['Code DCI', 'Designation', 'Forme', 'Dosage', 'Unite', 'Th.', 'Phys.', 'Ecart', 'Val. Ecart', 'Observation']],
         body: tableData,
         styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
         headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
