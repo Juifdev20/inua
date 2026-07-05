@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/finance")
 @RequiredArgsConstructor
 @Tag(name = "Finance", description = "Gestion financière de l'hôpital")
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 @Slf4j
 public class FinanceController {
 

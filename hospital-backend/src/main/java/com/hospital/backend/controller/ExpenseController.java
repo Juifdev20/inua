@@ -33,6 +33,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "Expenses", description = "Gestion des dépenses")
 @SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class ExpenseController {
 
     private final ExpenseService expenseService;

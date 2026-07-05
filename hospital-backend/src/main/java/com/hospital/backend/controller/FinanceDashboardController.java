@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Tag(name = "Dashboard Finance", description = "Tableau de bord financier temps réel avec statistiques par devise")
 @SecurityRequirement(name = "bearerAuth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class FinanceDashboardController {
 
     private final FinanceDashboardService dashboardService;

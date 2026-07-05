@@ -25,6 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "CashFlow", description = "Vue consolidée des flux financiers (entrées vs dépenses)")
 @SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class CashFlowController {
 
     private final RevenueService revenueService;

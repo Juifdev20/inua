@@ -35,7 +35,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Finance-Pharmacie", description = "Gestion du flux Pharmacie-Finance (dépenses, avoirs, retours)")
-@CrossOrigin(origins = {"https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
+@CrossOrigin(origins = {"https://inua-oux2.onrender.com", "https://inuaafia.onrender.com", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080"})
 public class FinanceTransactionController {
 
     private final PharmacieFinanceIntegrationService integrationService;
