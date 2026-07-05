@@ -109,7 +109,7 @@ export default function Documents() {
     if (!token || !id) return;
     
     try {
-      const response = await axios.get(`${API_DOCUMENTS_URL}/download/${id}`, {
+      const response = await axios.get(`${API_DOCUMENTS_URL}/${id}/content`, {
         responseType: 'blob',
         headers: { 'Authorization': `Bearer ${token}` }
       });
