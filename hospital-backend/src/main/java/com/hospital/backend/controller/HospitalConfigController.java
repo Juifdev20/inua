@@ -74,7 +74,17 @@ public class HospitalConfigController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long userId = getUserIdFromAuthentication(auth);
         
+        // Récupérer la config existante pour préserver les champs non fournis
+        HospitalConfig existingConfig = configService.getCurrentConfig().orElse(null);
+        
         HospitalConfig config = toEntity(dto);
+        
+        // Préserver l'URL du logo existant si non fourni dans le DTO
+        if (existingConfig != null && dto.getHospitalLogoUrl() == null) {
+            config.setHospitalLogoUrl(existingConfig.getHospitalLogoUrl());
+            log.info("🔍 [CONFIG DEBUG] Logo existant préservé: {}", existingConfig.getHospitalLogoUrl());
+        }
+        
         HospitalConfig saved = configService.saveOrUpdate(config, userId);
         
         log.info("🔍 [CONFIG DEBUG] Config sauvegardée - hospitalLogoUrl: {}",

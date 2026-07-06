@@ -50,10 +50,14 @@ export const hospitalConfigService = {
     // Essayer l'API si disponible
     try {
       // Ne pas envoyer un base64 potentiellement volumineux dans le PUT
+      // Et ne pas envoyer hospitalLogoUrl si c'est null ou vide (pour préserver l'URL existante)
       const payload = { ...configData };
       if (typeof payload.hospitalLogoUrl === 'string' && payload.hospitalLogoUrl.startsWith('data:')) {
         // Si le logo est encore en base64, on l'expurge : le formulaire doit utiliser l'endpoint /logo pour envoyer le fichier
-        payload.hospitalLogoUrl = null;
+        delete payload.hospitalLogoUrl;
+      } else if (payload.hospitalLogoUrl === null || payload.hospitalLogoUrl === '') {
+        // Si le logo est null ou vide, ne pas l'envoyer pour préserver l'URL existante côté backend
+        delete payload.hospitalLogoUrl;
       }
       const response = await api.put(`/api/hospital-config`, payload);
       return response.data;
