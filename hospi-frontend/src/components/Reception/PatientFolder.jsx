@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { admissionService } from '../../services/admissionService';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { API_BASE_URL } from '../../config/environment';
 import { 
   FileText, 
   Calendar, 
@@ -75,7 +77,7 @@ const DiagnosticRow = ({ label, value }) => (
 );
 
 // --- COMPOSANT IMPRESSION : PrintablePatientCard (ADAPTÉ POUR 1 SEULE PAGE) ---
-const PrintablePatientCard = ({ patient, lastVisit, resolvedData }) => {
+const PrintablePatientCard = ({ patient, lastVisit, resolvedData, config }) => {
   if (!patient) return null;
   const uniquePrintId = useMemo(() => {
     const stamp = Date.now().toString().slice(-6);
@@ -84,6 +86,9 @@ const PrintablePatientCard = ({ patient, lastVisit, resolvedData }) => {
   }, [patient]);
 
   const photoUrl = getCleanImageUrl(patient.photoUrl || patient.photo);
+  const logoUrl = config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false
+    ? (config.hospitalLogoUrl.startsWith('/') ? `${API_BASE_URL}${config.hospitalLogoUrl}` : config.hospitalLogoUrl)
+    : null;
 
   return (
     <div className="hidden print:block bg-white text-black font-serif w-[21cm] h-[29.7cm] mx-auto relative p-10">
@@ -92,6 +97,12 @@ const PrintablePatientCard = ({ patient, lastVisit, resolvedData }) => {
       
       {/* 1. Header Compact */}
       <div className="text-center border-b-2 border-black pb-4 mb-6">
+        {/* Logo de l'hôpital */}
+        {logoUrl && (
+          <div className="flex justify-center mb-2">
+            <img src={logoUrl} alt="Logo" className="h-16 w-auto object-contain" />
+          </div>
+        )}
         <h1 className="text-xl font-bold uppercase tracking-tight">UNIVERSITE CHRETIENNE BILINGUE DU CONGO</h1>
         <h2 className="text-md font-semibold uppercase italic">CLINIQUE CI/UCBC</h2>
         <div className="mt-4 inline-block border-2 border-black px-8 py-2 font-black text-xl uppercase">FICHE DE PATIENT</div>
@@ -179,6 +190,7 @@ const PrintablePatientCard = ({ patient, lastVisit, resolvedData }) => {
 const PatientFolder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { config } = useHospitalConfig();
   
   // États de données
   const [history, setHistory] = useState([]);
@@ -302,7 +314,8 @@ const PatientFolder = () => {
       <PrintablePatientCard 
         patient={patientInfo} 
         lastVisit={printData || history[0]} 
-        resolvedData={resolvedData} 
+        resolvedData={resolvedData}
+        config={config}
       />
 
       {/* Header Interfacce */}

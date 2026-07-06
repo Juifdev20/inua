@@ -35,7 +35,7 @@ const MedicalRecordPrint = forwardRef(({ report, config }, ref) => {
       <header className="print-header">
         <div className="header-left">
           <div className="logo-container">
-            {config?.hospitalLogoUrl ? (
+            {config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false ? (
               <img
                 src={resolveLogoUrl(config.hospitalLogoUrl, API_BASE_URL)}
                 alt={config.hospitalName}

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { admissionService } from '../../services/admissionService';
+import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { API_BASE_URL } from '../../config/environment';
 import { 
   FileText, 
   Calendar, 
@@ -18,13 +20,23 @@ import {
 import { cn } from '../../lib/utils';
 
 // --- SOUS-COMPOSANT : LA FICHE POUR L'IMPRESSION (ADAPTÉE ZÉRO STYLO) ---
-const PrintableFiche = ({ data, patient }) => {
+const PrintableFiche = ({ data, patient, config }) => {
   if (!patient) return null;
-  
+
+  const logoUrl = config?.hospitalLogoUrl && config?.enableLogoOnDocuments !== false
+    ? (config.hospitalLogoUrl.startsWith('/') ? `${API_BASE_URL}${config.hospitalLogoUrl}` : config.hospitalLogoUrl)
+    : null;
+
   return (
     <div className="bg-white text-black p-8 font-serif leading-tight">
       {/* ENTÊTE OFFICIELLE */}
       <div className="text-center space-y-1 border-b-2 border-black pb-4 mb-6">
+        {/* Logo de l'hôpital */}
+        {logoUrl && (
+          <div className="flex justify-center mb-2">
+            <img src={logoUrl} alt="Logo" className="h-16 w-auto object-contain" />
+          </div>
+        )}
         <h1 className="text-xl font-bold uppercase">République Démocratique du Congo</h1>
         <h2 className="text-lg font-semibold uppercase">Ministère de la Santé Publique</h2>
         <div className="flex justify-between text-xs font-medium px-4">
@@ -109,6 +121,7 @@ const PrintableFiche = ({ data, patient }) => {
 const PatientFolder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { config } = useHospitalConfig();
   const [history, setHistory] = useState([]);
   const [patientInfo, setPatientInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -223,7 +236,7 @@ const PatientFolder = () => {
 
       {/* 3. ZONE D'IMPRESSION (Invisible à l'écran) */}
       <div className="hidden print:block print-area">
-        <PrintableFiche data={history[0]} patient={patientInfo} />
+        <PrintableFiche data={history[0]} patient={patientInfo} config={config} />
       </div>
 
       {/* STYLE CSS POUR FORCER LA MISE EN PAGE PRINT */}

@@ -26,6 +26,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { admissionService } from '../../services/admissionService';
 import { useHospitalConfig } from '../../hooks/useHospitalConfig';
+import { API_BASE_URL } from '../../config/environment';
 import { toast } from 'sonner';
 import api from '../../services/patients/Api';
 import '../../styles/print.css';
@@ -136,6 +137,12 @@ const MedicalReportPatientView = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const resolveLogoUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    return url.startsWith('/') ? `${API_BASE_URL}${url}` : `${API_BASE_URL}/${url}`;
   };
 
   const handlePrint = () => {
@@ -338,11 +345,12 @@ const MedicalReportPatientView = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Logo ou icône par défaut */}
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shrink-0">
-                {config.hospitalLogoUrl ? (
+                {config.hospitalLogoUrl && config.enableLogoOnDocuments !== false ? (
                   <img
-                    src={config.hospitalLogoUrl}
+                    src={resolveLogoUrl(config.hospitalLogoUrl)}
                     alt={config.hospitalName}
                     className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
+                    onError={(e) => { e.target.style.display = 'none'; }}
                   />
                 ) : (
                   <Building2
