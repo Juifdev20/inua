@@ -707,36 +707,36 @@ const LabHistory = () => {
               {hasActiveFilters ? 'Aucun résultat trouvé pour les filtres actuels.' : 'Aucun examen avec résultats.'}
             </div>
           ) : (
-            <div className="divide-y divide-border/60">
+            <div className="divide-y divide-border/60 overflow-x-auto">
               {paginatedConsultations.map((consultation) => (
-                <div key={consultation.id} className="border-b border-border/60 last:border-b-0">
+                <div key={consultation.id} className="border-b border-border/60 last:border-b-0 min-w-[600px]">
                   {/* En-tête de consultation */}
                   <div 
                     className="px-4 py-3 hover:bg-muted/20 cursor-pointer flex items-center justify-between"
                     onClick={() => toggleConsultation(consultation.id)}
                   >
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       {expandedConsultations.has(consultation.id) ? (
-                        <FolderOpen className="w-5 h-5 text-primary" />
+                        <FolderOpen className="w-5 h-5 text-primary flex-shrink-0" />
                       ) : (
-                        <Folder className="w-5 h-5 text-muted-foreground" />
+                        <Folder className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold">{consultation.patient}</span>
+                          <span className="font-semibold truncate">{consultation.patient}</span>
                           {consultation.patientCode && (
-                            <span className="text-xs text-muted-foreground">({consultation.patientCode})</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">({consultation.patientCode})</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                          <span>{consultation.date}</span>
-                          <Badge variant="outline" className="text-xs">
+                          <span className="flex-shrink-0">{consultation.date}</span>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
                             {consultation.results.length} examen{consultation.results.length > 1 ? 's' : ''}
                           </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -772,64 +772,66 @@ const LabHistory = () => {
                   {/* Détails de la consultation (examen) */}
                   {expandedConsultations.has(consultation.id) && (
                     <div className="px-4 pb-4 pl-12 bg-muted/10">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-xs text-muted-foreground">
-                            <th className="pb-2 font-semibold">Examen</th>
-                            <th className="pb-2 font-semibold">Résultat</th>
-                            <th className="pb-2 font-semibold">Unité</th>
-                            <th className="pb-2 font-semibold">Statut</th>
-                            <th className="pb-2 font-semibold">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {consultation.results.map((result) => (
-                            <tr key={result.id} className="border-t border-border/40">
-                              <td className="py-2">{result.exam}</td>
-                              <td className="py-2">
-                                <span className={`inline-flex items-center gap-1 ${result.isCritical ? 'text-rose-500' : ''}`}>
-                                  <TrendingUp className={`w-3.5 h-3.5 ${result.isCritical ? 'text-rose-500' : 'text-primary'}`} />
-                                  {result.result}
-                                </span>
-                              </td>
-                              <td className="py-2 text-muted-foreground">{result.unit || '-'}</td>
-                              <td className="py-2">
-                                <Badge
-                                  className={`border ${
-                                    result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR'
-                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                                      : 'bg-violet-500/10 text-violet-600 border-violet-500/20'
-                                  }`}
-                                >
-                                  {result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? 'VALIDÉ' : 'TERMINÉ'}
-                                </Badge>
-                              </td>
-                              <td className="py-2">
-                                <div className="flex gap-1">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => handleComparePatient(result)}
-                                    title="Comparer les résultats"
-                                  >
-                                    <BarChart3 className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => handleViewResult(result)}
-                                    title="Voir les détails"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              </td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm min-w-[500px]">
+                          <thead>
+                            <tr className="text-left text-xs text-muted-foreground">
+                              <th className="pb-2 font-semibold">Examen</th>
+                              <th className="pb-2 font-semibold">Résultat</th>
+                              <th className="pb-2 font-semibold">Unité</th>
+                              <th className="pb-2 font-semibold">Statut</th>
+                              <th className="pb-2 font-semibold">Actions</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {consultation.results.map((result) => (
+                              <tr key={result.id} className="border-t border-border/40">
+                                <td className="py-2 truncate max-w-[150px]">{result.exam}</td>
+                                <td className="py-2">
+                                  <span className={`inline-flex items-center gap-1 ${result.isCritical ? 'text-rose-500' : ''}`}>
+                                    <TrendingUp className={`w-3.5 h-3.5 ${result.isCritical ? 'text-rose-500' : 'text-primary'}`} />
+                                    {result.result}
+                                  </span>
+                                </td>
+                                <td className="py-2 text-muted-foreground">{result.unit || '-'}</td>
+                                <td className="py-2">
+                                  <Badge
+                                    className={`border ${
+                                      result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR'
+                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                        : 'bg-violet-500/10 text-violet-600 border-violet-500/20'
+                                    }`}
+                                  >
+                                    {result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? 'VALIDÉ' : 'TERMINÉ'}
+                                  </Badge>
+                                </td>
+                                <td className="py-2">
+                                  <div className="flex gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => handleComparePatient(result)}
+                                      title="Comparer les résultats"
+                                    >
+                                      <BarChart3 className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => handleViewResult(result)}
+                                      title="Voir les détails"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -839,11 +841,11 @@ const LabHistory = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-border gap-4">
+              <p className="text-xs text-muted-foreground text-center sm:text-left">
                 Affichage de {(page - 1) * pageSize + 1} à {Math.min(page * pageSize, groupedByConsultation.length)} sur {groupedByConsultation.length} consultations
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
                 <Button
                   variant="outline"
                   size="sm"
