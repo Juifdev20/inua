@@ -17,7 +17,8 @@ import {
   HeartPulse,
   Cog,
   Activity,
-  TrendingUp
+  TrendingUp,
+  CreditCard
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext'; 
@@ -84,6 +85,7 @@ const Sidebar = () => {
     { nameKey: 'admin.departments', path: '/admin/departements', icon: Building2, color: 'text-secondary' },
     { name: 'Abonnés', path: '/admin/companies', icon: HeartPulse, color: 'text-pink-500' },
     { name: 'Rapports', path: '/admin/subscription-reports', icon: TrendingUp, color: 'text-indigo-500' },
+    { name: 'Abonnement', path: '/admin/billing', icon: CreditCard, color: 'text-green-600' },
     { nameKey: 'admin.configuration', path: '/admin/hospital-settings', icon: Cog, color: 'text-emerald-500' },
     { nameKey: 'common.settings', path: '/admin/parametres', icon: Settings, color: 'text-muted-foreground' },
     { nameKey: 'admin.audit', path: '/admin/audit', icon: FileText, color: 'text-warning' },

@@ -118,8 +118,8 @@ const LabDashboard = () => {
 
     loadAll();
     
-    // Rafraîchir toutes les 30 secondes
-    const interval = setInterval(loadAll, 30000);
+    // Rafraîchir toutes les 5 minutes
+    const interval = setInterval(loadAll, 300000);
     return () => clearInterval(interval);
   }, []);
 

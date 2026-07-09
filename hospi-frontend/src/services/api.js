@@ -140,6 +140,15 @@ api.interceptors.response.use(
       
       if (error.response.status === 401 || error.response.status === 403) {
         console.warn("Session expirée ou accès refusé");
+        // 💳 Abonnement expiré : notifier l'app pour afficher l'écran de blocage
+        const data = error.response.data;
+        if (data && (data.subscriptionExpired === true || data.subscriptionExpired === 'true')) {
+          try {
+            window.dispatchEvent(new CustomEvent('subscription-expired', {
+              detail: { message: data.error || "Votre abonnement est épuisé." }
+            }));
+          } catch (e) { /* no-op */ }
+        }
       }
     } else if (error.request) {
       console.error('❌ Pas de réponse du serveur:', error.request);

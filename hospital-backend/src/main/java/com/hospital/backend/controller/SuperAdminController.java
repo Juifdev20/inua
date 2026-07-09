@@ -51,6 +51,8 @@ public class SuperAdminController {
     private final DeviceSessionService deviceSessionService;
     private final com.hospital.backend.service.HospitalService hospitalService;
     private final com.hospital.backend.service.AdminCredentialsPdfService adminCredentialsPdfService;
+    private final com.hospital.backend.service.SubscriptionService subscriptionService;
+    private final com.hospital.backend.service.AdminProvisioningService adminProvisioningService;
 
     // ═══════════════════════════════════════════════════
     // 1. AUDIT & SÉCURITÉ
@@ -567,48 +569,176 @@ public class SuperAdminController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Email déjà utilisé"));
             }
 
-            String tempPassword = java.util.UUID.randomUUID().toString().substring(0, 10);
-
-            Role adminRole = roleRepository.findByNom("ROLE_ADMIN")
-                    .orElseThrow(() -> new RuntimeException("Role ROLE_ADMIN non trouvé"));
-
-            User admin = User.builder()
-                    .username(email)
-                    .email(email)
-                    .firstName(firstName)
-                    .lastName(lastName)
-                    .password(passwordEncoder.encode(tempPassword))
-                    .role(adminRole)
-                    .hospital(hospital)
-                    .isActive(true)
-                    .mustChangePassword(true)
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-
-            User saved = userRepository.save(admin);
-
-            // Generation PDF credentials
-            byte[] pdfBytes = adminCredentialsPdfService.generate(saved, tempPassword, hospital);
-            String pdfBase64 = adminCredentialsPdfService.toBase64(pdfBytes);
-
-            emailService.sendCredentialsEmail(
-                    email, firstName, lastName, email, tempPassword, "ADMIN"
-            );
-
-            auditLogService.logAction("ADMIN_PROVISIONED", "SUPERADMIN",
-                    "HOSPITAL-" + id, "Admin " + email + " pour " + hospital.getNom(), "success", "127.0.0.1");
-
+            Map<String, Object> result = createAdminForHospital(hospital, email, firstName, lastName);
             log.info("[SuperAdmin] Admin provisionne pour {}: {}", hospital.getNom(), email);
             return ResponseEntity.status(201).body(ApiResponse.success(
-                    "Admin cree pour " + hospital.getNom(),
-                    Map.of("id", saved.getId(), "email", email, "hospital", hospital.getNom(),
-                            "pdfBase64", pdfBase64, "filename", "credentials_" + saved.getId() + ".pdf")));
+                    "Admin cree pour " + hospital.getNom(), result));
 
         } catch (Exception e) {
             log.error("[SuperAdmin] Erreur provision admin: {}", e.getMessage());
             return ResponseEntity.status(500).body(ApiResponse.error("Erreur: " + e.getMessage()));
         }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 11. WORKFLOW D'INSCRIPTION DES HÔPITAUX (demandes publiques)
+    // ═══════════════════════════════════════════════════
+
+    @GetMapping("/hospitals/pending")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Lister les demandes d'inscription d'hôpitaux en attente")
+    public ResponseEntity<?> getPendingHospitals() {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Demandes en attente",
+                    hospitalService.getPendingRegistrations()));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur demandes en attente: {}", e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur recuperation demandes"));
+        }
+    }
+
+    @PostMapping("/hospitals/{id}/approve")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Approuver une demande d'inscription : active l'hôpital et provisionne l'admin")
+    public ResponseEntity<?> approveHospital(@PathVariable Long id) {
+        try {
+            com.hospital.backend.entity.Hospital pre = hospitalService.getEntityById(id);
+            String email = pre.getAdminEmail();
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Aucun email admin sur la demande"));
+            }
+
+            // 1. Marquer approuvé, puis appliquer l'abonnement (essai gratuit OU attente de paiement)
+            hospitalService.setRegistrationStatus(id, "APPROVED", null);
+            com.hospital.backend.entity.Hospital hospital = hospitalService.getEntityById(id);
+            subscriptionService.startTrialOrPending(hospital);
+
+            auditLogService.logAction("HOSPITAL_APPROVED", "SUPERADMIN",
+                    "HOSPITAL-" + id, "Demande approuvee pour " + hospital.getNom(), "success", "127.0.0.1");
+
+            // 2a. Sans essai gratuit → on attend la confirmation du paiement pour provisionner l'admin
+            if ("PENDING_PAYMENT".equals(hospital.getSubscriptionStatus())) {
+                log.info("[SuperAdmin] ✅ Hopital {} approuve — en attente de paiement", hospital.getNom());
+                return ResponseEntity.ok(ApiResponse.success(
+                        "Hôpital approuvé. En attente du paiement de l'abonnement pour activer et envoyer les identifiants.",
+                        Map.of("subscriptionStatus", "PENDING_PAYMENT", "hospitalId", id)));
+            }
+
+            // 2b. Essai gratuit actif → provisionner l'admin et envoyer les identifiants
+            if (userRepository.existsByEmail(email)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error(
+                        "Un compte utilise déjà l'email " + email));
+            }
+            String firstName = hospital.getRequestedAdminFirstName() != null
+                    ? hospital.getRequestedAdminFirstName() : "Admin";
+            String lastName = hospital.getRequestedAdminLastName() != null
+                    ? hospital.getRequestedAdminLastName() : hospital.getNom();
+            Map<String, Object> result = createAdminForHospital(hospital, email, firstName, lastName);
+
+            log.info("[SuperAdmin] ✅ Hopital {} approuve (essai), admin {} provisionne", hospital.getNom(), email);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Hôpital approuvé (essai gratuit). Identifiants envoyés à " + email, result));
+
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur approbation hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/hospitals/{id}/reject")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Rejeter une demande d'inscription d'hôpital")
+    public ResponseEntity<?> rejectHospital(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String reason = body != null ? body.getOrDefault("reason", "") : "";
+            com.hospital.backend.dto.HospitalDTO updated = hospitalService.setRegistrationStatus(id, "REJECTED", reason);
+            auditLogService.logAction("HOSPITAL_REJECTED", "SUPERADMIN",
+                    "HOSPITAL-" + id, "Demande rejetee: " + reason, "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Demande rejetée", updated));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur rejet hopital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).body(ApiResponse.error("Erreur: " + e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 12. ABONNEMENTS — TARIFS & CONFIRMATION DES PAIEMENTS
+    // ═══════════════════════════════════════════════════
+
+    @GetMapping("/subscription-settings")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Récupérer les réglages de tarification des abonnements")
+    public ResponseEntity<?> getSubscriptionSettings() {
+        return ResponseEntity.ok(ApiResponse.success("Réglages", subscriptionService.getSettings()));
+    }
+
+    @PutMapping("/subscription-settings")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Mettre à jour les tarifs (par plan), devise, essai, grâce, réduction annuelle")
+    public ResponseEntity<?> updateSubscriptionSettings(
+            @RequestBody com.hospital.backend.dto.SubscriptionSettingsDTO dto) {
+        try {
+            auditLogService.logAction("SUBSCRIPTION_SETTINGS_UPDATED", "SUPERADMIN",
+                    "SETTINGS", "Tarifs mis à jour", "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Réglages mis à jour",
+                    subscriptionService.updateSettings(dto)));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/payments/pending")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Lister les paiements d'abonnement en attente de confirmation")
+    public ResponseEntity<?> getPendingPayments() {
+        return ResponseEntity.ok(ApiResponse.success("Paiements en attente",
+                subscriptionService.getPendingPayments()));
+    }
+
+    @PostMapping("/payments/{id}/confirm")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Confirmer un paiement : active l'abonnement et provisionne l'admin si besoin")
+    public ResponseEntity<?> confirmPayment(@PathVariable Long id) {
+        try {
+            // Le service confirme le paiement, active l'abonnement, approuve l'établissement
+            // et provisionne l'admin (avec email) si nécessaire.
+            com.hospital.backend.entity.SubscriptionPayment payment =
+                    subscriptionService.confirmPayment(id, "SUPERADMIN");
+            com.hospital.backend.entity.Hospital hospital = payment.getHospital();
+
+            Map<String, Object> data = new java.util.HashMap<>();
+            data.put("reference", payment.getReference());
+            data.put("hospital", hospital.getNom());
+            data.put("subscriptionEnd", hospital.getSubscriptionEnd());
+
+            auditLogService.logAction("PAYMENT_CONFIRMED", "SUPERADMIN",
+                    "HOSPITAL-" + hospital.getId(), "Paiement " + payment.getReference() + " confirmé", "success", "127.0.0.1");
+            return ResponseEntity.ok(ApiResponse.success("Paiement confirmé", data));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur confirmation paiement {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/payments/{id}/reject")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Rejeter un paiement d'abonnement")
+    public ResponseEntity<?> rejectPayment(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String reason = body != null ? body.getOrDefault("reason", "") : "";
+            subscriptionService.rejectPayment(id, reason);
+            return ResponseEntity.ok(ApiResponse.success("Paiement rejeté", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Crée un compte ADMIN pour un hôpital — délègue au service de provisioning réutilisable.
+     */
+    private Map<String, Object> createAdminForHospital(com.hospital.backend.entity.Hospital hospital,
+                                                       String email, String firstName, String lastName) {
+        return adminProvisioningService.provisionAdmin(hospital, email, firstName, lastName, "SUPERADMIN");
     }
 
 }

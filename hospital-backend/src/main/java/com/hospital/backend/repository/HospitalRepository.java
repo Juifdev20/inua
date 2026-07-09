@@ -17,6 +17,8 @@ public interface HospitalRepository extends JpaRepository<Hospital, Long> {
 
     List<Hospital> findAllByIsActiveTrue();
 
+    List<Hospital> findByRegistrationStatus(String registrationStatus);
+
     @Query("SELECT COUNT(u) FROM User u WHERE u.hospital.id = :hospitalId")
     long countUsersByHospitalId(Long hospitalId);
 

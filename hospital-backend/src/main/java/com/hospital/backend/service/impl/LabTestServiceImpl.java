@@ -4,6 +4,7 @@ import com.hospital.backend.dto.*;
 import com.hospital.backend.entity.*;
 import com.hospital.backend.exception.ResourceNotFoundException;
 import com.hospital.backend.repository.*;
+import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.LabTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,7 +103,11 @@ public class LabTestServiceImpl implements LabTestService {
 
     @Override
     public PageResponse<LabTestDTO> getAll(Pageable pageable) {
-        Page<LabTest> page = labTestRepository.findAll(pageable);
+        // 🏥 MULTI-TENANT : ne renvoie que les tests de l'hôpital courant (hId == null => superadmin)
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<LabTest> page = (hId != null)
+                ? labTestRepository.findByPatientHospitalId(hId, pageable)
+                : labTestRepository.findAll(pageable);
         return toPageResponse(page);
     }
 
@@ -210,9 +215,11 @@ public class LabTestServiceImpl implements LabTestService {
     // ✅ NOUVEAU : Récupère la liste des Docteurs pour la Modal Frontend
     @Override
     public List<UserDTO> getAvailableDoctors() {
-        // Logique pour filtrer les utilisateurs par rôle 'ROLE_DOCTEUR'
+        // 🏥 MULTI-TENANT : uniquement les médecins de l'hôpital courant (hId == null => superadmin)
+        Long hId = HospitalTenantContext.getHospitalId();
         return userRepository.findAll().stream()
                 .filter(u -> u.getRole() != null && u.getRole().getNom().equals("ROLE_DOCTEUR"))
+                .filter(u -> hId == null || (u.getHospital() != null && u.getHospital().getId().equals(hId)))
                 .map(u -> UserDTO.builder()
                         .id(u.getId())
                         .firstName(u.getFirstName())

@@ -206,206 +206,337 @@ const LabHistory = () => {
   const handlePrintConsultation = (consultation) => {
     const logoUrl = config.hospitalLogoUrl ? resolveLogoUrl(config.hospitalLogoUrl, API_BASE_URL) : '';
     const primaryColor = config.primaryColor || '#2563eb';
+    const secondaryColor = config.secondaryColor || '#64748b';
     const hospitalName = config.hospitalName || 'Hôpital';
+    const hospitalCode = config.hospitalCode || '';
+    const hospitalAddress = config.address || config.hospitalAddress || '';
+    const hospitalPhone = config.phoneNumber || config.hospitalPhone || '';
+    const hospitalEmail = config.email || '';
+    const headerSubtitle = config.headerSubtitle || '';
+    const ministryName = config.ministryName || '';
+    const departmentName = config.departmentName || '';
+    const zoneName = config.zoneName || '';
+    const region = config.region || '';
     
     const printWindow = window.open('', '_blank');
     const printContent = `
+      <!DOCTYPE html>
       <html>
         <head>
           <title>Résultats Laboratoire - ${consultation.patient}</title>
+          <meta charset="UTF-8">
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+            @page {
+              margin: 15mm;
+              size: A4;
+            }
             body { 
               font-family: 'Inter', Arial, sans-serif; 
-              padding: 40px; 
+              padding: 0;
               margin: 0;
               background: #fff;
+              color: #1e293b;
             }
-            .header {
+            .container {
+              max-width: 100%;
+              margin: 0 auto;
+            }
+            .ministry-header {
+              text-align: center;
+              font-size: 9px;
+              color: #64748b;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .main-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 25px;
+              padding-bottom: 20px;
+              border-bottom: 4px solid ${primaryColor};
+            }
+            .header-left {
               display: flex;
               align-items: center;
               gap: 20px;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid ${primaryColor};
+              flex: 1;
             }
             .logo {
-              width: 80px;
-              height: 80px;
+              width: 100px;
+              height: 100px;
               object-fit: contain;
             }
             .hospital-info h1 {
-              margin: 0 0 5px 0;
-              font-size: 24px;
-              font-weight: 700;
+              margin: 0 0 8px 0;
+              font-size: 28px;
+              font-weight: 800;
               color: ${primaryColor};
+              letter-spacing: -0.5px;
             }
-            .hospital-info p {
-              margin: 0;
-              font-size: 12px;
-              color: #666;
+            .hospital-info .subtitle {
+              margin: 0 0 6px 0;
+              font-size: 13px;
+              font-style: italic;
+              color: ${secondaryColor};
             }
-            .document-title {
-              background: ${primaryColor};
-              color: white;
-              padding: 15px 20px;
-              border-radius: 8px;
-              margin-bottom: 25px;
-            }
-            .document-title h2 {
-              margin: 0;
-              font-size: 18px;
-              font-weight: 600;
-            }
-            .patient-info {
-              background: #f8fafc;
-              padding: 20px;
-              border-radius: 8px;
-              margin-bottom: 25px;
-              border-left: 4px solid ${primaryColor};
-            }
-            .patient-info-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-            }
-            .info-item label {
-              display: block;
+            .hospital-info .code {
+              margin: 0 0 6px 0;
               font-size: 11px;
               font-weight: 600;
               color: #64748b;
+              background: ${primaryColor}10;
+              padding: 4px 10px;
+              border-radius: 4px;
+              display: inline-block;
+            }
+            .hospital-info .contact {
+              margin: 0;
+              font-size: 11px;
+              color: #64748b;
+              line-height: 1.6;
+            }
+            .header-right {
+              text-align: right;
+              padding-left: 30px;
+            }
+            .document-badge {
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}cc 100%);
+              color: white;
+              padding: 20px 30px;
+              border-radius: 12px;
+              margin-bottom: 10px;
+            }
+            .document-badge h2 {
+              margin: 0;
+              font-size: 16px;
+              font-weight: 700;
               text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 4px;
+              letter-spacing: 1px;
+            }
+            .document-badge .date {
+              margin: 8px 0 0 0;
+              font-size: 12px;
+              opacity: 0.9;
+            }
+            .patient-section {
+              background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+              padding: 25px;
+              border-radius: 12px;
+              margin-bottom: 30px;
+              border-left: 5px solid ${primaryColor};
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            }
+            .patient-section h3 {
+              margin: 0 0 20px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: ${primaryColor};
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .patient-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+            }
+            .info-item label {
+              display: block;
+              font-size: 10px;
+              font-weight: 700;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              margin-bottom: 6px;
             }
             .info-item p {
               margin: 0;
-              font-size: 14px;
-              font-weight: 500;
+              font-size: 15px;
+              font-weight: 600;
               color: #1e293b;
+            }
+            .results-section {
+              margin-bottom: 30px;
+            }
+            .results-section h3 {
+              margin: 0 0 20px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: ${primaryColor};
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              padding-bottom: 10px;
+              border-bottom: 2px solid ${primaryColor}30;
             }
             table { 
               width: 100%; 
-              border-collapse: collapse; 
-              margin-bottom: 25px;
+              border-collapse: separate;
+              border-spacing: 0;
+              margin-bottom: 0;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             }
             th { 
-              background: ${primaryColor};
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}cc 100%);
               color: white;
-              padding: 12px 15px;
+              padding: 16px 18px;
               text-align: left;
-              font-weight: 600;
-              font-size: 13px;
+              font-weight: 700;
+              font-size: 12px;
               text-transform: uppercase;
-              letter-spacing: 0.5px;
+              letter-spacing: 0.8px;
             }
             th:first-child { border-radius: 8px 0 0 0; }
             th:last-child { border-radius: 0 8px 0 0; }
             td { 
-              padding: 12px 15px;
+              padding: 14px 18px;
               border-bottom: 1px solid #e2e8f0;
               font-size: 14px;
+              font-weight: 500;
             }
             tr:last-child td { border-bottom: none; }
+            tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+            tr:last-child td:last-child { border-radius: 0 0 8px 0; }
             tr:nth-child(even) { background: #f8fafc; }
+            tr:hover { background: ${primaryColor}08; }
             .critical { 
               color: #dc2626; 
-              font-weight: 700;
-              background: #fef2f2;
-              padding: 4px 8px;
-              border-radius: 4px;
+              font-weight: 800;
+              background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+              padding: 6px 12px;
+              border-radius: 6px;
+              border: 1px solid #fecaca;
             }
             .badge {
               display: inline-block;
-              padding: 4px 12px;
+              padding: 6px 14px;
               border-radius: 20px;
-              font-size: 12px;
-              font-weight: 600;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
             }
             .badge-valid {
-              background: #dcfce7;
+              background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
               color: #166534;
+              border: 1px solid #86efac;
             }
             .badge-terminated {
-              background: #ede9fe;
+              background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
               color: #6b21a8;
+              border: 1px solid #c4b5fd;
             }
             .footer { 
               margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e2e8f0;
+              padding-top: 25px;
+              border-top: 3px solid ${primaryColor}30;
+              text-align: center;
+            }
+            .footer p {
+              margin: 5px 0;
               font-size: 11px;
               color: #64748b;
-              text-align: center;
+            }
+            .footer .hospital-name {
+              font-weight: 700;
+              color: ${primaryColor};
+              font-size: 13px;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="Logo" onerror="this.style.display='none'" />` : ''}
-            <div class="hospital-info">
-              <h1>${hospitalName}</h1>
-              <p>${config.hospitalAddress || ''}</p>
-              <p>${config.hospitalPhone || ''}</p>
-            </div>
-          </div>
-          
-          <div class="document-title">
-            <h2>📋 Rapport de Résultats Laboratoire</h2>
-          </div>
-          
-          <div class="patient-info">
-            <div class="patient-info-grid">
-              <div class="info-item">
-                <label>Patient</label>
-                <p>${consultation.patient}</p>
+          <div class="container">
+            ${ministryName || departmentName || zoneName || region ? `
+            <div class="ministry-header">
+              ${[ministryName, departmentName, zoneName, region].filter(Boolean).join(' | ')}
+            </div>` : ''}
+            
+            <div class="main-header">
+              <div class="header-left">
+                ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="Logo" onerror="this.style.display='none'" />` : ''}
+                <div class="hospital-info">
+                  <h1>${hospitalName}</h1>
+                  ${headerSubtitle ? `<div class="subtitle">${headerSubtitle}</div>` : ''}
+                  ${hospitalCode ? `<div class="code">Code: ${hospitalCode}</div>` : ''}
+                  <div class="contact">
+                    ${hospitalAddress ? `<div>📍 ${hospitalAddress}</div>` : ''}
+                    ${hospitalPhone ? `<div>📞 ${hospitalPhone}</div>` : ''}
+                    ${hospitalEmail ? `<div>✉️ ${hospitalEmail}</div>` : ''}
+                  </div>
+                </div>
               </div>
-              <div class="info-item">
-                <label>Code Patient</label>
-                <p>${consultation.patientCode || 'N/A'}</p>
-              </div>
-              <div class="info-item">
-                <label>Date</label>
-                <p>${consultation.date}</p>
-              </div>
-              <div class="info-item">
-                <label>Nombre d'examens</label>
-                <p>${consultation.results.length}</p>
+              <div class="header-right">
+                <div class="document-badge">
+                  <h2>� Résultats Laboratoire</h2>
+                  <div class="date">${formatDateFn(new Date(), 'dd/MM/yyyy HH:mm')}</div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Examen</th>
-                <th>Résultat</th>
-                <th>Unité</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${consultation.results.map(result => `
-                <tr>
-                  <td>${result.exam || ''}</td>
-                  <td>${result.isCritical ? `<span class="critical">${result.result || ''}</span>` : (result.result || '')}</td>
-                  <td>${result.unit || '-'}</td>
-                  <td><span class="badge ${result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? 'badge-valid' : 'badge-terminated'}">${result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? 'VALIDÉ' : 'TERMINÉ'}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="footer">
-            <p>Document généré automatiquement le ${formatDateFn(new Date(), 'dd/MM/yyyy à HH:mm')}</p>
-            <p>${hospitalName} - Service de Laboratoire</p>
+            
+            <div class="patient-section">
+              <h3>Informations Patient</h3>
+              <div class="patient-grid">
+                <div class="info-item">
+                  <label>Nom du Patient</label>
+                  <p>${consultation.patient}</p>
+                </div>
+                <div class="info-item">
+                  <label>Code Patient</label>
+                  <p>${consultation.patientCode || 'N/A'}</p>
+                </div>
+                <div class="info-item">
+                  <label>Date de Consultation</label>
+                  <p>${consultation.date}</p>
+                </div>
+                <div class="info-item">
+                  <label>Nombre d'Examens</label>
+                  <p>${consultation.results.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="results-section">
+              <h3>Résultats d'Analyses</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Examen</th>
+                    <th>Résultat</th>
+                    <th>Unité</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${consultation.results.map(result => `
+                    <tr>
+                      <td>${result.exam || ''}</td>
+                      <td>${result.isCritical ? `<span class="critical">${result.result || ''}</span>` : (result.result || '')}</td>
+                      <td>${result.unit || '-'}</td>
+                      <td><span class="badge ${result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? 'badge-valid' : 'badge-terminated'}">${result.status === 'RESULTS_AVAILABLE' || result.status === 'DELIVERED_TO_DOCTOR' ? '✓ VALIDÉ' : '○ TERMINÉ'}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="footer">
+              <p class="hospital-name">${hospitalName}</p>
+              <p>Service de Laboratoire</p>
+              <p>Document généré automatiquement le ${formatDateFn(new Date(), 'dd/MM/yyyy à HH:mm')}</p>
+            </div>
           </div>
         </body>
       </html>
     `;
     printWindow.document.write(printContent);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
+    setTimeout(() => printWindow.print(), 500);
   };
 
   const handleExportConsultation = (consultation) => {

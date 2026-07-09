@@ -62,6 +62,49 @@ public class Hospital {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    // ═══════════════════════════════════════════════════
+    // INSCRIPTION PUBLIQUE / WORKFLOW D'APPROBATION
+    // registrationStatus: APPROVED (défaut historique) | PENDING | REJECTED
+    // NULL est traité comme APPROVED pour la compatibilité des lignes existantes.
+    // ═══════════════════════════════════════════════════
+    @Column(name = "registration_status", length = 20)
+    @Builder.Default
+    private String registrationStatus = "APPROVED";
+
+    @Column(name = "requested_admin_first_name")
+    private String requestedAdminFirstName;
+
+    @Column(name = "requested_admin_last_name")
+    private String requestedAdminLastName;
+
+    @Column(name = "requested_admin_phone", length = 50)
+    private String requestedAdminPhone;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    // ═══════════════════════════════════════════════════
+    // ABONNEMENT
+    // subscriptionStatus: TRIAL | ACTIVE | PENDING_PAYMENT | GRACE | EXPIRED
+    // subscriptionType  : MONTHLY | ANNUAL
+    // NULL de subscriptionStatus traité comme ACTIVE (hôpitaux historiques).
+    // ═══════════════════════════════════════════════════
+    @Column(name = "subscription_status", length = 20)
+    private String subscriptionStatus;
+
+    @Column(name = "subscription_type", length = 20)
+    private String subscriptionType;
+
+    @Column(name = "subscription_start")
+    private java.time.LocalDate subscriptionStart;
+
+    @Column(name = "subscription_end")
+    private java.time.LocalDate subscriptionEnd;
+
+    /** Anti-spam : mémorise le dernier palier d'alerte déjà envoyé (ex: "J-5", "EXPIRED"). */
+    @Column(name = "last_subscription_alert", length = 20)
+    private String lastSubscriptionAlert;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

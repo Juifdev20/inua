@@ -15,7 +15,8 @@ import {
   Sparkles,
   Activity,
   LogIn,
-  UserPlus
+  UserPlus,
+  Building2
 } from 'lucide-react';
 import LogoInuaAfya from '../components/LogoInuaAfya';
 
@@ -130,6 +131,23 @@ const LandingPage = () => {
           Connexion
         </Link>
 
+        {/* Inscription établissement (hôpital) */}
+        <Link
+          to="/register-hospital"
+          className="
+            hidden sm:inline-flex items-center gap-1.5
+            px-3 sm:px-5 py-2
+            border-2 border-blue-600 text-blue-700 dark:text-blue-300
+            rounded-lg font-semibold
+            hover:bg-blue-50 dark:hover:bg-blue-900/30 transition
+            text-sm sm:text-base
+            whitespace-nowrap
+          "
+        >
+          <Building2 className="w-4 h-4" />
+          Inscrire mon hôpital
+        </Link>
+
         {/* Inscription - Redirection vers page professionnelle */}
         <Link
           to="/register"
@@ -242,13 +260,23 @@ const LandingPage = () => {
           <p className="text-xl text-blue-100 mb-8">
             Sécurité • Performance • Simplicité
           </p>
-          <Link
-            to="/register"
-            className="group inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:scale-105 transition shadow-lg"
-          >
-            Commencer maintenant
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/register-hospital"
+              className="group inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:scale-105 transition shadow-lg"
+            >
+              <Building2 className="w-5 h-5" />
+              Inscrire mon établissement
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-blue-700/30 border-2 border-white text-white rounded-xl font-semibold text-lg hover:bg-blue-700/50 transition"
+            >
+              <LogIn className="w-5 h-5" />
+              Se connecter
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -1,9 +1,11 @@
 package com.hospital.backend.config;
 
 import com.hospital.backend.entity.Gender;
+import com.hospital.backend.entity.Hospital;
 import com.hospital.backend.entity.Patient;
 import com.hospital.backend.entity.Role;
 import com.hospital.backend.entity.User;
+import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.repository.PatientRepository;
 import com.hospital.backend.repository.RoleRepository;
 import com.hospital.backend.repository.UserRepository;
@@ -33,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final HospitalConfigService hospitalConfigService;
+    private final HospitalRepository hospitalRepository;
 
     @Override
     @Transactional
@@ -50,7 +53,47 @@ public class DataInitializer implements CommandLineRunner {
         initializeFinanceUser();
         initializePatientUser();
 
+        // 🏥 Migration mono→multi : rattache tout compte non-superadmin orphelin à l'hôpital principal.
+        // Indispensable depuis le durcissement de l'isolation (JwtAuthenticationFilter / NO_TENANT) :
+        // un non-superadmin sans hôpital ne verrait plus aucune donnée.
+        backfillUsersHospital();
+
         log.info("✅ Initialisation terminée!");
+    }
+
+    private void backfillUsersHospital() {
+        try {
+            // Hôpital principal : le premier hôpital ACTIF (à défaut le premier existant),
+            // sinon on en crée un par défaut.
+            java.util.Comparator<Hospital> byId = (a, b) -> Long.compare(a.getId(), b.getId());
+            Hospital defaultHospital = hospitalRepository.findAll().stream()
+                    .filter(h -> Boolean.TRUE.equals(h.getIsActive()))
+                    .min(byId)
+                    .or(() -> hospitalRepository.findAll().stream().min(byId))
+                    .orElseGet(() -> hospitalRepository.save(Hospital.builder()
+                            .nom("Hôpital Principal")
+                            .code("PRINCIPAL")
+                            .isActive(true)
+                            .registrationStatus("APPROVED")
+                            .subscriptionPlan("STANDARD")
+                            .maxUsers(100)
+                            .build()));
+
+            List<User> orphans = userRepository.findAll().stream()
+                    .filter(u -> u.getHospital() == null)
+                    .filter(u -> u.getRole() == null
+                            || !u.getRole().getNom().replace("_", "").toUpperCase().contains("SUPERADMIN"))
+                    .toList();
+
+            if (!orphans.isEmpty()) {
+                orphans.forEach(u -> u.setHospital(defaultHospital));
+                userRepository.saveAll(orphans);
+                log.info("🏥 {} utilisateur(s) sans hôpital rattaché(s) à '{}' (id {})",
+                        orphans.size(), defaultHospital.getNom(), defaultHospital.getId());
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Backfill hôpital des utilisateurs ignoré: {}", e.getMessage());
+        }
     }
     
     private void initializeHospitalConfig() {

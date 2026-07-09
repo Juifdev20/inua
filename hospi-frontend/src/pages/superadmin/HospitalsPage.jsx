@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Building2, Plus, Search, ToggleLeft, ToggleRight,
   Edit, Trash2, Users, UserCheck, CheckCircle, XCircle,
-  RefreshCw, X, Save, UserPlus
+  RefreshCw, X, Save, UserPlus, Clock, Mail, Check, Ban, Phone
 } from 'lucide-react';
 import superAdminApi from '../../services/superAdminApi';
 
@@ -30,6 +30,9 @@ export default function HospitalsPage() {
   const [adminMsg, setAdminMsg] = useState('');
   const [toggleTarget, setToggleTarget] = useState(null);
   const [toggleLoading, setToggleLoading] = useState(false);
+  // Demandes d'inscription en attente
+  const [pending, setPending] = useState([]);
+  const [pendingBusyId, setPendingBusyId] = useState(null);
 
   const fetchHospitals = async () => {
     setLoading(true);
@@ -43,7 +46,53 @@ export default function HospitalsPage() {
     }
   };
 
-  useEffect(() => { fetchHospitals(); }, []);
+  const fetchPending = async () => {
+    try {
+      const data = await superAdminApi.getPendingHospitals();
+      setPending(Array.isArray(data) ? data : []);
+    } catch (e) {
+      // silencieux : la section reste masquée si l'appel échoue
+      setPending([]);
+    }
+  };
+
+  useEffect(() => { fetchHospitals(); fetchPending(); }, []);
+
+  const handleApprove = async (h) => {
+    if (!window.confirm(`Approuver « ${h.nom} » ? Le compte admin sera créé et les identifiants envoyés à ${h.adminEmail}.`)) return;
+    setPendingBusyId(h.id);
+    try {
+      const res = await superAdminApi.approveHospital(h.id);
+      // Téléchargement du PDF d'identifiants si disponible
+      if (res?.pdfBase64) {
+        const link = document.createElement('a');
+        link.href = 'data:application/pdf;base64,' + res.pdfBase64;
+        link.download = res.filename || 'credentials.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      await Promise.all([fetchHospitals(), fetchPending()]);
+    } catch (e) {
+      alert('Erreur: ' + (e?.response?.data?.message || e?.response?.data?.error || e.message));
+    } finally {
+      setPendingBusyId(null);
+    }
+  };
+
+  const handleReject = async (h) => {
+    const reason = window.prompt(`Motif du rejet de « ${h.nom} » (optionnel) :`, '');
+    if (reason === null) return; // annulé
+    setPendingBusyId(h.id);
+    try {
+      await superAdminApi.rejectHospital(h.id, reason || '');
+      await Promise.all([fetchHospitals(), fetchPending()]);
+    } catch (e) {
+      alert('Erreur: ' + (e?.response?.data?.message || e.message));
+    } finally {
+      setPendingBusyId(null);
+    }
+  };
 
   const openCreate = () => { setEditTarget(null); setForm(emptyForm); setError(''); setShowModal(true); };
   const openEdit = (h) => {
@@ -150,7 +199,7 @@ export default function HospitalsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={fetchHospitals} className="p-2 rounded-lg border border-border hover:bg-muted transition-colors" title="Rafraîchir">
+          <button onClick={() => { fetchHospitals(); fetchPending(); }} className="p-2 rounded-lg border border-border hover:bg-muted transition-colors" title="Rafraîchir">
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
           <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
@@ -166,6 +215,53 @@ export default function HospitalsPage() {
         <StatCard label="Actifs" value={hospitals.filter(h => h.isActive).length} color="text-emerald-400" icon={CheckCircle} />
         <StatCard label="Inactifs" value={hospitals.filter(h => !h.isActive).length} color="text-rose-400" icon={XCircle} />
       </div>
+
+      {/* Demandes d'inscription en attente */}
+      {pending.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-500/20 bg-amber-500/10">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <h2 className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              Demandes d'inscription en attente ({pending.length})
+            </h2>
+          </div>
+          <div className="divide-y divide-border">
+            {pending.map(h => (
+              <div key={h.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-foreground">{h.nom}</span>
+                    <span className="font-mono text-xs px-2 py-0.5 bg-muted rounded">{h.code}</span>
+                    {h.subscriptionPlan && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planColor(h.subscriptionPlan)}`}>{h.subscriptionPlan}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      {[h.requestedAdminFirstName, h.requestedAdminLastName].filter(Boolean).join(' ') || '—'}
+                    </span>
+                    {h.adminEmail && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{h.adminEmail}</span>}
+                    {h.requestedAdminPhone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{h.requestedAdminPhone}</span>}
+                    {h.city && <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{h.city}{h.country ? `, ${h.country}` : ''}</span>}
+                  </div>
+                  {h.notes && <p className="mt-1 text-xs text-muted-foreground/80 italic line-clamp-2">{h.notes}</p>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => handleReject(h)} disabled={pendingBusyId === h.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-500/40 text-rose-500 text-xs font-medium hover:bg-rose-500/10 disabled:opacity-50 transition-colors">
+                    <Ban className="w-3.5 h-3.5" /> Rejeter
+                  </button>
+                  <button onClick={() => handleApprove(h)} disabled={pendingBusyId === h.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 disabled:opacity-50 transition-colors">
+                    <Check className="w-3.5 h-3.5" /> {pendingBusyId === h.id ? 'Traitement...' : 'Approuver'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">

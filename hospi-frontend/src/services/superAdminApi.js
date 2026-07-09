@@ -177,6 +177,54 @@ const superAdminApi = {
   },
 
   // ═══════════════════════════════════════
+  // DEMANDES D'INSCRIPTION D'HÔPITAUX (workflow d'approbation)
+  // ═══════════════════════════════════════
+
+  getPendingHospitals: async () => {
+    const response = await api.get('/hospitals/pending');
+    return response.data?.data || response.data;
+  },
+
+  approveHospital: async (hospitalId) => {
+    const response = await api.post(`/hospitals/${hospitalId}/approve`);
+    return response.data?.data || response.data;
+  },
+
+  rejectHospital: async (hospitalId, reason = '') => {
+    const response = await api.post(`/hospitals/${hospitalId}/reject`, { reason });
+    return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
+  // ABONNEMENTS — TARIFS & PAIEMENTS
+  // ═══════════════════════════════════════
+
+  getSubscriptionSettings: async () => {
+    const response = await api.get('/subscription-settings');
+    return response.data?.data || response.data;
+  },
+
+  updateSubscriptionSettings: async (data) => {
+    const response = await api.put('/subscription-settings', data);
+    return response.data?.data || response.data;
+  },
+
+  getPendingPayments: async () => {
+    const response = await api.get('/payments/pending');
+    return response.data?.data || response.data;
+  },
+
+  confirmPayment: async (paymentId) => {
+    const response = await api.post(`/payments/${paymentId}/confirm`);
+    return response.data?.data || response.data;
+  },
+
+  rejectPayment: async (paymentId, reason = '') => {
+    const response = await api.post(`/payments/${paymentId}/reject`, { reason });
+    return response.data?.data || response.data;
+  },
+
+  // ═══════════════════════════════════════
   // PERFORMANCE DASHBOARD
   // ═══════════════════════════════════════
 

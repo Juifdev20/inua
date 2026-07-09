@@ -59,7 +59,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
+        // 🏥 MULTI-TENANT : un admin d'hôpital ne voit que les utilisateurs de son établissement.
+        // hId == null => appelant sans hôpital (superadmin) => accès global conservé.
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<User> users = (hId != null)
+                ? userRepository.findByHospitalId(hId)
+                : userRepository.findAll();
+        return users.stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
     }
 

@@ -234,10 +234,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long hospitalId = jwtTokenProvider.getHospitalIdFromToken(token);
             if (hospitalId != null) {
                 HospitalTenantContext.setHospitalId(hospitalId);
+            } else if (!isSuperAdminRole(role)) {
+                // 🏥 SÉCURITÉ MULTI-TENANT : un utilisateur non-superadmin sans hôpital ne doit
+                // JAMAIS bénéficier de l'accès global. On pose une sentinelle qui ne matche
+                // aucun hôpital réel → les listes filtrées renvoient vide au lieu de tout exposer.
+                HospitalTenantContext.setHospitalId(HospitalTenantContext.NO_TENANT);
+                log.warn("🚫 [TENANT] Utilisateur {} (rôle {}) sans hôpital — accès restreint (NO_TENANT)", username, role);
             }
+            // Un vrai SUPERADMIN sans hôpital conserve un contexte null => accès global.
             filterChain.doFilter(request, response);
         } finally {
             HospitalTenantContext.clear();
         }
+    }
+
+    /** Détecte un rôle SUPERADMIN de manière robuste (gère ROLE_SUPERADMIN / SUPER_ADMIN). */
+    private boolean isSuperAdminRole(String role) {
+        if (role == null) return false;
+        return role.toUpperCase().replace("_", "").contains("SUPERADMIN");
     }
 }

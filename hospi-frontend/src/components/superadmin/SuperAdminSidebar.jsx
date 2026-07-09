@@ -13,7 +13,8 @@ import {
   Building2,
   BarChart3,
   Mail,
-  HardDrive
+  HardDrive,
+  CreditCard
 } from 'lucide-react';
 import LogoInuaAfya from '../LogoInuaAfya';
 import { useAdmin } from '../../context/AdminContext';
@@ -41,6 +42,7 @@ const SuperAdminSidebar = () => {
     { path: '/superadmin/devs', label: 'Développeurs', icon: Crown },
     { path: '/superadmin/logs', label: 'Logs', icon: Eye },
     { path: '/superadmin/hospitals', label: 'Hopitaux', icon: Building2 },
+    { path: '/superadmin/subscriptions', label: 'Abonnements', icon: CreditCard },
     { path: '/superadmin/performance', label: 'Performance', icon: BarChart3 },
     { path: '/superadmin/emails', label: 'Emails', icon: Mail },
     { path: '/superadmin/backup', label: 'Backup', icon: HardDrive },

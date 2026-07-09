@@ -27,6 +27,13 @@ public class HospitalDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Workflow d'inscription publique
+    private String registrationStatus;
+    private String requestedAdminFirstName;
+    private String requestedAdminLastName;
+    private String requestedAdminPhone;
+    private String rejectionReason;
+
     private long totalUsers;
     private long totalPatients;
 }
