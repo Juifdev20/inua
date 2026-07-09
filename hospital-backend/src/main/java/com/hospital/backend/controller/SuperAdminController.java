@@ -580,6 +580,21 @@ public class SuperAdminController {
         }
     }
 
+    @PostMapping("/hospitals/{id}/resend-credentials")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Régénérer et renvoyer les identifiants de l'admin (email + PDF de secours)")
+    public ResponseEntity<?> resendCredentials(@PathVariable Long id) {
+        try {
+            com.hospital.backend.entity.Hospital hospital = hospitalService.getEntityById(id);
+            Map<String, Object> res = adminProvisioningService.resendCredentials(hospital);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Identifiants régénérés et renvoyés à " + res.get("email"), res));
+        } catch (Exception e) {
+            log.error("[SuperAdmin] Erreur renvoi identifiants hôpital {}: {}", id, e.getMessage());
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     // ═══════════════════════════════════════════════════
     // 11. WORKFLOW D'INSCRIPTION DES HÔPITAUX (demandes publiques)
     // ═══════════════════════════════════════════════════

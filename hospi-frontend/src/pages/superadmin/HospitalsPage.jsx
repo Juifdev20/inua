@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Building2, Plus, Search, ToggleLeft, ToggleRight,
   Edit, Trash2, Users, UserCheck, CheckCircle, XCircle,
-  RefreshCw, X, Save, UserPlus, Clock, Mail, Check, Ban, Phone
+  RefreshCw, X, Save, UserPlus, Clock, Mail, Check, Ban, Phone, KeyRound
 } from 'lucide-react';
 import superAdminApi from '../../services/superAdminApi';
 
@@ -164,6 +164,30 @@ export default function HospitalsPage() {
     } catch (e) {
       setAdminMsg('Erreur: ' + (e?.response?.data?.message || e.message));
     } finally { setAdminLoading(false); }
+  };
+
+  const [resendBusyId, setResendBusyId] = useState(null);
+
+  const handleResendCredentials = async (h) => {
+    if (!window.confirm(`Régénérer et renvoyer les identifiants de l'admin de « ${h.nom} » ?\nUn nouveau mot de passe temporaire sera généré, l'email renvoyé, et le PDF téléchargé.`)) return;
+    setResendBusyId(h.id);
+    try {
+      const res = await superAdminApi.resendCredentials(h.id);
+      // Canal 2 : téléchargement immédiat du PDF (fiable même si l'email échoue)
+      if (res?.pdfBase64) {
+        const link = document.createElement('a');
+        link.href = 'data:application/pdf;base64,' + res.pdfBase64;
+        link.download = res.filename || 'credentials.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      alert(`Identifiants régénérés pour ${res?.email || 'l\'admin'}.\nEmail renvoyé + PDF téléchargé.`);
+    } catch (e) {
+      alert('Erreur: ' + (e?.response?.data?.message || e?.response?.data?.error || e.message));
+    } finally {
+      setResendBusyId(null);
+    }
   };
 
   const handleDelete = async (h) => {
@@ -332,6 +356,9 @@ export default function HospitalsPage() {
                     <div className="flex justify-end gap-1">
                       <button onClick={() => openProvisionAdmin(h)} className="p-1.5 rounded hover:bg-primary/10 transition-colors" title="Creer un admin">
                         <UserPlus className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                      </button>
+                      <button onClick={() => handleResendCredentials(h)} disabled={resendBusyId === h.id} className="p-1.5 rounded hover:bg-emerald-500/10 transition-colors disabled:opacity-50" title="Renvoyer les identifiants (email + PDF)">
+                        <KeyRound className="w-4 h-4 text-muted-foreground hover:text-emerald-500" />
                       </button>
                       <button onClick={() => openEdit(h)} className="p-1.5 rounded hover:bg-muted transition-colors" title="Modifier">
                         <Edit className="w-4 h-4 text-muted-foreground hover:text-primary" />

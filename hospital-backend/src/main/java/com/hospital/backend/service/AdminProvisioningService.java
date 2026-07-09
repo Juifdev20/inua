@@ -80,4 +80,41 @@ public class AdminProvisioningService {
         return Map.of("id", saved.getId(), "email", email, "hospital", hospital.getNom(),
                 "pdfBase64", pdfBase64, "filename", "credentials_" + saved.getId() + ".pdf");
     }
+
+    /**
+     * Renvoie les identifiants de l'admin d'un hôpital : régénère un mot de passe
+     * temporaire, renvoie l'email ET retourne le PDF (canal de secours fiable si
+     * l'email échoue). Sert de filet lorsqu'un envoi automatique n'arrive pas.
+     */
+    @Transactional
+    public Map<String, Object> resendCredentials(Hospital hospital) {
+        User admin = userRepository.findByHospitalId(hospital.getId()).stream()
+                .filter(u -> u.getRole() != null && u.getRole().getNom() != null
+                        && u.getRole().getNom().toUpperCase().contains("ADMIN"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException(
+                        "Aucun compte administrateur pour cet hôpital. Créez-en un d'abord."));
+
+        String tempPassword = java.util.UUID.randomUUID().toString().substring(0, 10);
+        admin.setPassword(passwordEncoder.encode(tempPassword));
+        admin.setMustChangePassword(true);
+        admin.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(admin);
+
+        byte[] pdfBytes = adminCredentialsPdfService.generate(admin, tempPassword, hospital);
+        String pdfBase64 = adminCredentialsPdfService.toBase64(pdfBytes);
+
+        // Canal 1 : email (best-effort, asynchrone)
+        emailService.sendCredentialsEmail(admin.getEmail(), admin.getFirstName(),
+                admin.getLastName(), admin.getUsername(), tempPassword, "ADMIN");
+
+        auditLogService.logAction("CREDENTIALS_RESENT", "SUPERADMIN",
+                "HOSPITAL-" + hospital.getId(), "Identifiants renvoyés à " + admin.getEmail(), "success", "127.0.0.1");
+        log.info("🔁 [PROVISION] Identifiants régénérés/renvoyés pour {} ({})", admin.getEmail(), hospital.getNom());
+
+        // Canal 2 : PDF retourné pour téléchargement immédiat
+        return Map.of("id", admin.getId(), "email", admin.getEmail(), "username", admin.getUsername(),
+                "hospital", hospital.getNom(), "pdfBase64", pdfBase64,
+                "filename", "credentials_" + admin.getId() + ".pdf");
+    }
 }

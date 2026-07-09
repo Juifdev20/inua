@@ -176,6 +176,11 @@ const superAdminApi = {
     return response.data?.data || response.data;
   },
 
+  resendCredentials: async (hospitalId) => {
+    const response = await api.post(`/hospitals/${hospitalId}/resend-credentials`);
+    return response.data?.data || response.data;
+  },
+
   // ═══════════════════════════════════════
   // DEMANDES D'INSCRIPTION D'HÔPITAUX (workflow d'approbation)
   // ═══════════════════════════════════════

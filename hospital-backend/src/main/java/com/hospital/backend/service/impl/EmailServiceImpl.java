@@ -670,7 +670,6 @@ public class EmailServiceImpl implements EmailService {
                     <div class="header">
                         <div class="header-icon">🏥</div>
                         <h1>Inua Afya</h1>
-                        <h1>Inua Afia</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Votre santé, notre priorité</p>
                     </div>
                     
@@ -679,7 +678,6 @@ public class EmailServiceImpl implements EmailService {
                         
                         <div class="message">
                             Bienvenue sur <strong>Inua Afya</strong> ! Votre compte %s a été créé avec succès.
-                            Bienvenue sur <strong>Inua Afia</strong> ! Votre compte %s a été créé avec succès.
                             Vous trouverez ci-dessous vos identifiants de connexion.
                         </div>
                         
@@ -718,9 +716,6 @@ public class EmailServiceImpl implements EmailService {
                         <p><strong>Inua Afya</strong> - Hôpital Moderne</p>
                         <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
                         <p>© 2026 Inua Afya. Tous droits réservés.</p>
-                        <p><strong>Inua Afia</strong> - Hôpital Moderne</p>
-                        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-                        <p>© 2026 Inua Afia. Tous droits réservés.</p>
                     </div>
                 </div>
             </body>

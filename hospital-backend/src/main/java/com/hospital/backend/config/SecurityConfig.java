@@ -75,6 +75,9 @@ public class SecurityConfig {
                         .requestMatchers("/ws-hospital/**", "/ws-notifications/**").permitAll()
                         .requestMatchers("/api/ws-hospital/**", "/api/ws-notifications/**").permitAll()
                         .requestMatchers("/health").permitAll()
+                        // ★ /error doit être public : sinon toute erreur (403/404/500) est re-bloquée
+                        //   lors du forward vers /error → "Exception Processing ErrorPage" en cascade.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/hospital-config/logo-status").permitAll()
 
                         // PRIORITÉ ABSOLUE : /me pour patient connecté (AVANT toutes autres règles patients)
