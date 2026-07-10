@@ -98,6 +98,20 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
             "LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<Patient> searchActivePatientsList(@Param("search") String search);
 
+    // ★ PERF MULTI-TENANT : versions filtrées par hôpital DANS la requête (index patients.hospital_id)
+    // Évitent de charger toute la table patients en mémoire (réception rapide).
+    @Query("SELECT p FROM Patient p JOIN p.user u JOIN u.role r WHERE p.isActive = true AND r.nom = 'ROLE_PATIENT' AND p.hospital.id = :hospitalId")
+    Page<Patient> findActiveByHospital(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT p FROM Patient p JOIN p.user u JOIN u.role r WHERE r.nom = 'ROLE_PATIENT' AND p.isActive = true AND p.hospital.id = :hospitalId AND (" +
+            "LOWER(p.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.firstName, ' ', p.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(CONCAT(p.lastName, ' ', p.firstName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.phoneNumber) LIKE LOWER(CONCAT('%', :search, '%')))")
+    List<Patient> searchActiveByHospital(@Param("search") String search, @Param("hospitalId") Long hospitalId, Pageable pageable);
+
     /**
      * ✅ Statistiques : Nombre total de patients actifs
      */

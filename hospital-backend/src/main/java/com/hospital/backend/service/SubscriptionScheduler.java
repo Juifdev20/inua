@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class SubscriptionScheduler {
 
     private final SubscriptionService subscriptionService;
+    private final SchedulerLockService lockService;
 
     /** Tous les jours à 08:00. Également au démarrage (après 1 min) pour rattraper l'état. */
     @Scheduled(cron = "0 0 8 * * *")
@@ -28,6 +29,8 @@ public class SubscriptionScheduler {
     }
 
     private void run(String trigger) {
+        // 🔒 Multi-instance : une seule instance exécute la maintenance (évite alertes/emails en double)
+        if (!lockService.tryAcquire("subscription-maintenance", 3600)) return;
         try {
             log.info("🗓️ [SUBSCRIPTION] Maintenance des abonnements ({})", trigger);
             subscriptionService.runSubscriptionMaintenance();

@@ -32,8 +32,9 @@ RUN mvn clean package -DskipTests -B -Dproject.build.sourceEncoding=UTF-8 -Dproj
 # ============================================
 FROM eclipse-temurin:21-jre-alpine
 
-# Ajustement de la mémoire pour les conteneurs (75% de la RAM disponible sur Render)
-ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=128m -XX:+ExitOnOutOfMemoryError"
+# Mémoire conteneur (Render 2 Go). Metaspace relevé à 384m (128m était trop bas pour
+# Spring Boot → OutOfMemoryError: Metaspace → exit 3 → redémarrages fréquents).
+ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:MaxMetaspaceSize=384m -XX:+HeapDumpOnOutOfMemoryError -XX:+ExitOnOutOfMemoryError"
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Installer curl pour healthcheck (optionnel mais utile)
@@ -57,9 +58,11 @@ USER hospital
 # Exposer le port 10000 (Render utilise ce port par défaut)
 EXPOSE 10000
 
-# Healthcheck pour Render
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:10000/actuator/health || exit 1
+# Healthcheck : /health (léger, public, 200, ne dépend PAS de la DB).
+# /actuator/health renvoyait 302 (redirection) et dépend de la DB → faux négatifs
+# quand Supabase est brièvement injoignable → redémarrages inutiles.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
+  CMD curl -f http://localhost:10000/health || exit 1
 
 # Commande de démarrage - Ajout de $JAVA_OPTS pour une flexibilité totale depuis Render
 ENV PORT=10000

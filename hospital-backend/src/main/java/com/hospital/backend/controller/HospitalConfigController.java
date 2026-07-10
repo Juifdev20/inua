@@ -118,12 +118,23 @@ public class HospitalConfigController {
                     ApiResponse.<String>error("Format non supporté: '" + originalName + "'. Utilisez PNG ou JPEG (pas WEBP, AVIF, SVG)."));
             }
 
-            String ext = originalName.endsWith(".png") ? ".png" : ".jpg";
-            String fileName = "hospital_logo_" + System.currentTimeMillis() + ext;
-            Path dir = Paths.get("uploads/logo/");
-            Files.createDirectories(dir);
-            Files.write(dir.resolve(fileName), logo.getBytes());
-            String logoUrl = "/uploads/logo/" + fileName;
+            // ⚠️ Limite de taille : le logo est stocké en base (data-URI) → on évite les gros fichiers.
+            long maxBytes = 1_500_000; // ~1,5 Mo
+            if (logo.getSize() > maxBytes) {
+                return ResponseEntity.badRequest().body(ApiResponse.<String>error(
+                        "Logo trop volumineux (max 1,5 Mo). Compressez l'image ou réduisez sa résolution."));
+            }
+
+            // 🖼️ MULTI-INSTANCE : on stocke le logo EN BASE (base64 data-URI) et non sur le disque
+            // local (éphémère sur Render, non partagé entre instances). Fonctionne partout,
+            // survit aux redémarrages, aucun service externe requis.
+            String mime = originalName.endsWith(".png") ? "image/png"
+                    : (originalName.endsWith(".gif") ? "image/gif" : "image/jpeg");
+            if (contentType.contains("png")) mime = "image/png";
+            else if (contentType.contains("gif")) mime = "image/gif";
+            else if (contentType.contains("jpeg")) mime = "image/jpeg";
+            String logoUrl = "data:" + mime + ";base64,"
+                    + java.util.Base64.getEncoder().encodeToString(logo.getBytes());
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             Long userId = getUserIdFromAuthentication(auth);
@@ -131,7 +142,7 @@ public class HospitalConfigController {
             config.setHospitalLogoUrl(logoUrl);
             configService.saveOrUpdate(config, userId);
 
-            log.info("✅ Logo hôpital sauvegardé: {}", logoUrl);
+            log.info("✅ Logo hôpital sauvegardé en base ({} octets, {})", logo.getSize(), mime);
             return ResponseEntity.ok(ApiResponse.success("Logo mis à jour", logoUrl));
         } catch (IOException e) {
             log.error("❌ Erreur upload logo: {}", e.getMessage());

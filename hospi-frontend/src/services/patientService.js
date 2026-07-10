@@ -104,6 +104,17 @@ export const patientService = {
     }
   },
 
+  // 4c. ⚡ Liste simplifiée ultra-rapide (réception) : ID + nom, filtrée hôpital, sans N+1
+  getPatientsSimple: async () => {
+    try {
+      const response = await api.get('/v1/patients/simple-list');
+      const data = response.data?.data || response.data;
+      return data || [];
+    } catch (error) {
+      return [];
+    }
+  },
+
   // 5. Récupération par ID
   getPatientById: async (id) => {
     try {

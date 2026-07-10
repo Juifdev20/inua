@@ -198,9 +198,10 @@ export const Admissions = () => {
 
   const fetchPatients = async (searchTerm = '') => {
     try {
+      // ⚡ PERF : endpoints légers (ID + nom, filtrés hôpital, sans N+1) → réception rapide
       const response = searchTerm.trim() !== ''
-        ? await patientService.searchPatients(searchTerm)
-        : await patientService.getPatients(0, 20);
+        ? await patientService.searchPatientsSimple(searchTerm)
+        : await patientService.getPatientsSimple();
       const rawData = response?.content || response?.data || response || [];
       setPatients(
         rawData.map((p) => ({

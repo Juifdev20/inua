@@ -39,6 +39,7 @@ public class InvoiceExpirationService {
     private final MedicationRepository medicationRepository;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final SchedulerLockService lockService;
 
     /**
      * =========================================================================
@@ -54,6 +55,8 @@ public class InvoiceExpirationService {
     @Scheduled(cron = "0 */15 * * * *")
     @Transactional
     public void expirePendingPharmacyOrders() {
+        // 🔒 Multi-instance : une seule instance exécute (évite double annulation/notif)
+        if (!lockService.tryAcquire("invoice-expiration", 600)) return;
         log.info("🕐 [EXPIRATION] Vérification des commandes pharmacie expirées...");
         
         LocalDateTime expirationThreshold = LocalDateTime.now().minusHours(4);

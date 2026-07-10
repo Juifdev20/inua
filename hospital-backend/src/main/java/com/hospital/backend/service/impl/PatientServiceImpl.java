@@ -45,38 +45,29 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public List<PatientSimpleDTO> getAllSimpleList() {
-        log.info("Récupération de la liste simplifiée des patients pour la réception");
         Long hId = HospitalTenantContext.getHospitalId();
-        return patientRepository.findAllActivePatients().stream()
-                .filter(p -> hId == null || p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
-                .map(patientMapper::toSimpleDTO)
-                .collect(Collectors.toList());
+        // ⚡ PERF : requête filtrée par hôpital + limitée (200 récents) — plus de chargement
+        // de toute la table en mémoire. Pour aller plus loin, la réception utilise la recherche.
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 200,
+                org.springframework.data.domain.Sort.by("createdAt").descending());
+        List<Patient> patients = (hId != null)
+                ? patientRepository.findActiveByHospital(hId, pageable).getContent()
+                : patientRepository.findByIsActiveTrue(pageable).getContent();
+        return patients.stream().map(patientMapper::toSimpleDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PatientSimpleDTO> searchSimple(String query) {
-        log.info("Recherche simplifiée pour le triage : {}", query);
-        String q = query.trim().toLowerCase();
-        // Recherche en mémoire sur tous les patients actifs (évite le filtre ROLE_PATIENT du repo)
+        String q = query != null ? query.trim() : "";
+        if (q.isEmpty()) return getAllSimpleList();
         Long hId = HospitalTenantContext.getHospitalId();
-        return patientRepository.findAll().stream()
-                .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
-                .filter(p -> hId == null || p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
-                .filter(p -> {
-                    String fn = p.getFirstName() != null ? p.getFirstName().toLowerCase() : "";
-                    String ln = p.getLastName() != null ? p.getLastName().toLowerCase() : "";
-                    String full1 = fn + " " + ln;
-                    String full2 = ln + " " + fn;
-                    String full3 = fn + "-" + ln;
-                    String full4 = ln + "-" + fn;
-                    String code = p.getPatientCode() != null ? p.getPatientCode().toLowerCase() : "";
-                    return fn.contains(q) || ln.contains(q) || full1.contains(q) || full2.contains(q)
-                            || full3.contains(q) || full4.contains(q) || code.contains(q);
-                })
-                .map(patientMapper::toSimpleDTO)
-                .limit(20)
-                .collect(Collectors.toList());
+        // ⚡ PERF : recherche filtrée par hôpital DANS la requête SQL (index) + limitée à 20
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        List<Patient> patients = (hId != null)
+                ? patientRepository.searchActiveByHospital(q, hId, pageable)
+                : patientRepository.searchActivePatientsList(q);
+        return patients.stream().limit(20).map(patientMapper::toSimpleDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -203,14 +194,11 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PatientDTO> getAll(Pageable pageable) {
+        // ⚡ PERF + correction : filtrage hôpital DANS la requête (index) + pagination correcte
         Long hId = HospitalTenantContext.getHospitalId();
-        if (hId != null) {
-            List<Patient> filtered = patientRepository.findByIsActiveTrue(pageable).getContent().stream()
-                    .filter(p -> p.getHospital() == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
-                    .collect(Collectors.toList());
-            return toPageResponse(new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size()));
-        }
-        return toPageResponse(patientRepository.findByIsActiveTrue(pageable));
+        return toPageResponse(hId != null
+                ? patientRepository.findActiveByHospital(hId, pageable)
+                : patientRepository.findByIsActiveTrue(pageable));
     }
 
     @Override

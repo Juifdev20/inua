@@ -41,6 +41,7 @@ public class MedicationReminderService {
 
     private final PrescriptionRepository prescriptionRepository;
     private final NotificationService notificationService;
+    private final SchedulerLockService lockService;
 
     // Set pour éviter les doublons de notifications (patientId_medicationId_heure_date)
     private final Set<String> sentNotifications = ConcurrentHashMap.newKeySet();
@@ -62,6 +63,9 @@ public class MedicationReminderService {
     @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void checkMedicationReminders() {
+        // 🔒 Multi-instance : une seule instance envoie les rappels (le dédoublonnage
+        // en mémoire ne fonctionne pas entre instances → sinon rappels en double)
+        if (!lockService.tryAcquire("medication-reminders", 240)) return;
         LocalDateTime now = LocalDateTime.now();
         LocalTime currentTime = now.toLocalTime();
         LocalDate today = now.toLocalDate();
