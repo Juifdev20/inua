@@ -710,8 +710,11 @@ public class InvoiceServiceImpl implements InvoiceService {
     public List<InvoiceDTO> getPendingInvoicesByDepartment(DepartmentSource source) {
         log.info("📋 File d'attente département: {}", source);
 
-        List<Invoice> invoices = invoiceRepository
-                .findByStatusAndDepartmentSource(InvoiceStatus.EN_ATTENTE, source);
+        // 🏥 MULTI-TENANT : factures en attente de l'hôpital courant uniquement (caisse)
+        Long hId = com.hospital.backend.security.HospitalTenantContext.getHospitalId();
+        List<Invoice> invoices = (hId != null)
+                ? invoiceRepository.findByStatusAndDepartmentSourceAndHospitalId(InvoiceStatus.EN_ATTENTE, source, hId)
+                : invoiceRepository.findByStatusAndDepartmentSource(InvoiceStatus.EN_ATTENTE, source);
 
         log.info("✅ {} facture(s) en attente pour {}", invoices.size(), source);
 

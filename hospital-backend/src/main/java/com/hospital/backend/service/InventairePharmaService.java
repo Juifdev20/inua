@@ -268,6 +268,13 @@ public class InventairePharmaService {
         if (medicaments.isEmpty()) {
             medicaments = medicationRepository.findByIsActiveTrue();
         }
+        // 🏥 MULTI-TENANT : ne compter que les médicaments de l'hôpital courant
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null) {
+            medicaments = medicaments.stream()
+                    .filter(m -> m.getHospital() != null && m.getHospital().getId().equals(hId))
+                    .collect(java.util.stream.Collectors.toList());
+        }
         return medicaments;
     }
 

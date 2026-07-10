@@ -754,8 +754,11 @@ public class FinanceController {
             
             int safeSize = Math.min(size, 100);
             Pageable pageable = PageRequest.of(page, safeSize);
-            var orders = pharmacyOrderRepository.findByStatus(
-                PharmacyOrderStatus.EN_ATTENTE_PAIEMENT, pageable);
+            // 🏥 MULTI-TENANT : commandes en attente de l'hôpital courant uniquement
+            Long hId = HospitalTenantContext.getHospitalId();
+            var orders = (hId != null)
+                ? pharmacyOrderRepository.findByStatusAndHospitalId(PharmacyOrderStatus.EN_ATTENTE_PAIEMENT, hId, pageable)
+                : pharmacyOrderRepository.findByStatus(PharmacyOrderStatus.EN_ATTENTE_PAIEMENT, pageable);
             
             List<Map<String, Object>> result = orders.getContent().stream()
                 .map(order -> {

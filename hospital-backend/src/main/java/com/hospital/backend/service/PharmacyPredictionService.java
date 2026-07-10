@@ -50,7 +50,11 @@ public class PharmacyPredictionService {
     public List<PharmacyPredictionDTO> calculatePredictions(int monthsToCover) {
         log.info("Calcul des prédictions de réapprovisionnement pour {} mois de couverture", monthsToCover);
         
-        List<Medication> medications = medicationRepository.findByIsActiveTrue();
+        // 🏥 MULTI-TENANT : ne prédire que sur les médicaments de l'hôpital courant
+        Long hId = com.hospital.backend.security.HospitalTenantContext.getHospitalId();
+        List<Medication> medications = (hId != null)
+            ? medicationRepository.findByHospitalIdAndIsActiveTrue(hId)
+            : medicationRepository.findByIsActiveTrue();
         
         LocalDateTime analysisStartDate = LocalDateTime.now().minusMonths(DEFAULT_ANALYSIS_MONTHS);
         

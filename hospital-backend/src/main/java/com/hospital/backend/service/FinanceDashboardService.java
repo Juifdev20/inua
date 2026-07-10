@@ -151,7 +151,7 @@ public class FinanceDashboardService {
         // 8. TRANSACTIONS RÉCENTES
         // ═══════════════════════════════════════════════════════════════
 
-        dto.setRecentTransactions(buildRecentTransactions());
+        dto.setRecentTransactions(buildRecentTransactions(hId));
 
         log.info("✅ [DASHBOARD] Statistiques générées avec succès");
         log.info("   📈 Revenus journaliers: {} CDF | {} USD", dto.getDailyRevenue().getCdf(), dto.getDailyRevenue().getUsd());
@@ -270,13 +270,14 @@ public class FinanceDashboardService {
     /**
      * Construit la liste des transactions récentes (revenus et dépenses)
      */
-    private List<FinanceDashboardDTO.RecentTransaction> buildRecentTransactions() {
+    private List<FinanceDashboardDTO.RecentTransaction> buildRecentTransactions(Long hId) {
         List<FinanceDashboardDTO.RecentTransaction> transactions = new ArrayList<>();
 
-        // Récupérer les 5 revenus les plus récents
-        List<Revenue> recentRevenues = revenueRepository.findRecentRevenues(
-            org.springframework.data.domain.PageRequest.of(0, 5)
-        );
+        // 🏥 MULTI-TENANT : 5 revenus récents de l'hôpital courant uniquement
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 5);
+        List<Revenue> recentRevenues = (hId != null)
+            ? revenueRepository.findRecentRevenuesByHospital(hId, pageable)
+            : revenueRepository.findRecentRevenues(pageable);
 
         for (Revenue r : recentRevenues) {
             Long invoiceId = r.getReferenceInvoice() != null ? r.getReferenceInvoice().getId() : null;

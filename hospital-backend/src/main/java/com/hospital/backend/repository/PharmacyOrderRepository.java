@@ -23,6 +23,12 @@ public interface PharmacyOrderRepository extends JpaRepository<PharmacyOrder, Lo
     
     // Paginated version for single status (used by Finance for pending payments)
     Page<PharmacyOrder> findByStatus(PharmacyOrderStatus status, Pageable pageable);
+
+    // ★ MULTI-TENANT : même statut, filtré par hôpital du patient (caisse pharmacie)
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM PharmacyOrder o WHERE o.status = :status AND o.patient.hospital.id = :hospitalId")
+    Page<PharmacyOrder> findByStatusAndHospitalId(@org.springframework.data.repository.query.Param("status") PharmacyOrderStatus status,
+                                                  @org.springframework.data.repository.query.Param("hospitalId") Long hospitalId,
+                                                  Pageable pageable);
     
     List<PharmacyOrder> findByStatusIn(List<PharmacyOrderStatus> statuses);
     
