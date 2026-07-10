@@ -102,10 +102,18 @@ public class FinanceDashboardService {
         // 4. STATISTIQUES COMPLÉMENTAIRES
         // ═══════════════════════════════════════════════════════════════
 
-        dto.setPendingInvoicesCount(invoiceRepository.countByStatus(InvoiceStatus.EN_ATTENTE));
-        dto.setTotalInvoicesGenerated(invoiceRepository.count());
-        dto.setTotalRevenuesCount(revenueRepository.count());
-        dto.setTotalExpensesCount(expenseRepository.count());
+        // 🏥 MULTI-TENANT : compteurs filtrés par hôpital (hId == null => superadmin => global)
+        if (hId != null) {
+            dto.setPendingInvoicesCount(invoiceRepository.countByStatusAndHospitalId(InvoiceStatus.EN_ATTENTE, hId));
+            dto.setTotalInvoicesGenerated(invoiceRepository.countByHospitalId(hId));
+            dto.setTotalRevenuesCount(revenueRepository.countByHospitalId(hId));
+            dto.setTotalExpensesCount(expenseRepository.countByCreatedByHospitalId(hId));
+        } else {
+            dto.setPendingInvoicesCount(invoiceRepository.countByStatus(InvoiceStatus.EN_ATTENTE));
+            dto.setTotalInvoicesGenerated(invoiceRepository.count());
+            dto.setTotalRevenuesCount(revenueRepository.count());
+            dto.setTotalExpensesCount(expenseRepository.count());
+        }
 
         // ═══════════════════════════════════════════════════════════════
         // 5. RÉPARTITION PAR SOURCE (Revenus)

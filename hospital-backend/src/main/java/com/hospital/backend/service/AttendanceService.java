@@ -4,6 +4,7 @@ import com.hospital.backend.entity.Attendance;
 import com.hospital.backend.entity.Employee;
 import com.hospital.backend.repository.AttendanceRepository;
 import com.hospital.backend.repository.EmployeeRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,8 +60,13 @@ public class AttendanceService {
         LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.now().with(LocalTime.MAX);
 
+        // 🏥 MULTI-TENANT : présences de l'hôpital courant uniquement (via employee → user → hospital)
+        Long hId = HospitalTenantContext.getHospitalId();
         return attendanceRepository.findAll().stream()
                 .filter(a -> a.getCheckIn().isAfter(startOfDay) && a.getCheckIn().isBefore(endOfDay))
+                .filter(a -> hId == null || (a.getEmployee() != null && a.getEmployee().getUser() != null
+                        && a.getEmployee().getUser().getHospital() != null
+                        && a.getEmployee().getUser().getHospital().getId().equals(hId)))
                 .collect(Collectors.toList());
     }
 }

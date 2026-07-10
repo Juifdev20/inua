@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Bell, Moon, Sun, Search, Globe, ChevronDown, Check, LogOut, Settings, User, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -320,12 +321,12 @@ const Topbar = () => {
             >
               <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-emerald-500/20 bg-muted flex items-center justify-center shadow-sm">
                 <img
-                  src={photoUrl || `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}+${user?.lastName || 'D'}&background=10b981&color=fff`}
+                  src={photoUrl || initialsAvatar(user?.firstName || 'A', user?.lastName || 'D', "10b981")}
                   alt="Admin"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}+${user?.lastName || 'D'}&background=10b981&color=fff`;
+                    e.target.src = initialsAvatar(user?.firstName || 'A', user?.lastName || 'D', "10b981");
                   }}
                 />
               </div>

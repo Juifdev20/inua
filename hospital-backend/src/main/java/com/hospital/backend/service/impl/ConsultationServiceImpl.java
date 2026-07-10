@@ -743,7 +743,14 @@ public class ConsultationServiceImpl implements ConsultationService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ConsultationDTO> getAll(Pageable pageable) {
-        return toPageResponse(consultationRepository.findAll(pageable));
+        // 🏥 MULTI-TENANT : ne renvoyer que les consultations de l'hôpital courant.
+        // hId == null => appelant sans hôpital (superadmin) => accès global conservé.
+        Long hId = HospitalTenantContext.getHospitalId();
+        org.springframework.data.domain.Page<com.hospital.backend.entity.Consultation> page =
+                (hId != null)
+                        ? consultationRepository.findByPatientHospitalId(hId, pageable)
+                        : consultationRepository.findAll(pageable);
+        return toPageResponse(page);
     }
 
     @Override

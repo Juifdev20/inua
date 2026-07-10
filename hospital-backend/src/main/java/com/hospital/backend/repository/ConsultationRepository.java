@@ -72,6 +72,10 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     @Query("SELECT c FROM Consultation c WHERE c.patient.hospital.id = :hospitalId ORDER BY c.createdAt DESC")
     List<Consultation> findByPatientHospitalId(@Param("hospitalId") Long hospitalId);
 
+    // ★ MULTI-TENANT: version paginée (historique réception / liste des fiches)
+    @Query("SELECT c FROM Consultation c WHERE c.patient.hospital.id = :hospitalId")
+    Page<Consultation> findByPatientHospitalId(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
     @Query("SELECT c FROM Consultation c WHERE c.patient.hospital.id = :hospitalId AND c.status = :status ORDER BY c.createdAt DESC")
     List<Consultation> findByPatientHospitalIdAndStatus(@Param("hospitalId") Long hospitalId, @Param("status") ConsultationStatus status);
 

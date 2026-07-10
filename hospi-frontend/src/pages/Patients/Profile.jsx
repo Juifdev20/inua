@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Droplet, Edit2, Save, X, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -41,7 +42,7 @@ const Profile = () => {
         address: user.address || "",
         avatar: user.photoUrl 
           ? (user.photoUrl.startsWith('data:') ? user.photoUrl : `${IMAGE_BASE_URL}${user.photoUrl}?t=${new Date().getTime()}`)
-          : `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=10b981&color=fff`
+          : initialsAvatar(user.firstName, user.lastName, "10b981")
       });
     }
   }, [user]);
@@ -121,7 +122,7 @@ const Profile = () => {
         dateOfBirth: formattedDate,
         avatar: user.photoUrl 
           ? (user.photoUrl.startsWith('data:') ? user.photoUrl : `${IMAGE_BASE_URL}${user.photoUrl}`)
-          : `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=10b981&color=fff`
+          : initialsAvatar(user.firstName, user.lastName, "10b981")
       });
     }
     setIsEditing(false);

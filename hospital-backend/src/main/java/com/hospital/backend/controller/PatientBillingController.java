@@ -82,6 +82,7 @@ public class PatientBillingController {
     private final PharmacyOrderRepository pharmacyOrderRepository;
     private final NotificationService notificationService;
     private final HospitalConfigRepository hospitalConfigRepository;
+    private final com.hospital.backend.repository.PrescribedExamRepository prescribedExamRepository;
 
     /**
      * ═══════════════════════════════════════════════════════════════════════════════
@@ -291,6 +292,36 @@ public class PatientBillingController {
         }
 
         // ─────────────────────────────────────────────────────────────────
+        // 4. EXAMENS DE LABORATOIRE (frais labo) — portés par PrescribedExam
+        // ─────────────────────────────────────────────────────────────────
+        List<PrescribedExam> labExams = prescribedExamRepository.findByPatientId(patient.getId());
+        log.info("📋 [BILLING] {} examens labo trouvés pour patient {}", labExams.size(), patient.getId());
+
+        for (PrescribedExam exam : labExams) {
+            BigDecimal amount = exam.getTotalPrice() != null ? exam.getTotalPrice() : BigDecimal.ZERO;
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) continue; // ignorer les examens sans frais
+            boolean paid = isExamPaid(exam.getStatus());
+            allItems.add(BillingItemDTO.builder()
+                    .id("LAB-" + exam.getId())
+                    .referenceNumber("LAB-" + exam.getId())
+                    .type(BillingItemDTO.BillingType.LABORATOIRE)
+                    .source("LABORATOIRE")
+                    .title(exam.getServiceName() != null ? exam.getServiceName() : "Examen de laboratoire")
+                    .description("Analyse / examen de laboratoire")
+                    .totalAmount(amount)
+                    .paidAmount(paid ? amount : BigDecimal.ZERO)
+                    .balance(paid ? BigDecimal.ZERO : amount)
+                    .status(paid ? BillingItemDTO.PaymentStatus.PAYEE : BillingItemDTO.PaymentStatus.EN_ATTENTE)
+                    .createdAt(exam.getCreatedAt())
+                    .updatedAt(exam.getUpdatedAt())
+                    .currency(exam.getCurrency() != null ? exam.getCurrency().name() : "USD")
+                    .isPaid(paid)
+                    .patientId(patient.getId())
+                    .patientName(patient.getFirstName() + " " + patient.getLastName())
+                    .build());
+        }
+
+        // ─────────────────────────────────────────────────────────────────
         // TRI: Date décroissante (plus récent d'abord)
         // ─────────────────────────────────────────────────────────────────
         log.info("📊 [BILLING] Total items avant tri: {}", allItems.size());
@@ -435,11 +466,28 @@ public class PatientBillingController {
             }
         }
 
+        // Examens de laboratoire (frais labo)
+        List<PrescribedExam> labExams = prescribedExamRepository.findByPatientId(patient.getId());
+        int labCount = 0;
+        for (PrescribedExam exam : labExams) {
+            BigDecimal amount = exam.getTotalPrice() != null ? exam.getTotalPrice() : BigDecimal.ZERO;
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+            totalInvoiced = totalInvoiced.add(amount);
+            labCount++;
+            if (isExamPaid(exam.getStatus())) {
+                totalPaid = totalPaid.add(amount);
+                paidCount++;
+            } else {
+                totalPending = totalPending.add(amount);
+                pendingCount++;
+            }
+        }
+
         BillingStatsDTO stats = BillingStatsDTO.builder()
                 .totalPaid(totalPaid)
                 .totalPending(totalPending)
                 .totalInvoiced(totalInvoiced)
-                .invoiceCount(invoices.size() + admissions.size() + orders.size())
+                .invoiceCount(invoices.size() + admissions.size() + orders.size() + labCount)
                 .paidCount(paidCount)
                 .pendingCount(pendingCount)
                 .currency("CDF")
@@ -548,6 +596,16 @@ public class PatientBillingController {
             case PARTIELLEMENT_PAYEE -> BillingItemDTO.PaymentStatus.PARTIEL;
             case ANNULEE -> BillingItemDTO.PaymentStatus.ANNULEE;
             default -> BillingItemDTO.PaymentStatus.EN_ATTENTE;
+        };
+    }
+
+    /** Un examen de labo est considéré payé dès qu'il a franchi l'étape caisse. */
+    private boolean isExamPaid(PrescribedExamStatus status) {
+        if (status == null) return false;
+        return switch (status) {
+            case PAID, PAID_PENDING_LAB, IN_PROGRESS, COMPLETED,
+                 RESULTS_AVAILABLE, DELIVERED_TO_DOCTOR, ARCHIVED -> true;
+            default -> false; // PENDING, PRESCRIBED, ADJUSTED_BY_CASHIER
         };
     }
 

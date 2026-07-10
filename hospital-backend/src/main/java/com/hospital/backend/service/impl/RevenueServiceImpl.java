@@ -130,15 +130,23 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     @Transactional(readOnly = true)
     public Page<RevenueDTO> getAllRevenues(Pageable pageable) {
-        return revenueRepository.findAll(pageable)
-                .map(RevenueDTO::fromEntity);
+        // 🏥 MULTI-TENANT : entrées de l'hôpital courant uniquement
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<Revenue> page = (hId != null)
+                ? revenueRepository.findByHospitalId(hId, pageable)
+                : revenueRepository.findAll(pageable);
+        return page.map(RevenueDTO::fromEntity);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<RevenueDTO> getRevenuesBySource(Revenue.RevenueSource source, Pageable pageable) {
-        return revenueRepository.findBySourceOrderByDateDesc(source, pageable)
-                .map(RevenueDTO::fromEntity);
+        // 🏥 MULTI-TENANT : filtré par hôpital + source
+        Long hId = HospitalTenantContext.getHospitalId();
+        Page<Revenue> page = (hId != null)
+                ? revenueRepository.findBySourceAndHospitalId(source, hId, pageable)
+                : revenueRepository.findBySourceOrderByDateDesc(source, pageable);
+        return page.map(RevenueDTO::fromEntity);
     }
 
     @Override
@@ -154,8 +162,12 @@ public class RevenueServiceImpl implements RevenueService {
     @Transactional(readOnly = true)
     public List<RevenueDTO> getRecentRevenues(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
-        return revenueRepository.findRecentRevenues(pageable)
-                .stream()
+        // 🏥 MULTI-TENANT : entrées récentes de l'hôpital courant (dashboard)
+        Long hId = HospitalTenantContext.getHospitalId();
+        List<Revenue> revenues = (hId != null)
+                ? revenueRepository.findRecentRevenuesByHospital(hId, pageable)
+                : revenueRepository.findRecentRevenues(pageable);
+        return revenues.stream()
                 .map(RevenueDTO::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -190,7 +202,11 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getRevenuesStatsBySource() {
-        return revenueRepository.getStatsBySource();
+        // 🏥 MULTI-TENANT : répartition par source de l'hôpital courant
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null)
+                ? revenueRepository.getStatsBySourceAndHospital(hId)
+                : revenueRepository.getStatsBySource();
     }
 
     @Override

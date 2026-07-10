@@ -264,7 +264,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Facture non trouvée"));
     }
 
-    @Override public PageResponse<InvoiceDTO> getAll(Pageable p)                      { return toPageResponse(invoiceRepository.findAll(p)); }
+    @Override public PageResponse<InvoiceDTO> getAll(Pageable p) {
+        // 🏥 MULTI-TENANT : factures de l'hôpital courant uniquement (hId==null => superadmin)
+        Long hId = com.hospital.backend.security.HospitalTenantContext.getHospitalId();
+        return toPageResponse(hId != null ? invoiceRepository.findByHospitalId(hId, p) : invoiceRepository.findAll(p));
+    }
     @Override public PageResponse<InvoiceDTO> getByPatient(Long id, Pageable p)       { return toPageResponse(invoiceRepository.findByPatientId(id, p)); }
     @Override public PageResponse<InvoiceDTO> getByStatus(InvoiceStatus s, Pageable p){ return toPageResponse(invoiceRepository.findByStatus(s, p)); }
 

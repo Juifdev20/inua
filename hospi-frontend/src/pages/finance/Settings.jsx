@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -304,7 +305,7 @@ export const Settings = () => {
                     // Fallback to generated avatar
                     const fn = user?.firstName || 'C';
                     const ln = user?.lastName || 'F';
-                    e.target.src = `https://ui-avatars.com/api/?name=${fn}+${ln}&background=10b981&color=fff`;
+                    e.target.src = initialsAvatar(fn, ln, "10b981");
                   }}
                 />
               ) : (

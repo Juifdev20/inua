@@ -85,8 +85,12 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public Page<ExpenseDTO> getAllExpenses(Pageable pageable) {
-        return expenseRepository.findAll(pageable)
-                .map(ExpenseDTO::fromEntity);
+        // 🏥 MULTI-TENANT : dépenses de l'hôpital courant (hId==null => superadmin => global)
+        Long hId = com.hospital.backend.security.HospitalTenantContext.getHospitalId();
+        Page<Expense> page = (hId != null)
+                ? expenseRepository.findByCreatedByHospitalId(hId, pageable)
+                : expenseRepository.findAll(pageable);
+        return page.map(ExpenseDTO::fromEntity);
     }
 
     @Override

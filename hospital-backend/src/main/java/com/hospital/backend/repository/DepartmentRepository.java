@@ -18,4 +18,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     // MULTI-TENANT: trouver un departement par nom ET hopital (evite les doublons cross-hospital)
     Optional<Department> findByNomAndHospitalId(String nom, Long hospitalId);
+
+    // MULTI-TENANT: compter les departements d'un hopital (dashboard)
+    long countByHospitalId(Long hospitalId);
 }

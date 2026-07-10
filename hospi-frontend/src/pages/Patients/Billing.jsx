@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { hospitalConfigService } from '../../services/hospitalConfigService';
+import { BACKEND_URL } from '../../config/environment.js';
 import { 
   CreditCard, CheckCircle, Clock, Download, Loader2, FileText, Search, ArrowUpDown,
   QrCode, X, ChevronRight, Pill, Stethoscope, FlaskConical, Receipt, AlertCircle,
@@ -16,6 +20,26 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 
+// Charge une image (logo) et la convertit en dataURL pour jsPDF. Retourne null si échec.
+const loadImageAsDataURL = (url) => new Promise((resolve) => {
+  if (!url) return resolve(null);
+  const full = (url.startsWith('http') || url.startsWith('data:'))
+    ? url
+    : `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve({ dataUrl: canvas.toDataURL('image/png'), w: img.naturalWidth, h: img.naturalHeight });
+    } catch (e) { resolve(null); }
+  };
+  img.onerror = () => resolve(null);
+  img.src = full;
+});
+
 const Billing = () => {
   const [billings, setBillings] = useState([]);
   const [stats, setStats] = useState({ totalPaid: 0, totalPending: 0, totalInvoiced: 0, paidCount: 0, pendingCount: 0 });
@@ -30,6 +54,7 @@ const Billing = () => {
   const [pharmacyDetailOpen, setPharmacyDetailOpen] = useState(false);
   const [pharmacyDetail, setPharmacyDetail] = useState(null);
   const [loadingPharmacy, setLoadingPharmacy] = useState(false);
+  const [hospitalConfig, setHospitalConfig] = useState(null);
   
   // Real-time updates with polling
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -37,6 +62,11 @@ const Billing = () => {
   // WebSocket notifications
   const { notifications, unreadCount } = useNotifications();
   const { user } = useAuth();
+
+  // Config de l'hôpital (nom, logo, adresse…) pour l'en-tête des reçus PDF
+  useEffect(() => {
+    hospitalConfigService.getConfig().then(setHospitalConfig).catch(() => {});
+  }, []);
 
   // 1. Chargement et Tri des données avec nouveau endpoint consolidé
   const fetchBillingData = useCallback(async () => {
@@ -122,86 +152,152 @@ const Billing = () => {
   }, [fetchBillingData]);
 
   // 2. Téléchargement PDF
-  const handleDownloadPDF = async (invoiceId, invoiceCode) => {
-    // Validation de l'ID
-    if (!invoiceId) {
-      console.error('❌ [Billing] ID de facture manquant');
-      alert('Erreur: ID de facture manquant');
-      return;
-    }
-    
-    // Convertir en nombre si c'est une string numérique (pour l'API)
-    const numericId = typeof invoiceId === 'string' ? parseInt(invoiceId.replace(/\D/g, ''), 10) : invoiceId;
-    
-    if (!numericId || isNaN(numericId)) {
-      console.error('❌ [Billing] ID de facture invalide:', invoiceId);
-      alert('Erreur: ID de facture invalide');
-      return;
-    }
-    
-    // Utiliser l'ID original (string) pour le state afin que la comparaison avec billing.id fonctionne
-    setDownloadingId(invoiceId);
-    
+  // 📄 Génération du reçu PDF CÔTÉ CLIENT — fonctionne pour TOUS les types
+  // (facture, admission, pharmacie, laboratoire), payés ou non. Aucune dépendance
+  // à un PDF serveur : le reçu est construit à partir des données de l'item.
+  const handleDownloadPDF = async (billing) => {
+    if (!billing) { alert('Élément introuvable'); return; }
+    const ref = billing.referenceNumber || billing.invoiceCode || billing.id;
+    setDownloadingId(billing.originalId || billing.id);
     try {
-      // URL correcte - PatientBillingController expose /api/v1/patient/billing/{id}/pdf
-      const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-      const pdfUrl = `${API_URL}/api/v1/patient/billing/${numericId}/pdf`;
-      
-      console.log('📄 [Billing] Téléchargement PDF:', pdfUrl);
-      console.log('📄 [Billing] Invoice ID brut:', invoiceId, 'Numérique:', numericId, 'Code:', invoiceCode);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token d\'authentification manquant');
+      const cfg = hospitalConfig || {};
+      const currency = billing.currency || 'USD';
+      const money = (n) => `${Number(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+      const paid = billing.isPaid || billing.status === 'PAYEE';
+      const partial = billing.status === 'PARTIEL' || billing.status === 'PARTIELLEMENT_PAYEE';
+      const total = Number(billing.totalAmount || 0);
+      const paidAmt = Number(billing.paidAmount || 0);
+      const balance = billing.balance != null ? Number(billing.balance) : (total - paidAmt);
+
+      // Palette
+      const GREEN = [14, 124, 90];      // vert profond (marque)
+      const GOLD = [201, 162, 39];      // accent doré
+      const DARK = [33, 37, 41];
+      const MUTED = [110, 116, 122];
+
+      const logo = await loadImageAsDataURL(cfg.hospitalLogoUrl || cfg.logoUrl);
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+      const M = 16; // marge
+
+      // ── EN-TÊTE ──
+      doc.setFillColor(...GREEN);
+      doc.rect(0, 0, W, 38, 'F');
+      // fine ligne dorée
+      doc.setFillColor(...GOLD);
+      doc.rect(0, 38, W, 1.2, 'F');
+
+      let headerTextX = M;
+      if (logo) {
+        const ratio = logo.w && logo.h ? logo.w / logo.h : 1;
+        const lh = 20, lw = Math.min(28, lh * ratio);
+        // pastille blanche derrière le logo
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(M, 9, lw + 6, 24, 2, 2, 'F');
+        doc.addImage(logo.dataUrl, 'PNG', M + 3, 11, lw, lh, undefined, 'FAST');
+        headerTextX = M + lw + 12;
       }
-      
-      const response = await axios.get(pdfUrl, { 
-        responseType: 'blob',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        timeout: 30000 // 30 secondes timeout
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+      doc.text(cfg.hospitalName || cfg.headerTitle || 'INUA AFYA', headerTextX, 16);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+      let hy = 22;
+      const headerLines = [
+        cfg.headerSubtitle || cfg.ministryName,
+        [cfg.address, cfg.city].filter(Boolean).join(', ') || null,
+        [cfg.phoneNumber && `Tél: ${cfg.phoneNumber}`, cfg.email].filter(Boolean).join('  ·  ') || null,
+        [cfg.website, cfg.country].filter(Boolean).join('  ·  ') || null,
+      ].filter(Boolean);
+      headerLines.slice(0, 4).forEach((t) => { doc.text(String(t), headerTextX, hy); hy += 4.5; });
+
+      // ── TITRE + STATUT ──
+      let y = 52;
+      doc.setTextColor(...DARK);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+      doc.text('REÇU DE PAIEMENT', M, y);
+
+      const badge = paid ? { t: 'PAYÉ', c: [16, 185, 129] } : partial ? { t: 'PARTIEL', c: [217, 119, 6] } : { t: 'EN ATTENTE', c: [220, 38, 38] };
+      const bw = 42, bx = W - M - bw;
+      doc.setFillColor(...badge.c);
+      doc.roundedRect(bx, y - 7, bw, 10, 5, 5, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text(badge.t, bx + bw / 2, y, { align: 'center' });
+
+      // Réf + date sous le titre
+      y += 7;
+      doc.setTextColor(...MUTED); doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+      doc.text(`Référence : ${ref}`, M, y);
+      doc.text(`Date : ${billing.createdAt ? new Date(billing.createdAt).toLocaleDateString('fr-FR') : '—'}`, W - M, y, { align: 'right' });
+
+      // ── BLOC PATIENT ──
+      y += 6;
+      doc.setDrawColor(230); doc.setFillColor(248, 250, 249);
+      doc.roundedRect(M, y, W - 2 * M, 18, 2, 2, 'FD');
+      doc.setTextColor(...MUTED); doc.setFontSize(8);
+      doc.text('PATIENT', M + 4, y + 6);
+      doc.text('PRESTATION', W / 2, y + 6);
+      doc.setTextColor(...DARK); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.text(billing.patientName || '—', M + 4, y + 13);
+      doc.setFontSize(10);
+      doc.text(`${billing.type || billing.source || ''}`.trim() || '—', W / 2, y + 13);
+      y += 24;
+
+      // ── TABLEAU DES PRESTATIONS ──
+      const rows = (Array.isArray(billing.items) && billing.items.length > 0)
+        ? billing.items.map((it) => [
+            it.description || it.name || it.serviceName || billing.title || 'Prestation',
+            money(it.totalPrice ?? it.amount ?? it.unitPrice ?? 0),
+          ])
+        : [[billing.title || billing.description || 'Prestation', money(total)]];
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Désignation', 'Montant']],
+        body: rows,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 3, textColor: DARK, lineColor: [230, 230, 230] },
+        headStyles: { fillColor: GREEN, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'left' },
+        columnStyles: { 1: { halign: 'right', cellWidth: 45 } },
+        margin: { left: M, right: M },
       });
-      
-      // Vérifier que la réponse contient bien des données
-      if (!response.data || response.data.size === 0) {
-        throw new Error('PDF vide reçu du serveur');
-      }
-      
-      // Créer un blob PDF et déclencher le téléchargement
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Facture-${invoiceCode || numericId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Nettoyer l'URL après un délai pour éviter les fuites mémoire
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 100);
-      
-      console.log('✅ [Billing] PDF téléchargé avec succès');
+      y = doc.lastAutoTable.finalY + 8;
+
+      // ── TOTAUX (encadré à droite) ──
+      const boxW = 80, boxX = W - M - boxW;
+      doc.setDrawColor(230); doc.setFillColor(250, 250, 250);
+      doc.roundedRect(boxX, y, boxW, 30, 2, 2, 'FD');
+      const totLine = (label, value, opts = {}) => {
+        doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+        doc.setFontSize(opts.big ? 11 : 9.5);
+        doc.setTextColor(...(opts.color || MUTED));
+        doc.text(label, boxX + 4, y);
+        doc.setTextColor(...(opts.color || DARK));
+        doc.text(value, boxX + boxW - 4, y, { align: 'right' });
+      };
+      y += 8; totLine('Montant total', money(total));
+      y += 7; totLine('Déjà payé', money(paidAmt));
+      y += 2; doc.setDrawColor(220); doc.line(boxX + 4, y, boxX + boxW - 4, y);
+      y += 7; totLine('Reste à payer', money(balance), { bold: true, big: true, color: balance > 0 ? [220, 38, 38] : [16, 185, 129] });
+
+      // ── PIED DE PAGE ──
+      const footY = H - 20;
+      doc.setDrawColor(...GOLD); doc.setLineWidth(0.5); doc.line(M, footY, W - M, footY);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      const footer = cfg.footerText || `${cfg.hospitalName || 'Inua Afya'} — Merci de votre confiance.`;
+      doc.text(footer, W / 2, footY + 5, { align: 'center', maxWidth: W - 2 * M });
+      const legal = [cfg.registrationNumber && `RCCM: ${cfg.registrationNumber}`, cfg.taxId && `NIF: ${cfg.taxId}`, cfg.licenseNumber && `Autorisation: ${cfg.licenseNumber}`].filter(Boolean).join('   |   ');
+      if (legal) doc.text(legal, W / 2, footY + 10, { align: 'center' });
+      doc.setFontSize(7);
+      doc.text(`Reçu généré le ${new Date().toLocaleString('fr-FR')} — Document électronique`, W / 2, H - 6, { align: 'center' });
+
+      doc.save(`Recu-${ref}.pdf`);
     } catch (error) {
-      console.error('❌ [Billing] Erreur téléchargement PDF:', error);
-      console.error('❌ [Billing] URL qui a échoué:', error.config?.url);
-      console.error('❌ [Billing] Status:', error.response?.status);
-      console.error('❌ [Billing] Message:', error.message);
-      
-      const status = error.response?.status;
-      let message = 'Erreur lors du téléchargement';
-      if (status === 404) message = 'Facture non trouvée (404) - L\'ID numérique n\'existe pas';
-      else if (status === 403) message = 'Accès refusé - Cette facture ne vous appartient pas';
-      else if (status === 401) message = 'Session expirée - Veuillez vous reconnecter';
-      else if (error.code === 'ECONNABORTED') message = 'Délai d\'attente dépassé';
-      else if (error.message) message = error.message;
-      
-      alert(message);
+      console.error('❌ [Billing] Erreur génération PDF:', error);
+      alert('Erreur lors de la génération du reçu PDF');
     } finally {
-      // GARANTIE: Le loading s'arrête toujours ici
-      console.log('🔄 [Billing] Reset loading state');
       setDownloadingId(null);
     }
   };
@@ -569,7 +665,7 @@ const Billing = () => {
                         {/* Bouton Télécharger PDF - Mobile (si payé) */}
                         {billing.isPaid && (billing.type === 'INVOICE' || billing.type === 'LABORATOIRE' || billing.type === 'AUTRE' || billing.type === 'PHARMACIE' || billing.source === 'FINANCE') && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDownloadPDF(billing.originalId || billing.id, billing.referenceNumber || billing.invoiceCode); }}
+                            onClick={(e) => { e.stopPropagation(); handleDownloadPDF(billing); }}
                             disabled={String(downloadingId) === String(billing.originalId || billing.id)}
                             className="p-2 rounded-lg bg-muted/50 hover:bg-emerald-500 hover:text-white transition-colors disabled:opacity-50 min-w-[36px] min-h-[36px] flex items-center justify-center"
                             title="Télécharger le PDF"
@@ -628,7 +724,7 @@ const Billing = () => {
                       </button>
                       {billing.isPaid && (billing.type === 'INVOICE' || billing.type === 'LABORATOIRE' || billing.type === 'AUTRE' || billing.type === 'PHARMACIE' || billing.source === 'FINANCE') && (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleDownloadPDF(billing.originalId || billing.id, billing.referenceNumber || billing.invoiceCode); }}
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPDF(billing); }}
                           disabled={String(downloadingId) === String(billing.originalId || billing.id)}
                           className="p-3 rounded-lg bg-muted/50 hover:bg-emerald-500 hover:text-white transition-colors disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center"
                           title="Télécharger le PDF"
@@ -757,7 +853,7 @@ const Billing = () => {
                 {invoiceDetail.isPaid && (invoiceDetail.type === 'INVOICE' || invoiceDetail.type === 'LABORATOIRE' || invoiceDetail.type === 'AUTRE' || invoiceDetail.type === 'PHARMACIE' || invoiceDetail.source === 'FINANCE') ? (
                   <Button 
                     className="flex-1 h-11 bg-emerald-500 hover:bg-emerald-600"
-                    onClick={() => handleDownloadPDF(invoiceDetail.originalId || invoiceDetail.id, invoiceDetail.referenceNumber || invoiceDetail.invoiceCode)}
+                    onClick={() => handleDownloadPDF(invoiceDetail)}
                     disabled={String(downloadingId) === String(invoiceDetail.originalId || invoiceDetail.id)}
                   >
                     {String(downloadingId) === String(invoiceDetail.originalId || invoiceDetail.id) ? (

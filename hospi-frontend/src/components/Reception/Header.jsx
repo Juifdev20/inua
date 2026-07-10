@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Settings, UserPlus, Loader2, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -237,7 +238,7 @@ const ReceptionHeader = () => {
   const getAvatarUrl = () => {
     const timestamp = `?t=${new Date().getTime()}`;
     
-    if (!user?.photoUrl) return `https://ui-avatars.com/api/?name=${user?.firstName}+${user?.lastName}&background=10b981&color=fff`;
+    if (!user?.photoUrl) return initialsAvatar(user?.firstName, user?.lastName, "10b981");
     
     // Si c'est déjà une URL complète (data ou http)
     if (user.photoUrl.startsWith('data:') || user.photoUrl.startsWith('http')) return user.photoUrl;
@@ -460,7 +461,7 @@ const ReceptionHeader = () => {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.onerror = null; 
-                    e.target.src = `https://ui-avatars.com/api/?name=${user?.firstName}+${user?.lastName}&background=10b981&color=fff`;
+                    e.target.src = initialsAvatar(user?.firstName, user?.lastName, "10b981");
                   }}
                 />
               </div>

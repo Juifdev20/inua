@@ -269,7 +269,13 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     @Transactional(readOnly = true)
-    public Long countActive() { return patientRepository.countActivePatients(); }
+    public Long countActive() {
+        // 🏥 MULTI-TENANT : ne compter que les patients de l'hôpital courant
+        Long hId = HospitalTenantContext.getHospitalId();
+        return (hId != null)
+                ? patientRepository.countActivePatientsByHospitalId(hId)
+                : patientRepository.countActivePatients();
+    }
 
     @Override @Transactional(readOnly = true)
     public PatientDTO getById(Long id) {
@@ -303,8 +309,11 @@ public class PatientServiceImpl implements PatientService {
     @Transactional
     public void deleteAllWithoutPhotos() {
         log.warn("🚀 Démarrage du nettoyage des patients sans photos...");
+        // 🏥 MULTI-TENANT : ne supprimer QUE les patients de l'hôpital courant
+        Long hId = HospitalTenantContext.getHospitalId();
         List<Patient> toDelete = patientRepository.findAll().stream()
                 .filter(p -> p.getPhotoUrl() == null || p.getPhotoUrl().trim().isEmpty())
+                .filter(p -> hId == null || (p.getHospital() != null && p.getHospital().getId().equals(hId)))
                 .collect(Collectors.toList());
 
         for (Patient p : toDelete) {

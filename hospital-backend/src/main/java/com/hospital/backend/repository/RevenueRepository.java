@@ -57,6 +57,10 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
     @Query("SELECT r.source, COALESCE(SUM(r.amount), 0), COALESCE(COUNT(r), 0) FROM Revenue r GROUP BY r.source")
     List<Object[]> getStatsBySource();
 
+    // ★ MULTI-TENANT : même forme, filtré par hôpital
+    @Query("SELECT r.source, COALESCE(SUM(r.amount), 0), COALESCE(COUNT(r), 0) FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId GROUP BY r.source")
+    List<Object[]> getStatsBySourceAndHospital(@Param("hospitalId") Long hospitalId);
+
     // Recent revenues (limit)
     @Query("SELECT r FROM Revenue r ORDER BY r.date DESC")
     List<Revenue> findRecentRevenues(Pageable pageable);
@@ -115,6 +119,16 @@ public interface RevenueRepository extends JpaRepository<Revenue, Long> {
 
     @Query("SELECT r FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId ORDER BY r.date DESC")
     List<Revenue> findRecentRevenuesByHospital(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    // ★ MULTI-TENANT: liste paginée + par source + compteur, filtrés par hôpital
+    @Query("SELECT r FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId")
+    Page<Revenue> findByHospitalId(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT r FROM Revenue r WHERE r.source = :source AND r.createdBy.hospital.id = :hospitalId")
+    Page<Revenue> findBySourceAndHospitalId(@Param("source") RevenueSource source, @Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT COUNT(r) FROM Revenue r WHERE r.createdBy.hospital.id = :hospitalId")
+    long countByHospitalId(@Param("hospitalId") Long hospitalId);
 
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Revenue r WHERE r.source = :source AND r.createdBy.hospital.id = :hospitalId")
     BigDecimal sumAmountBySourceAndHospital(@Param("source") RevenueSource source, @Param("hospitalId") Long hospitalId);

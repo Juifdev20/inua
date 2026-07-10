@@ -454,6 +454,27 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    /** Convertit un contenu HTML en texte brut lisible pour l'alternative multipart (anti-spam). */
+    private String htmlToPlainText(String html) {
+        if (html == null) return "";
+        return html
+                .replaceAll("(?is)<style.*?</style>", " ")
+                .replaceAll("(?is)<script.*?</script>", " ")
+                .replaceAll("(?i)<br\\s*/?>", "\n")
+                .replaceAll("(?i)</p>", "\n")
+                .replaceAll("(?i)</div>", "\n")
+                .replaceAll("(?i)</h[1-6]>", "\n")
+                .replaceAll("(?i)</tr>", "\n")
+                .replaceAll("<[^>]+>", " ")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("&amp;", "&")
+                .replaceAll("&lt;", "<")
+                .replaceAll("&gt;", ">")
+                .replaceAll("[ \\t]+", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
+    }
+
         private void sendHtmlEmailInternal(String to, String subject, String htmlContent)
             throws Exception {
         
@@ -494,7 +515,10 @@ public class EmailServiceImpl implements EmailService {
             helper.setFrom(cleanFromEmail, appName);
             helper.setTo(to.trim());
             helper.setSubject(subject);
-            helper.setText(htmlContent, true);
+            helper.setReplyTo(cleanFromEmail);
+            // Version multipart : texte brut + HTML. Un email HTML-only est davantage
+            // classé en spam ; fournir une alternative texte améliore nettement la délivrabilité.
+            helper.setText(htmlToPlainText(htmlContent), htmlContent);
 
             log.info("📧 [EMAIL INTERNAL] Envoi du message...");
             mailSender.send(message);

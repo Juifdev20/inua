@@ -46,7 +46,11 @@ public class AuditLogService {
     // ÉCRITURE
     // ═══════════════════════════════════════════════════
 
-    @Transactional
+    // REQUIRES_NEW : l'écriture d'audit s'exécute dans SA PROPRE transaction.
+    // Sinon, appelée depuis une méthode @Transactional(readOnly=true) (ex: consultation
+    // de facturation patient), l'INSERT échoue et marque la transaction rollback-only
+    // → UnexpectedRollbackException qui faisait échouer toute la requête (billing à 0).
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void logAction(String action, String utilisateur, String cible, String details, String type, String ip) {
         AuditLog log = AuditLog.builder()
                 .action(action)

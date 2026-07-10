@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut, Calendar, FileText, Info, Globe, Check, ArrowLeft, RotateCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -181,7 +182,7 @@ const Header = () => {
 
   // ✅ Logique pour construire l'URL de l'image de profil
   const getAvatarUrl = () => {
-    if (!user?.photoUrl) return `https://ui-avatars.com/api/?name=${user?.firstName}+${user?.lastName}&background=10b981&color=fff`;
+    if (!user?.photoUrl) return initialsAvatar(user?.firstName, user?.lastName, "10b981");
     if (user.photoUrl.startsWith('data:') || user.photoUrl.startsWith('http')) return user.photoUrl;
     return `${IMAGE_BASE_URL}${user.photoUrl}`;
   };
@@ -368,7 +369,7 @@ const Header = () => {
                   className="w-full h-full object-cover animate-in fade-in duration-500"
                   onError={(e) => {
                     e.target.onerror = null; 
-                    e.target.src = `https://ui-avatars.com/api/?name=${user?.firstName}+${user?.lastName}&background=10b981&color=fff`;
+                    e.target.src = initialsAvatar(user?.firstName, user?.lastName, "10b981");
                   }}
                 />
               </div>

@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search, Bell, ChevronDown, Moon, Sun, Menu, User, LogOut,
@@ -283,7 +284,7 @@ const LabHeader = () => {
     const lastName = user?.lastName || user?.nom || '';
 
     if (!user?.photoUrl || user.photoUrl === '')
-      return `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=6366f1&color=fff`;
+      return initialsAvatar(firstName, lastName, "6366f1");
 
     if (user.photoUrl.startsWith('data:') || user.photoUrl.startsWith('http'))
       return `${user.photoUrl}${timestamp}`;
@@ -550,7 +551,7 @@ const LabHeader = () => {
                     e.target.onerror = null;
                     const fn = user?.firstName || user?.prenom || 'L';
                     const ln = user?.lastName || user?.nom || 'B';
-                    e.target.src = `https://ui-avatars.com/api/?name=${fn}+${ln}&background=6366f1&color=fff`;
+                    e.target.src = initialsAvatar(fn, ln, "6366f1");
                   }}
                 />
               </div>

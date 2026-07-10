@@ -82,6 +82,12 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     @Query("SELECT e FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId AND e.category = :category ORDER BY e.date DESC")
     List<Expense> findByCreatedByHospitalIdAndCategory(@Param("hospitalId") Long hospitalId, @Param("category") ExpenseCategory category);
 
+    @Query("SELECT e FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId")
+    Page<Expense> findByCreatedByHospitalId(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
+    @Query("SELECT COUNT(e) FROM Expense e WHERE e.createdBy.hospital.id = :hospitalId")
+    long countByCreatedByHospitalId(@Param("hospitalId") Long hospitalId);
+
     // ★ MULTI-TENANT: agrégations filtrées par hôpital
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE CAST(e.date AS date) = :today AND e.currency = :currency AND e.createdBy.hospital.id = :hospitalId")
     BigDecimal getTodayTotalByCurrencyAndHospital(@Param("today") java.time.LocalDate today, @Param("currency") com.hospital.backend.entity.Currency currency, @Param("hospitalId") Long hospitalId);

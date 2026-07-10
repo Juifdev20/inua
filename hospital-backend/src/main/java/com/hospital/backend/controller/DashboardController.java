@@ -51,7 +51,7 @@ public class DashboardController {
             stats.put("newDoctorsMonth", userRepository.countNewUsersByRoleAndHospitalSince(hospitalId, "ROLE_DOCTEUR", startOfMonth));
             stats.put("totalPatients", patientRepository.countActivePatientsByHospitalId(hospitalId));
             stats.put("newPatientsMonth", patientRepository.countNewPatientsByHospitalSince(hospitalId, startOfMonth));
-            stats.put("totalDepartments", departmentRepository.count());
+            stats.put("totalDepartments", departmentRepository.countByHospitalId(hospitalId));
             Long pendingCount = consultationRepository.countByStatusAndHospitalId(ConsultationStatus.EN_ATTENTE, hospitalId);
             stats.put("pendingAppointments", pendingCount != null ? pendingCount : 0L);
             stats.put("activities", activityRepository.findTop5ByHospitalIdOrderByDateDesc(hospitalId));

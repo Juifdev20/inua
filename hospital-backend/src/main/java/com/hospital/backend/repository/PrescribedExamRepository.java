@@ -23,6 +23,10 @@ public interface PrescribedExamRepository extends JpaRepository<PrescribedExam, 
 
     List<PrescribedExam> findByConsultationIdOrderByCreatedAtDesc(Long consultationId);
 
+    // ★ Frais labo d'un patient (via consultation → patient) pour la facturation patient
+    @Query("SELECT e FROM PrescribedExam e WHERE e.consultation.patient.id = :patientId AND e.active = true ORDER BY e.createdAt DESC")
+    List<PrescribedExam> findByPatientId(@Param("patientId") Long patientId);
+
     List<PrescribedExam> findByConsultationIdAndActiveTrue(Long consultationId);
 
     List<PrescribedExam> findByConsultationIdAndActiveTrueOrderByCreatedAtDesc(Long consultationId);

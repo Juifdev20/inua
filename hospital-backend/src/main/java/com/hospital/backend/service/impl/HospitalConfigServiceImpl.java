@@ -4,6 +4,7 @@ import com.hospital.backend.entity.Currency;
 import com.hospital.backend.entity.Hospital;
 import com.hospital.backend.entity.HospitalConfig;
 import com.hospital.backend.repository.HospitalConfigRepository;
+import com.hospital.backend.repository.HospitalRepository;
 import com.hospital.backend.security.HospitalTenantContext;
 import com.hospital.backend.service.HospitalConfigService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.Optional;
 public class HospitalConfigServiceImpl implements HospitalConfigService {
 
     private final HospitalConfigRepository configRepository;
+    private final HospitalRepository hospitalRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -97,10 +99,17 @@ public class HospitalConfigServiceImpl implements HospitalConfigService {
         }
 
         Long hId = HospitalTenantContext.getHospitalId();
+        // 🏥 MULTI-TENANT : nom/code tirés de l'hôpital réel pour garantir l'UNICITÉ de
+        // hospital_code (contrainte unique globale) — sinon 2 hôpitaux → doublon → 23505.
+        Hospital hospital = hId != null ? hospitalRepository.findById(hId).orElse(null) : null;
+        String uniqueCode = (hospital != null && hospital.getCode() != null)
+                ? "CFG-" + hospital.getCode()
+                : "CFG-" + (hId != null ? hId : "DEFAULT-" + System.currentTimeMillis());
+        String hospitalName = (hospital != null && hospital.getNom() != null) ? hospital.getNom() : "INUA AFYA";
         HospitalConfig defaultConfig = HospitalConfig.builder()
                 .hospital(hId != null ? Hospital.builder().id(hId).build() : null)
-                .hospitalName("INUA AFYA")
-                .hospitalCode("HOSP-001")
+                .hospitalName(hospitalName)
+                .hospitalCode(uniqueCode)
                 .hospitalLogoUrl(null)
                 .ministryName("MINISTERE DE LA SANTE")
                 .departmentName("DEPARTEMENT DE LA SANTE PUBLIQUE")

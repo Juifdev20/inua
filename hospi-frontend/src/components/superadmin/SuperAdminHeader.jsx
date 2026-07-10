@@ -1,3 +1,4 @@
+import { initialsAvatar } from '../../utils/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Moon, Sun, LogOut, User, ChevronDown, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -33,7 +34,7 @@ const SuperAdminHeader = () => {
     if (user?.photoUrl) {
       return user.photoUrl.startsWith('http') ? user.photoUrl : `${BACKEND_URL}${user.photoUrl}`;
     }
-    return `https://ui-avatars.com/api/?name=${user?.firstName || 'S'}+${user?.lastName || 'A'}&background=10b981&color=fff`;
+    return initialsAvatar(user?.firstName || 'S', user?.lastName || 'A', "10b981");
   };
 
   return (
@@ -81,7 +82,7 @@ const SuperAdminHeader = () => {
                 className="w-full h-full object-cover animate-in fade-in duration-500"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = `https://ui-avatars.com/api/?name=${user?.firstName || 'S'}+${user?.lastName || 'A'}&background=10b981&color=fff`;
+                  e.target.src = initialsAvatar(user?.firstName || 'S', user?.lastName || 'A', "10b981");
                 }}
               />
             </div>

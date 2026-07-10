@@ -4,6 +4,7 @@ import com.hospital.backend.entity.*;
 import com.hospital.backend.repository.NotificationRepository;
 import com.hospital.backend.repository.PrescribedExamRepository;
 import com.hospital.backend.repository.UserRepository;
+import com.hospital.backend.security.HospitalTenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -120,9 +121,12 @@ public class LabAlertService {
                 return; // Ne pas créer de doublon
             }
 
-            // Récupérer les utilisateurs du rôle cible
+            // Récupérer les utilisateurs du rôle cible — 🏥 filtrés par hôpital courant
+            // (une alerte labo ne doit notifier que le personnel du MÊME établissement)
+            Long hId = HospitalTenantContext.getHospitalId();
             List<User> targetUsers = userRepository.findAll().stream()
                 .filter(u -> u.getRole() != null && u.getRole().getNom().equals(targetRole))
+                .filter(u -> hId == null || (u.getHospital() != null && u.getHospital().getId().equals(hId)))
                 .collect(Collectors.toList());
 
             // ★ Si aucun utilisateur avec ce rôle, envoyer quand même via WebSocket au topic général

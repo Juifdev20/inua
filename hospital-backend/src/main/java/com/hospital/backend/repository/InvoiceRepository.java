@@ -75,6 +75,16 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("source") DepartmentSource source,
             @Param("hospitalId") Long hospitalId);
     
+    // ★ MULTI-TENANT: compteurs & liste par hôpital (dashboard + page Factures)
+    @Query("SELECT COUNT(i) FROM Invoice i WHERE i.status = :status AND i.patient.hospital.id = :hospitalId")
+    Long countByStatusAndHospitalId(@Param("status") InvoiceStatus status, @Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT COUNT(i) FROM Invoice i WHERE i.patient.hospital.id = :hospitalId")
+    long countByHospitalId(@Param("hospitalId") Long hospitalId);
+
+    @Query("SELECT i FROM Invoice i WHERE i.patient.hospital.id = :hospitalId")
+    Page<Invoice> findByHospitalId(@Param("hospitalId") Long hospitalId, Pageable pageable);
+
     // --- MÉTHODES POUR LE FLUX PHARMACIE PRESCRIPTION ---
     Optional<Invoice> findByPrescriptionId(Long prescriptionId);
     
