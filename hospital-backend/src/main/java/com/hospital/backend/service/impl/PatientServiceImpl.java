@@ -90,6 +90,12 @@ public class PatientServiceImpl implements PatientService {
 
         Patient patient = mapToEntity(dto);
         patient.setEmail(emailToUse);
+        // 🏥 MULTI-TENANT : rattacher le patient à l'hôpital courant, sinon hospital_id=NULL
+        // → le patient serait invisible pour l'admin/la réception de son propre hôpital.
+        Long hId = HospitalTenantContext.getHospitalId();
+        if (hId != null && patient.getHospital() == null) {
+            patient.setHospital(com.hospital.backend.entity.Hospital.builder().id(hId).build());
+        }
         patient = patientRepository.save(patient);
 
         // ★ NOTE: La création du compte utilisateur est maintenant gérée par AccountCreationController

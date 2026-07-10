@@ -740,6 +740,63 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .build();
     }
 
+    /** Variante LÉGÈRE pour les listes/historique : mapping sans N+1 (exams/services). */
+    private PageResponse<ConsultationDTO> toListPageResponse(Page<Consultation> page) {
+        return PageResponse.<ConsultationDTO>builder()
+                .content(page.getContent().stream().map(this::mapToLightDTO).toList())
+                .page(page.getNumber())
+                .size(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .build();
+    }
+
+    /**
+     * ⚡ Mapping LÉGER pour l'historique/liste réception : uniquement les champs affichés
+     * (patient, dates, statut, médecin, montants admission). N'exécute PAS les requêtes
+     * par consultation pour les examens/services/prescriptions (source du N+1 → lenteur).
+     */
+    public ConsultationDTO mapToLightDTO(Consultation c) {
+        if (c == null) return ConsultationDTO.builder().build();
+        ConsultationDTO dto = ConsultationDTO.builder()
+                .id(c.getId())
+                .consultationCode(c.getConsultationCode())
+                .patientId(c.getPatient() != null ? c.getPatient().getId() : null)
+                .status(c.getStatus())
+                .statut(c.getStatut())
+                .consultationDate(c.getConsultationDate())
+                .createdAt(c.getCreatedAt())
+                .serviceName(c.getService() != null ? c.getService().getNom() : null)
+                .ficheAmountDue(c.getFicheAmountDue())
+                .ficheAmountPaid(c.getFicheAmountPaid())
+                .consulAmountDue(c.getConsulAmountDue())
+                .consulAmountPaid(c.getConsulAmountPaid())
+                .examTotalAmount(c.getExamTotalAmount())
+                .build();
+        if (c.getPatient() != null) {
+            Patient p = c.getPatient();
+            dto.setPatientName(p.getFirstName() + " " + p.getLastName());
+            dto.setPhoneNumber(p.getPhoneNumber());
+            dto.setPatientPhoto(p.getPhotoUrl() != null && !p.getPhotoUrl().isEmpty()
+                    ? normalizePhotoUrl(p.getPhotoUrl()) : "/uploads/default-patient.png");
+        } else {
+            dto.setPatientName("Patient Inconnu");
+            dto.setPatientPhoto("/uploads/default-patient.png");
+        }
+        if (c.getDoctor() != null) {
+            dto.setDoctorId(c.getDoctor().getId());
+            dto.setDoctorName(c.getDoctor().getFirstName() + " " + c.getDoctor().getLastName());
+        }
+        if (c.getAdmission() != null) {
+            Admission adm = c.getAdmission();
+            dto.setAdmissionId(adm.getId());
+            dto.setTotalAmount(adm.getTotalAmount());
+            dto.setAmountPaid(adm.getAmountPaid());
+            dto.setAdmissionStatus(adm.getStatus() != null ? adm.getStatus().name() : null);
+        }
+        return dto;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ConsultationDTO> getAll(Pageable pageable) {
@@ -750,7 +807,8 @@ public class ConsultationServiceImpl implements ConsultationService {
                 (hId != null)
                         ? consultationRepository.findByPatientHospitalId(hId, pageable)
                         : consultationRepository.findAll(pageable);
-        return toPageResponse(page);
+        // ⚡ Mapping léger (sans N+1 exams/services) → historique réception rapide
+        return toListPageResponse(page);
     }
 
     @Override
