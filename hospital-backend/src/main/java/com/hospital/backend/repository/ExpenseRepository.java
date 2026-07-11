@@ -47,6 +47,10 @@ List<Expense> findByCategoryOrderByDateDesc(ExpenseCategory category);
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.category = :category")
     BigDecimal sumAmountByCategory(@Param("category") ExpenseCategory category);
 
+    // ★ MULTI-TENANT : somme par catégorie filtrée par hôpital (solde par source, caisse)
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.category = :category AND e.createdBy.hospital.id = :hospitalId")
+    BigDecimal sumAmountByCategoryAndHospital(@Param("category") ExpenseCategory category, @Param("hospitalId") Long hospitalId);
+
     // Sum all amounts
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e")
     BigDecimal sumTotalAmount();

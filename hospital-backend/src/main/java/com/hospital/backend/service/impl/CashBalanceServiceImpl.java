@@ -55,7 +55,11 @@ public class CashBalanceServiceImpl implements CashBalanceService {
         BigDecimal totalExpenses = BigDecimal.ZERO;
         
         if (expenseCategory != null) {
-            totalExpenses = expenseRepository.sumAmountByCategory(expenseCategory);
+            // 🏥 MULTI-TENANT : dépenses de la catégorie POUR L'HÔPITAL COURANT (sinon
+            // un hôpital neuf voit les dépenses des autres → solde négatif fantôme).
+            totalExpenses = (hId != null)
+                    ? expenseRepository.sumAmountByCategoryAndHospital(expenseCategory, hId)
+                    : expenseRepository.sumAmountByCategory(expenseCategory);
             if (totalExpenses == null) {
                 totalExpenses = BigDecimal.ZERO;
             }
