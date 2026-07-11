@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { cachedGet, queueableMutation, registerInstance } from '../../offline';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const API_BASE_URL = `${BACKEND_URL}/api/v1`;
@@ -11,6 +12,9 @@ const pharmacyApi = axios.create({
   },
   timeout: 30000, // ⏱️ Timeout global 30s pour éviter les blocages infinis
 });
+
+// 🔌 Enregistre l'instance pharmacie pour le rejeu hors-ligne
+registerInstance('pharmacy', pharmacyApi);
 
 // Request interceptor to add auth token
 pharmacyApi.interceptors.request.use(
@@ -94,29 +98,52 @@ pharmacyApi.interceptors.response.use(
 export const getDashboardStats = () => pharmacyApi.get('/dashboard/stats');
 
 // Orders API
-export const createOrder = (orderData) => pharmacyApi.post('/orders', orderData);
+// 🚧 Création = nouvel id serveur → nécessite une connexion (exclu Phase 1 hors-ligne)
+export const createOrder = (orderData) => {
+  if (!navigator.onLine) return Promise.reject({ message: "La création d'une commande nécessite une connexion internet." });
+  return pharmacyApi.post('/orders', orderData);
+};
 export const getOrderById = (id) => pharmacyApi.get(`/orders/${id}`);
 export const getOrderByCode = (orderCode) => pharmacyApi.get(`/orders/code/${orderCode}`);
 export const updateOrder = (id, orderData) => pharmacyApi.put(`/orders/${id}`, orderData);
-export const getOrdersByStatus = (status, page = 0, size = 20) => 
-  pharmacyApi.get('/orders', { params: { status, page, size } });
-export const searchOrders = (query, page = 0, size = 20) => 
+export const getOrdersByStatus = async (status, page = 0, size = 20) => {
+  const data = await cachedGet('pharmacyQueue', `orders:${status}:${page}:${size}`, () =>
+    pharmacyApi.get('/orders', { params: { status, page, size } }).then((r) => r.data)
+  );
+  return { data };
+};
+export const searchOrders = (query, page = 0, size = 20) =>
   pharmacyApi.get('/orders/search', { params: { query, page, size } });
-export const getPendingOrders = () => pharmacyApi.get('/orders/pending');
+export const getPendingOrders = async () => {
+  const data = await cachedGet('pharmacyQueue', 'pending', () => pharmacyApi.get('/orders/pending').then((r) => r.data));
+  return { data };
+};
 
 // Order Status Management
 export const updateOrderStatus = (id, status) => 
   pharmacyApi.put(`/orders/${id}/status`, { status });
+// ✍️ Paiement d'une commande EXISTANTE → encaissable hors-ligne (rejeu idempotent)
 export const processPayment = (id, paymentData) => {
   const { amountPaid, paymentMethod, allowPartialPayment } = paymentData;
-  return pharmacyApi.post(`/orders/${id}/pay`, { 
-    amountPaid, 
-    paymentMethod, 
-    allowPartialPayment 
+  return queueableMutation({
+    instanceTag: 'pharmacy',
+    method: 'post',
+    url: `/orders/${id}/pay`,
+    body: { amountPaid, paymentMethod, allowPartialPayment },
+    moduleTag: 'pharmacy',
+    entityRef: { type: 'PharmacyOrder', id },
   });
 };
-export const dispenseOrder = (id, pharmacistId) => 
-  pharmacyApi.post(`/orders/${id}/dispense`, { pharmacistId });
+// ✍️ Délivrance d'une commande EXISTANTE → hors-ligne OK
+export const dispenseOrder = (id, pharmacistId) =>
+  queueableMutation({
+    instanceTag: 'pharmacy',
+    method: 'post',
+    url: `/orders/${id}/dispense`,
+    body: { pharmacistId },
+    moduleTag: 'pharmacy',
+    entityRef: { type: 'PharmacyOrder', id },
+  });
 export const validateOrder = (id) => pharmacyApi.post(`/orders/${id}/validate`);
 export const cancelOrder = (id, reason) => 
   pharmacyApi.post(`/orders/${id}/cancel`, { reason });
@@ -138,13 +165,21 @@ export const checkMedicationStock = (medicationId, requiredQuantity) =>
   pharmacyApi.get(`/stock/check/${medicationId}`, { params: { requiredQuantity } });
 export const updateMedicationStock = (medicationId, quantityChange) => 
   pharmacyApi.put(`/stock/${medicationId}`, null, { params: { quantityChange } });
-export const getStockAlerts = () => pharmacyApi.get('/stock/alerts');
+export const getStockAlerts = async () => {
+  const data = await cachedGet('pharmacyQueue', 'stock-alerts', () => pharmacyApi.get('/stock/alerts').then((r) => r.data));
+  return { data };
+};
 export const getUnpaidOrders = () => pharmacyApi.get('/orders/unpaid');
 export const getSalesHistory = (params) => 
   pharmacyApi.get('/sales/history', { params });
 
 // Prescriptions API
-export const getPendingPrescriptions = () => pharmacyApi.get('/prescriptions/pending');
+export const getPendingPrescriptions = async () => {
+  const data = await cachedGet('pharmacyQueue', 'prescriptions-pending', () =>
+    pharmacyApi.get('/prescriptions/pending').then((r) => r.data)
+  );
+  return { data };
+};
 export const getPaidPrescriptions = (params) => axios.get(`${BACKEND_URL}/api/prescriptions/paid`, { params, headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 export const convertPrescriptionToOrder = (prescriptionId, options = {}) => 
   pharmacyApi.post(`/prescriptions/${prescriptionId}/convert`, options);
@@ -158,8 +193,12 @@ export const updatePrescriptionItem = (itemId, itemData) =>
   pharmacyApi.put(`/prescriptions/items/${itemId}`, itemData);
 
 // Medications API (Stock/Inventory)
-export const getAllMedications = (page = 0, size = 100) => 
-  pharmacyApi.get('/medications', { params: { page, size } });
+export const getAllMedications = async (page = 0, size = 100) => {
+  const data = await cachedGet('catalogs', `medications:${page}:${size}`, () =>
+    pharmacyApi.get('/medications', { params: { page, size } }).then((r) => r.data)
+  );
+  return { data };
+};
 export const getMedicationById = (id) => pharmacyApi.get(`/medications/${id}`);
 export const purchaseMedication = (medicationId, data) => 
   pharmacyApi.post(`/medications/${medicationId}/purchase`, data);

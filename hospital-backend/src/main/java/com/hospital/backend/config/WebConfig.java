@@ -1,10 +1,12 @@
 package com.hospital.backend.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -13,10 +15,30 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Supporte localhost (dev) et URL Render (production)
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${file.upload-dir:uploads/profiles}")
     private String uploadDir;
+
+    private final IdempotencyInterceptor idempotencyInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 🔁 Idempotence : uniquement sur les écritures rejouables hors-ligne (liste blanche)
+        registry.addInterceptor(idempotencyInterceptor)
+                .addPathPatterns(
+                        "/api/lab/exam/*/result",
+                        "/api/lab/box/*/start",
+                        "/api/lab/box/*/finalize",
+                        "/api/finance/pay/**",
+                        "/api/finance/prescription/**/pay",
+                        "/api/v1/finance/prescription/process-payment/**",
+                        "/api/reception/process-payment/**",
+                        "/api/v1/pharmacy/orders/*/pay",
+                        "/api/v1/pharmacy/orders/*/dispense"
+                );
+    }
 
     @Bean
     public RestTemplate restTemplate() {

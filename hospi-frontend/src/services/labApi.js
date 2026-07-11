@@ -1,27 +1,59 @@
 import api from './api';
+import { cachedGet, queueableMutation, registerInstance } from '../offline';
 
 const API = '/lab';
 
+// 🔌 Enregistre l'instance axios du labo pour le rejeu hors-ligne
+registerInstance('lab', api);
+
 export const labApi = {
-  // Récupérer la file d'attente du laboratoire
-  getQueue: () => api.get(`${API}/queue`),
+  // 📥 File d'attente labo — mise en cache (lisible hors-ligne)
+  getQueue: async () => {
+    const data = await cachedGet('labQueue', 'default', () => api.get(`${API}/queue`).then((r) => r.data));
+    return { data };
+  },
 
-  // Récupérer une boîte spécifique
-  getBox: (consultationId) => api.get(`${API}/box/${consultationId}`),
+  // 📥 Boîte spécifique — mise en cache par consultation
+  getBox: async (consultationId) => {
+    const data = await cachedGet('labQueue', `box:${consultationId}`, () =>
+      api.get(`${API}/box/${consultationId}`).then((r) => r.data)
+    );
+    return { data };
+  },
 
-  // Démarrer le traitement d'une boîte
-  startProcessing: (consultationId, technicianName) => 
-    api.post(`${API}/box/${consultationId}/start?technicianName=${technicianName}`),
+  // ✍️ Démarrer le traitement (cible une consultation EXISTANTE) — file hors-ligne OK
+  startProcessing: (consultationId, technicianName) =>
+    queueableMutation({
+      instanceTag: 'lab',
+      method: 'post',
+      url: `${API}/box/${consultationId}/start?technicianName=${encodeURIComponent(technicianName || '')}`,
+      body: null,
+      moduleTag: 'lab',
+      entityRef: { type: 'Consultation', id: consultationId },
+    }),
 
-  // Saisir un résultat d'examen
-  enterResult: (examId, resultData) => 
-    api.post(`${API}/exam/${examId}/result`, resultData),
+  // ✍️ Saisir un résultat (cible un examen EXISTANT) — file hors-ligne OK
+  enterResult: (examId, resultData) =>
+    queueableMutation({
+      instanceTag: 'lab',
+      method: 'post',
+      url: `${API}/exam/${examId}/result`,
+      body: resultData,
+      moduleTag: 'lab',
+      entityRef: { type: 'PrescribedExam', id: examId },
+    }),
 
-  // Finaliser une boîte (tous les résultats saisis)
-  finalizeBox: (consultationId) => 
-    api.post(`${API}/box/${consultationId}/finalize`),
+  // ✍️ Finaliser une boîte — file hors-ligne OK
+  finalizeBox: (consultationId) =>
+    queueableMutation({
+      instanceTag: 'lab',
+      method: 'post',
+      url: `${API}/box/${consultationId}/finalize`,
+      body: null,
+      moduleTag: 'lab',
+      entityRef: { type: 'Consultation', id: consultationId },
+    }),
 
-  // Médecin consulte les résultats
-  viewResults: (consultationId) => 
-    api.post(`${API}/box/${consultationId}/view-results`)
+  // Médecin consulte les résultats (lecture/mutation légère) — reste en ligne
+  viewResults: (consultationId) => api.post(`${API}/box/${consultationId}/view-results`),
 };

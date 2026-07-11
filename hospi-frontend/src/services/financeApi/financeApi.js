@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { BACKEND_URL } from '../../config/environment.js';
+import { cachedGet, queueableMutation, registerInstance } from '../../offline';
 
 const API_BASE = `${BACKEND_URL}/api/finance`;
 
@@ -26,6 +27,10 @@ const globalApi = axios.create({
   );
 });
 
+// 🔌 Enregistre les instances pour le rejeu hors-ligne
+registerInstance('finance', api);
+registerInstance('financeGlobal', globalApi);
+
 const financeApi = {
 
   // ═══════════════════════════════════════
@@ -37,17 +42,15 @@ const financeApi = {
   },
 
   // ★ NOUVEAU : Dashboard complet avec stats par devise (CDF/USD)
-  getFullDashboard: async () => {
-    const response = await api.get('/dashboard');
-    return response.data;
-  },
+  getFullDashboard: async () =>
+    cachedGet('financeQueues', 'dashboard', () => api.get('/dashboard').then((r) => r.data)),
 
   // ═══════════════════════════════════════
   // ADMISSIONS — CAISSE
   // ═══════════════════════════════════════
   getAdmissionsQueue: async (params = {}) => {
-    const response = await api.get('/admissions/queue', { params });
-    return response.data;
+    const qk = 'admissions:' + new URLSearchParams(params || {}).toString();
+    return cachedGet('financeQueues', qk, () => api.get('/admissions/queue', { params }).then((r) => r.data));
   },
 
   getAdmissionsStats: async () => {
@@ -61,12 +64,19 @@ const financeApi = {
   },
 
   payInvoice: async (id, paymentData) => {
-    // Utiliser l'endpoint FinanceController - le baseURL contient déjà /api/finance
-    const response = await api.post(`/pay/${id}`, {
-      amountPaid: paymentData.amountPaid || 0,
-      paymentMethod: paymentData.paymentMethod || 'ESPECES'
+    // ✍️ Cible une facture EXISTANTE → encaissable hors-ligne (rejeu idempotent)
+    const res = await queueableMutation({
+      instanceTag: 'finance',
+      method: 'post',
+      url: `/pay/${id}`,
+      body: {
+        amountPaid: paymentData.amountPaid || 0,
+        paymentMethod: paymentData.paymentMethod || 'ESPECES',
+      },
+      moduleTag: 'finance',
+      entityRef: { type: 'Invoice', id },
     });
-    return response.data;
+    return res.data;
   },
 
   // ═══════════════════════════════════════
@@ -111,29 +121,21 @@ const financeApi = {
   // ═══════════════════════════════════════
   // QUEUES PAR DÉPARTEMENT
   // ═══════════════════════════════════════
-  getQueueByType: async (type) => {
-    const response = await api.get(`/queues/${type}`);
-    return response.data;
-  },
+  getQueueByType: async (type) =>
+    cachedGet('financeQueues', `queue:${type}`, () => api.get(`/queues/${type}`).then((r) => r.data)),
 
   getPharmacyQueue: async () => {
     try {
-      console.log('🔍 [DEBUG] Appel de getPharmacyQueue...');
-
-      // Call the pharmacy-invoices endpoint for Caisse Pharmacie
-      const response = await api.get('/prescription/pharmacy-invoices');
-      console.log('🔍 [DEBUG] Données reçues de /prescription/pharmacy-invoices:', response.data);
-      return response.data;
+      return await cachedGet('financeQueues', 'pharmacyQueue', () =>
+        api.get('/prescription/pharmacy-invoices').then((r) => r.data)
+      );
     } catch (error) {
-      console.error('❌ [DEBUG] Erreur getPharmacyQueue:', error.response?.status, error.response?.data);
-
-      // Fallback: essayer l'ancien endpoint
+      if (error.offlineNoCache) return [];
+      // Fallback en ligne : ancien endpoint
       try {
         const response = await api.get('/queues/PHARMACY');
-        console.log('🔄 [DEBUG] Fallback vers /queues/PHARMACY:', response.data);
         return response.data;
       } catch (fallbackError) {
-        console.error('❌ [DEBUG] Erreur fallback aussi:', fallbackError.response?.status, fallbackError.response?.data);
         return [];
       }
     }
@@ -166,16 +168,21 @@ const financeApi = {
     }
   },
 
-  // ★ NOUVEAU : Paiement prescription pharmacie
+  // ★ Paiement prescription pharmacie — cible une facture EXISTANTE → hors-ligne OK
   processPrescriptionPayment: async (invoiceId, paymentMethod = 'ESPECES') => {
-    const response = await globalApi.post(`/v1/finance/prescription/process-payment/${invoiceId}?paymentMethod=${paymentMethod}`);
-    return response.data;
+    const res = await queueableMutation({
+      instanceTag: 'financeGlobal',
+      method: 'post',
+      url: `/v1/finance/prescription/process-payment/${invoiceId}?paymentMethod=${paymentMethod}`,
+      body: null,
+      moduleTag: 'finance',
+      entityRef: { type: 'Invoice', id: invoiceId },
+    });
+    return res.data;
   },
 
-  getLaboratoryQueue: async () => {
-    const response = await api.get('/queues/LABORATORY');
-    return response.data;
-  },
+  getLaboratoryQueue: async () =>
+    cachedGet('financeQueues', 'queue:LABORATORY', () => api.get('/queues/LABORATORY').then((r) => r.data)),
 
   getLaboratoryStats: async () => {
     // Utiliser all-lab-payments et calculer les stats côté client
@@ -370,17 +377,17 @@ const financeApi = {
     return response.data;
   },
 
-  getCashBalance: async () => {
-    const response = await api.get('/cashflow/balance');
-    return response.data;
-  },
+  getCashBalance: async () =>
+    cachedGet('financeQueues', 'cashflow-balance', () => api.get('/cashflow/balance').then((r) => r.data)),
 
   // ═══════════════════════════════════════
   // CASH BALANCE - Soldes par catégorie
   // ═══════════════════════════════════════
   getBalancesBySource: async () => {
-    const response = await api.get('/cash-balance/by-source');
-    return response.data?.balances || response.data;
+    const data = await cachedGet('financeQueues', 'balances-by-source', () =>
+      api.get('/cash-balance/by-source').then((r) => r.data)
+    );
+    return data?.balances || data;
   },
 
   getBalanceBySource: async (source) => {

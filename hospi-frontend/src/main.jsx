@@ -23,7 +23,11 @@ import SplashScreen from './components/SplashScreen'
 import * as serviceWorkerRegistration from './serviceWorkerRegistration'
 
 // 🔐 PWA: Persistance du stockage (empêche l'effacement sur mobile)
-import { initStoragePersistence } from './utils/storagePersistence.js' 
+import { initStoragePersistence } from './utils/storagePersistence.js'
+
+// 🔄 Mode hors-ligne : rejeu automatique de la file d'écritures à la reconnexion + au démarrage
+import { initAutoSync } from './offline'
+initAutoSync()
 
 // État pour contrôler le SplashScreen
 const AppWithSplash = () => {

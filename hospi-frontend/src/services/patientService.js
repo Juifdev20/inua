@@ -1,4 +1,5 @@
 import api, { validateId } from './api';
+import { cachedGet } from '../offline';
 
 /**
  * 🛠️ UTILITAIRE : Convertit le Base64 de la caméra en fichier binaire (Blob)
@@ -57,6 +58,11 @@ export const patientService = {
 
   // 2. CRÉATION (Utilise maintenant FormData)
   createPatient: async (patientData) => {
+    // 🚧 Phase 1 hors-ligne : la création d'un nouveau patient génère un id serveur
+    // (référencé ensuite par la finance/labo/pharmacie) → nécessite une connexion.
+    if (!navigator.onLine) {
+      throw { message: "La création d'un patient nécessite une connexion internet." };
+    }
     try {
       const formData = prepareFormData(patientData);
       const response = await api.post('/v1/patients', formData);
@@ -104,11 +110,12 @@ export const patientService = {
     }
   },
 
-  // 4c. ⚡ Liste simplifiée ultra-rapide (réception) : ID + nom, filtrée hôpital, sans N+1
+  // 4c. ⚡ Liste simplifiée (réception) : ID + nom — mise en cache pour lecture hors-ligne
   getPatientsSimple: async () => {
     try {
-      const response = await api.get('/v1/patients/simple-list');
-      const data = response.data?.data || response.data;
+      const data = await cachedGet('receptionPatients', 'simple-list', () =>
+        api.get('/v1/patients/simple-list').then((r) => r.data?.data || r.data)
+      );
       return data || [];
     } catch (error) {
       return [];

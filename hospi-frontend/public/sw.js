@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inuaafia-v5';
+const CACHE_NAME = 'inuaafia-v6';
 // 🔥 OPTIMISATION: Réduire le cache initial pour accélérer l'installation
 const urlsToCache = [
   '/',
@@ -108,10 +108,13 @@ self.addEventListener('fetch', (event) => {
           return response;
         }).catch((error) => {
           console.error('Service Worker: Erreur réseau', error);
-          
-          // Pour les requêtes de navigation, retourner la page offline
-          if (event.request.destination === 'document') {
-            return caches.match('/offline.html');
+
+          // 🔄 SPA offline : pour toute navigation (route module /reception,
+          // /finance, /labo, /pharmacy…), on sert l'app-shell en cache.
+          // React Router affiche ensuite la bonne page côté client, qui lit
+          // ses données depuis IndexedDB (Dexie).
+          if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+            return caches.match('/index.html').then((shell) => shell || caches.match('/'));
           }
         });
       })
